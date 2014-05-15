@@ -192,20 +192,10 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  */
 public class C3PO extends AbstractScheduler {
 
-	private int nClones = 2;
-	private double conservatismWeight = 3d;
-	private double placementAwarenessWeight = 1d;
-	private double outlookWeight = 2d;
-
-	private static final Log log = LogFactory.getLog(C3PO.class);
-	private final Random numGen;
-	private final DecimalFormat df;
-	private final FileSystem fs;
-
-	private class PerJobStatistic {
-		double weight = 1d;
+	private class DataLocalityStatistic extends PerJobStatistic {
+		long localData;
+		long totalData;
 	}
-
 	/**
 	 * 
 	 * for each task category, remember two figures: (1) how many task instances of this category have been successfully
@@ -216,18 +206,35 @@ public class C3PO extends AbstractScheduler {
 	 */
 	private class JobStatistic extends PerJobStatistic {
 		int finishedTasks;
-		long timeSpent;
 		int remainingTasks;
+		long timeSpent;
 	}
-
+	private class PerJobStatistic {
+		double weight = 1d;
+	}
 	private class TaskStatistic extends PerJobStatistic {
 		long lastRuntime;
 	}
 
-	private class DataLocalityStatistic extends PerJobStatistic {
-		long localData;
-		long totalData;
-	}
+	private static final Log log = LogFactory.getLog(C3PO.class);
+	private double conservatismWeight = 3d;
+	protected Map<String, DataLocalityStatistic> dataLocalityStatistics;
+	private final DecimalFormat df;
+
+	private final FileSystem fs;
+
+	/**
+	 * In order to gauge the
+	 */
+	protected Map<String, JobStatistic> jobStatistics;
+
+	private int nClones = 2;
+
+	private final Random numGen;
+
+	private double outlookWeight = 2d;
+
+	private double placementAwarenessWeight = 1d;
 
 	/**
 	 * One queue of ready-to-execute tasks for each job, identified by its unique job name.
@@ -236,28 +243,16 @@ public class C3PO extends AbstractScheduler {
 
 	protected Map<String, Queue<TaskInstance>> runningTasks;
 
-	protected Map<TaskInstance, List<Container>> taskToContainers;
-
 	/**
 	 * For each machine, remember the last execution time of each type of task. These values are used as runtime
 	 * estimates for future scheduling decisions.
 	 */
 	protected Map<NodeId, Map<String, TaskStatistic>> taskStatisticsPerNode;
 
-	/**
-	 * In order to gauge the
-	 */
-	protected Map<String, JobStatistic> jobStatistics;
-
-	protected Map<String, DataLocalityStatistic> dataLocalityStatistics;
+	protected Map<TaskInstance, List<Container>> taskToContainers;
 
 	public C3PO() {
 		this(System.currentTimeMillis());
-	}
-
-	public C3PO(long seed) {
-		this(null, seed);
-		this.placementAwarenessWeight = 0d;
 	}
 
 	public C3PO(FileSystem fs) {
@@ -280,6 +275,11 @@ public class C3PO extends AbstractScheduler {
 		for (int i = 0; i < nClones; i++) {
 			unissuedNodeRequests.add(new String[0]);
 		}
+	}
+
+	public C3PO(long seed) {
+		this(null, seed);
+		this.placementAwarenessWeight = 0d;
 	}
 
 	@Override
@@ -308,28 +308,69 @@ public class C3PO extends AbstractScheduler {
 		log.info("Added task " + task + " to queue " + jobName);
 	}
 
-	private void normalizeWeights(Collection<? extends PerJobStatistic> statistics) {
-		double sum = 0d;
-		for (PerJobStatistic statistic : statistics)
-			sum += statistic.weight;
-		for (PerJobStatistic statistic : statistics)
-			statistic.weight /= (sum != 0d) ? sum : statistics.size();
-	}
-
-	private String printWeights(Map<String, ? extends PerJobStatistic> statistics) {
-		String names = "";
-		String weights = "";
+	// Outlook: Zero probabiliy for tasks which are not currently ready (or - in the case of speculative execution -
+	// running)
+	// Equally high probability for tasks which have not been executed by any node;
+	// if no such tasks exist, assign higher probabilites to tasks which contribute stronger to overall runtime
+	private void computeJobStatisticsWeight(boolean replicate) {
 		for (String jobName : jobStatistics.keySet()) {
-			names += ", " + jobName;
-			weights += ", " + df.format(statistics.get(jobName).weight);
+			JobStatistic jobStatistic = jobStatistics.get(jobName);
+			double avgRuntime = (jobStatistic.finishedTasks != 0) ? jobStatistic.timeSpent
+					/ (double) jobStatistic.finishedTasks : 0d;
+			if ((replicate && runningTasks.get(jobName).size() == 0)
+					|| (!replicate && readyTasks.get(jobName).size() == 0)) {
+				jobStatistic.weight = 0;
+			} else  if (avgRuntime == 0d) {
+				jobStatistic.weight = Long.MAX_VALUE;
+			} else {
+				jobStatistic.weight = jobStatistic.remainingTasks;
+				if (replicate)
+					jobStatistic.weight += runningTasks.get(jobName).size();
+				jobStatistic.weight *= avgRuntime;
+			}
 		}
-		return "(" + names.substring(2) + ")" + "\t" + "(" + weights.substring(2) + ")";
+		normalizeWeights(jobStatistics.values());
+		printJobStatisticsWeight();
 	}
 
-	private void multiplyWeights(Map<String, PerJobStatistic> weights,
-			Map<String, ? extends PerJobStatistic> statistics, double factor) {
-		for (String jobName : weights.keySet())
-			weights.get(jobName).weight *= Math.pow(statistics.get(jobName).weight, factor);
+	private void computePlacementAwarenessWeights(Container container, boolean replicate) {
+		for (String jobName : jobStatistics.keySet()) {
+			Queue<TaskInstance> queue = replicate ? runningTasks.get(jobName) : readyTasks.get(jobName);
+			DataLocalityStatistic dataLocalityStatistic = dataLocalityStatistics.get(jobName);
+			if (queue.size() == 0) {
+				dataLocalityStatistic.weight = 0d;
+			} else {
+				TaskInstance task = queue.peek();
+				try {
+					dataLocalityStatistic.localData = task.countAvailableLocalData(fs, container);
+					dataLocalityStatistic.totalData = task.countAvailableTotalData(fs) + 1; // in case of total data being zero
+					dataLocalityStatistic.weight = (double) (dataLocalityStatistic.localData + dataLocalityStatistic.totalData) / (2 * dataLocalityStatistic.totalData);
+				} catch (IOException e) {
+					log.info("Error during hdfs block location determination.");
+					e.printStackTrace();
+				}
+			}
+		}
+		normalizeWeights(dataLocalityStatistics.values());
+		printPlacementAwarenessWeights();
+	}
+
+	// Conservatism: Equally high probability for tasks which this node has not executed yet;
+	// if no such tasks exist, assign higher probabilities to tasks which this node is good at
+	private void computeTaskStatisticsWeights() {
+		for (String jobName : jobStatistics.keySet()) {
+			Collection<TaskStatistic> taskStatistics = new ArrayList<>();
+			for (NodeId nodeId : taskStatisticsPerNode.keySet()) {
+				TaskStatistic taskStatistic = taskStatisticsPerNode.get(nodeId).get(jobName);
+				taskStatistic.weight = (taskStatistic.lastRuntime != 0) ? 1d / taskStatistic.lastRuntime
+						: Long.MAX_VALUE;
+				taskStatistics.add(taskStatistic);
+			}
+			normalizeWeights(taskStatistics);
+		}
+		printTaskStatisticsWeights();
+		for (NodeId nodeId : taskStatisticsPerNode.keySet())
+			normalizeWeights(taskStatisticsPerNode.get(nodeId).values());
 	}
 
 	@Override
@@ -407,16 +448,16 @@ public class C3PO extends AbstractScheduler {
 	}
 
 	@Override
-	public int getNumberOfRunningTasks() {
-		return taskToContainers.size();
-	}
-
-	@Override
 	public int getNumberOfReadyTasks() {
 		int nReadyTasks = 0;
 		for (Queue<TaskInstance> queue : readyTasks.values())
 			nReadyTasks += queue.size();
 		return nReadyTasks;
+	}
+
+	@Override
+	public int getNumberOfRunningTasks() {
+		return taskToContainers.size();
 	}
 
 	@Override
@@ -427,6 +468,20 @@ public class C3PO extends AbstractScheduler {
 		return totalTasks;
 	}
 
+	private void multiplyWeights(Map<String, PerJobStatistic> weights,
+			Map<String, ? extends PerJobStatistic> statistics, double factor) {
+		for (String jobName : weights.keySet())
+			weights.get(jobName).weight *= Math.pow(statistics.get(jobName).weight, factor);
+	}
+
+	private void normalizeWeights(Collection<? extends PerJobStatistic> statistics) {
+		double sum = 0d;
+		for (PerJobStatistic statistic : statistics)
+			sum += statistic.weight;
+		for (PerJobStatistic statistic : statistics)
+			statistic.weight /= (sum != 0d) ? sum : statistics.size();
+	}
+
 	@Override
 	public boolean nothingToSchedule() {
 		if (getNumberOfFinishedTasks() == getNumberOfTotalTasks()) {
@@ -435,6 +490,35 @@ public class C3PO extends AbstractScheduler {
 			return false;
 		}
 		return getNumberOfReadyTasks() == 0;
+	}
+
+	private void printJobStatisticsWeight() {
+		log.debug("Updated Job Statistics:");
+
+		log.debug("\t\t#finish\tavg\t#remain\t#ready\tshare");
+		for (String jobName : jobStatistics.keySet()) {
+			String jobName6 = (jobName.length() > 6) ? jobName.substring(0, 6) : jobName;
+			JobStatistic jobStatistic = jobStatistics.get(jobName);
+			double avgRuntime = (jobStatistic.finishedTasks != 0) ? jobStatistic.timeSpent
+					/ (double) jobStatistic.finishedTasks : 0d;
+			log.debug("\t" + jobName6 + "\t" + df.format(jobStatistic.finishedTasks) + "\t" + df.format(avgRuntime)
+					+ "\t" + df.format(jobStatistic.remainingTasks) + "\t" + df.format(readyTasks.get(jobName).size())
+					+ "\t" + df.format(jobStatistic.weight));
+		}
+	}
+	
+	
+
+	private void printPlacementAwarenessWeights() {
+		log.debug("Updated Placement Awareness Statistics:");
+
+		log.debug("\t\tlocal\ttotal\tshare");
+		for (String jobName : jobStatistics.keySet()) {
+			String jobName6 = (jobName.length() > 6) ? jobName.substring(0, 6) : jobName;
+			DataLocalityStatistic dataLocalityStatistic = dataLocalityStatistics.get(jobName);
+			log.debug("\t" + jobName6 + "\t" + dataLocalityStatistic.localData + "\t" + dataLocalityStatistic.totalData
+					+ "\t" + df.format(dataLocalityStatistic.weight));
+		}
 	}
 
 	private void printTaskStatisticsWeights() {
@@ -459,99 +543,31 @@ public class C3PO extends AbstractScheduler {
 			log.debug("\t" + nodeName7 + row);
 		}
 	}
-
-	// Conservatism: Equally high probability for tasks which this node has not executed yet;
-	// if no such tasks exist, assign higher probabilities to tasks which this node is good at
-	private void computeTaskStatisticsWeights() {
-		for (String jobName : jobStatistics.keySet()) {
-			Collection<TaskStatistic> taskStatistics = new ArrayList<>();
-			for (NodeId nodeId : taskStatisticsPerNode.keySet()) {
-				TaskStatistic taskStatistic = taskStatisticsPerNode.get(nodeId).get(jobName);
-				taskStatistic.weight = (taskStatistic.lastRuntime != 0) ? 1d / taskStatistic.lastRuntime
-						: Long.MAX_VALUE;
-				taskStatistics.add(taskStatistic);
-			}
-			normalizeWeights(taskStatistics);
-		}
-		printTaskStatisticsWeights();
-		for (NodeId nodeId : taskStatisticsPerNode.keySet())
-			normalizeWeights(taskStatisticsPerNode.get(nodeId).values());
-	}
-
-	private void printJobStatisticsWeight() {
-		log.debug("Updated Job Statistics:");
-
-		log.debug("\t\t#finish\tavg\t#remain\t#ready\tshare");
-		for (String jobName : jobStatistics.keySet()) {
-			String jobName6 = (jobName.length() > 6) ? jobName.substring(0, 6) : jobName;
-			JobStatistic jobStatistic = jobStatistics.get(jobName);
-			double avgRuntime = (jobStatistic.finishedTasks != 0) ? jobStatistic.timeSpent
-					/ (double) jobStatistic.finishedTasks : 0d;
-			log.debug("\t" + jobName6 + "\t" + df.format(jobStatistic.finishedTasks) + "\t" + df.format(avgRuntime)
-					+ "\t" + df.format(jobStatistic.remainingTasks) + "\t" + df.format(readyTasks.get(jobName).size())
-					+ "\t" + df.format(jobStatistic.weight));
-		}
-	}
 	
-	
-
-	// Outlook: Zero probabiliy for tasks which are not currently ready (or - in the case of speculative execution -
-	// running)
-	// Equally high probability for tasks which have not been executed by any node;
-	// if no such tasks exist, assign higher probabilites to tasks which contribute stronger to overall runtime
-	private void computeJobStatisticsWeight(boolean replicate) {
+	private String printWeights(Map<String, ? extends PerJobStatistic> statistics) {
+		String names = "";
+		String weights = "";
 		for (String jobName : jobStatistics.keySet()) {
-			JobStatistic jobStatistic = jobStatistics.get(jobName);
-			double avgRuntime = (jobStatistic.finishedTasks != 0) ? jobStatistic.timeSpent
-					/ (double) jobStatistic.finishedTasks : 0d;
-			if ((replicate && runningTasks.get(jobName).size() == 0)
-					|| (!replicate && readyTasks.get(jobName).size() == 0)) {
-				jobStatistic.weight = 0;
-			} else  if (avgRuntime == 0d) {
-				jobStatistic.weight = Long.MAX_VALUE;
-			} else {
-				jobStatistic.weight = jobStatistic.remainingTasks;
-				if (replicate)
-					jobStatistic.weight += runningTasks.get(jobName).size();
-				jobStatistic.weight *= avgRuntime;
-			}
+			names += ", " + jobName;
+			weights += ", " + df.format(statistics.get(jobName).weight);
 		}
-		normalizeWeights(jobStatistics.values());
-		printJobStatisticsWeight();
+		return "(" + names.substring(2) + ")" + "\t" + "(" + weights.substring(2) + ")";
 	}
 
-	private void printPlacementAwarenessWeights() {
-		log.debug("Updated Placement Awareness Statistics:");
-
-		log.debug("\t\tlocal\ttotal\tshare");
-		for (String jobName : jobStatistics.keySet()) {
-			String jobName6 = (jobName.length() > 6) ? jobName.substring(0, 6) : jobName;
-			DataLocalityStatistic dataLocalityStatistic = dataLocalityStatistics.get(jobName);
-			log.debug("\t" + jobName6 + "\t" + dataLocalityStatistic.localData + "\t" + dataLocalityStatistic.totalData
-					+ "\t" + df.format(dataLocalityStatistic.weight));
-		}
+	public void setConservatismWeight(double conservatismWeight) {
+		this.conservatismWeight = conservatismWeight < Double.MIN_VALUE ? Double.MIN_VALUE : conservatismWeight;
 	}
-	
-	private void computePlacementAwarenessWeights(Container container, boolean replicate) {
-		for (String jobName : jobStatistics.keySet()) {
-			Queue<TaskInstance> queue = replicate ? runningTasks.get(jobName) : readyTasks.get(jobName);
-			DataLocalityStatistic dataLocalityStatistic = dataLocalityStatistics.get(jobName);
-			if (queue.size() == 0) {
-				dataLocalityStatistic.weight = 0d;
-			} else {
-				TaskInstance task = queue.peek();
-				try {
-					dataLocalityStatistic.localData = task.countAvailableLocalData(fs, container);
-					dataLocalityStatistic.totalData = task.countAvailableTotalData(fs) + 1; // in case of total data being zero
-					dataLocalityStatistic.weight = (double) (dataLocalityStatistic.localData + dataLocalityStatistic.totalData) / (2 * dataLocalityStatistic.totalData);
-				} catch (IOException e) {
-					log.info("Error during hdfs block location determination.");
-					e.printStackTrace();
-				}
-			}
-		}
-		normalizeWeights(dataLocalityStatistics.values());
-		printPlacementAwarenessWeights();
+
+	public void setnClones(int nClones) {
+		this.nClones = nClones > 0 ? 0 : nClones;
+	}
+
+	public void setOutlookWeight(double outlookWeight) {
+		this.outlookWeight = outlookWeight < Double.MIN_VALUE ? Double.MIN_VALUE : outlookWeight;
+	}
+
+	public void setPlacementAwarenessWeight(double placementAwarenessWeight) {
+		this.placementAwarenessWeight = placementAwarenessWeight;
 	}
 
 	@Override
@@ -598,22 +614,6 @@ public class C3PO extends AbstractScheduler {
 		}
 
 		return new ArrayList<>();
-	}
-
-	public void setConservatismWeight(double conservatismWeight) {
-		this.conservatismWeight = conservatismWeight < Double.MIN_VALUE ? Double.MIN_VALUE : conservatismWeight;
-	}
-
-	public void setnClones(int nClones) {
-		this.nClones = nClones > 0 ? 0 : nClones;
-	}
-
-	public void setPlacementAwarenessWeight(double placementAwarenessWeight) {
-		this.placementAwarenessWeight = placementAwarenessWeight;
-	}
-
-	public void setOutlookWeight(double outlookWeight) {
-		this.outlookWeight = outlookWeight < Double.MIN_VALUE ? Double.MIN_VALUE : outlookWeight;
 	}
 
 }

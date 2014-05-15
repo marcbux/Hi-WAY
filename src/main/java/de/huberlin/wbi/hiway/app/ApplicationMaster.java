@@ -14,24 +14,24 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
 
 public interface ApplicationMaster {
 	
+	public void buildScripts(TaskInstance task, Container container) throws IOException;
+	
+	public Collection<Data> getOutputFiles();
+	
+	public String getRunId();
+	
+	public Scheduler getScheduler();
+	
+	public String getWorkflowName();
+	
 	public boolean init(String[] args) throws ParseException;
 	
 	public void parseWorkflow();
 	
 	public boolean run() throws YarnException, IOException;
 	
-	public String getRunId();
-	
-	public String getWorkflowName();
-	
-	public Collection<Data> getOutputFiles();
-	
-	public void buildScripts(TaskInstance task, Container container) throws IOException;
-	
-	public void taskSuccess(TaskInstance task, ContainerId containerId);
-	
 	public void taskFailure(TaskInstance task, ContainerId containerId);
 	
-	public Scheduler getScheduler();
+	public void taskSuccess(TaskInstance task, ContainerId containerId);
 
 }

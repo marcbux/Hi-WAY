@@ -51,8 +51,13 @@ public class WFAppMetrics {
 //	@Metric
 //	MutableCounterInt workflowsFailed;
 
-	@Metric
-	MutableCounterInt tasksLaunched;
+	public static WFAppMetrics create() {
+		return create(DefaultMetricsSystem.instance());
+	}
+	public static WFAppMetrics create(MetricsSystem ms) {
+		JvmMetrics.initSingleton("WFAppMaster", null);
+		return ms.register(new WFAppMetrics());
+	}
 	@Metric
 	MutableCounterInt tasksCompleted;
 	@Metric
@@ -60,18 +65,13 @@ public class WFAppMetrics {
 	@Metric
 	MutableCounterInt tasksKilled;
 	@Metric
+	MutableCounterInt tasksLaunched;
+
+	@Metric
 	MutableGaugeInt tasksRunning;
+
 	@Metric
 	MutableGaugeInt tasksWaiting;
-
-	public static WFAppMetrics create() {
-		return create(DefaultMetricsSystem.instance());
-	}
-
-	public static WFAppMetrics create(MetricsSystem ms) {
-		JvmMetrics.initSingleton("WFAppMaster", null);
-		return ms.register(new WFAppMetrics());
-	}
 
 //	public void submittedWorkflow(UUID runId) {
 //		workflowsSubmitted.incr();
@@ -85,12 +85,16 @@ public class WFAppMetrics {
 //		workflowsFailed.incr();
 //	}
 
-	public void launchedTask(TaskInstance task) {
-		tasksLaunched.incr();
-	}
-
 	public void completedTask(TaskInstance task) {
 		tasksCompleted.incr();
+	}
+
+	public void endRunningTask(TaskInstance task) {
+		tasksRunning.decr();
+	}
+
+	public void endWaitingTask() {
+		tasksWaiting.decr();
 	}
 
 	public void failedTask(TaskInstance task) {
@@ -101,20 +105,16 @@ public class WFAppMetrics {
 		tasksKilled.incr();
 	}
 
+	public void launchedTask(TaskInstance task) {
+		tasksLaunched.incr();
+	}
+
 	public void runningTask(TaskInstance task) {
 		tasksRunning.incr();
 	}
 
-	public void endRunningTask(TaskInstance task) {
-		tasksRunning.decr();
-	}
-
 	public void waitingTask() {
 		tasksWaiting.incr();
-	}
-
-	public void endWaitingTask() {
-		tasksWaiting.decr();
 	}
 
 }

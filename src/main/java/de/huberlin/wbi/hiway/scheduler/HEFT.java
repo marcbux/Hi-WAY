@@ -63,13 +63,13 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
  */
 public class HEFT extends StaticScheduler {
 
-	Map<TaskInstance, Double> readyTimePerTask;
-	Map<String, TreeSet<Double>> freeTimeSlotStartsPerNode;
+	private static final Log log = LogFactory.getLog(HEFT.class);
 	Map<String, Map<Double, Double>> freeTimeSlotLengthsPerNode;
+	Map<String, TreeSet<Double>> freeTimeSlotStartsPerNode;
+
+	Map<TaskInstance, Double> readyTimePerTask;
 
 	Map<String, Map<String, Double>> runtimeEstimate;
-
-	private static final Log log = LogFactory.getLog(HEFT.class);
 
 	public HEFT(Map<String, Map<String, Double>> runtimeEstimate) {
 		super(runtimeEstimate);
@@ -85,52 +85,6 @@ public class HEFT extends StaticScheduler {
 			freeTimeSlotLengths.put(0d, Double.MAX_VALUE);
 			freeTimeSlotLengthsPerNode.put(node, freeTimeSlotLengths);
 		}
-	}
-
-	@Override
-	public void addTasks(Collection<TaskInstance> tasks) {
-		List<TaskInstance> taskList = new LinkedList<>(tasks);
-		Collections.sort(taskList, StaticTaskInstance.Comparators.DEPTH);
-
-		Collection<String> nodes = runtimeEstimate.keySet();
-
-		// compute upward ranks of all tasks
-		for (int i = taskList.size() - 1; i >= 0; i--) {
-			TaskInstance task = taskList.get(i);
-			readyTimePerTask.put(task, 0d);
-			double maxSuccessorRank = 0;
-			try {
-				for (TaskInstance child : task.getChildTasks()) {
-					if (child.getUpwardRank() > maxSuccessorRank) {
-						maxSuccessorRank = child.getUpwardRank();
-					}
-				}
-			} catch (WorkflowStructureUnknownException e) {
-				throw new RuntimeException(e);
-			}
-
-			double averageComputationCost = 0;
-			for (String node : nodes) {
-				averageComputationCost += runtimeEstimate.get(node).get(task.getTaskName());
-			}
-			averageComputationCost /= nodes.size();
-
-			// note that the upward rank of a task will always be greater than that of its successors
-			try {
-				task.setUpwardRank(averageComputationCost + maxSuccessorRank);
-			} catch (WorkflowStructureUnknownException e) {
-				throw new RuntimeException(e);
-			}
-		}
-
-		// Phase 1: Task Prioritizing (sort by decreasing order of rank)
-		Collections.sort(taskList, StaticTaskInstance.Comparators.UPWARDSRANK);
-
-		// Phase 2: Processor Selection
-		for (TaskInstance task : taskList) {
-			addTask(task);
-		}
-
 	}
 
 	@Override
@@ -205,6 +159,52 @@ public class HEFT extends StaticScheduler {
 			freeTimeSlotStartsPerNode.get(bestNode).add(bestFinish);
 			freeTimeSlotLengthsPerNode.get(bestNode).put(bestFinish, actualTimeSlotLength - computationCost);
 		}
+	}
+
+	@Override
+	public void addTasks(Collection<TaskInstance> tasks) {
+		List<TaskInstance> taskList = new LinkedList<>(tasks);
+		Collections.sort(taskList, StaticTaskInstance.Comparators.DEPTH);
+
+		Collection<String> nodes = runtimeEstimate.keySet();
+
+		// compute upward ranks of all tasks
+		for (int i = taskList.size() - 1; i >= 0; i--) {
+			TaskInstance task = taskList.get(i);
+			readyTimePerTask.put(task, 0d);
+			double maxSuccessorRank = 0;
+			try {
+				for (TaskInstance child : task.getChildTasks()) {
+					if (child.getUpwardRank() > maxSuccessorRank) {
+						maxSuccessorRank = child.getUpwardRank();
+					}
+				}
+			} catch (WorkflowStructureUnknownException e) {
+				throw new RuntimeException(e);
+			}
+
+			double averageComputationCost = 0;
+			for (String node : nodes) {
+				averageComputationCost += runtimeEstimate.get(node).get(task.getTaskName());
+			}
+			averageComputationCost /= nodes.size();
+
+			// note that the upward rank of a task will always be greater than that of its successors
+			try {
+				task.setUpwardRank(averageComputationCost + maxSuccessorRank);
+			} catch (WorkflowStructureUnknownException e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		// Phase 1: Task Prioritizing (sort by decreasing order of rank)
+		Collections.sort(taskList, StaticTaskInstance.Comparators.UPWARDSRANK);
+
+		// Phase 2: Processor Selection
+		for (TaskInstance task : taskList) {
+			addTask(task);
+		}
+
 	}
 
 }

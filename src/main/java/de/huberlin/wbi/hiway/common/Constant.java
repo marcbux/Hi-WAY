@@ -33,35 +33,9 @@ package de.huberlin.wbi.hiway.common;
 
 public class Constant {
 
-	// the name of Hi-WAY applications, as shown in the RM web interface
-	public static final String APPLICATION_TYPE = "WORKFLOW";
-
-	// the directory in which Hi-WAY stores intermediate and output files
-	public static final String SANDBOX_DIRECTORY = "hiway";
-
-	// the names of scripts created by Hi-WAY for each invocation
-	public static final String SUPER_SCRIPT_FILENAME = "__super_script__";
-	public static final String PRE_SCRIPT_FILENAME = "__pre_script__";
-	public static final String POST_SCRIPT_FILENAME = "__post_script__";
-	public static final String BASH_SHEBANG = "#!/usr/bin/env bash\n";
-
-	// Keys of entries in the log
-	public static final String KEY_INVOC_HOST = "invoc-host";
-	public static final String KEY_INVOC_TIME_STAGEIN = "invoc-time-stagein";
-	public static final String KEY_INVOC_TIME_STAGEOUT = "invoc-time-stageout";
-	public static final String KEY_FILE_TIME_STAGEIN = "file-time-stagein";
-	public static final String KEY_FILE_TIME_STAGEOUT = "file-time-stageout";
-	public static final String KEY_INVOC_TIME_SCHED = "invoc-time-sched";
-	public static final String KEY_WF_NAME = "wf-name";
-	public static final String KEY_WF_TIME = "wf-time";
-	public static final String KEY_HIWAY_EVENT = "hiway-event";
-	
-	// the amount of memory (in MB) a single instance of the hdfs command requires
-	public static final int HDFS_MEMORY_REQ = 768;
-	
 	// available scheduling policies
 	public static enum SchedulingPolicy {
-		staticRoundRobin, heft, greedyQueue, c3po, conservative, cloning, placementAware, outlooking
+		c3po, cloning, conservative, greedyQueue, heft, outlooking, placementAware, staticRoundRobin
 	}
 
 	// available workflow formats
@@ -69,7 +43,33 @@ public class Constant {
 		cuneiform, dax
 	}
 
+	// the name of Hi-WAY applications, as shown in the RM web interface
+	public static final String APPLICATION_TYPE = "WORKFLOW";
+	public static final String BASH_SHEBANG = "#!/usr/bin/env bash\n";
+	// the amount of memory (in MB) a single instance of the hdfs command requires
+	public static final int HDFS_MEMORY_REQ = 768;
+	public static final String KEY_FILE_TIME_STAGEIN = "file-time-stagein";
+
+	public static final String KEY_FILE_TIME_STAGEOUT = "file-time-stageout";
+	public static final String KEY_HIWAY_EVENT = "hiway-event";
+	// Keys of entries in the log
+	public static final String KEY_INVOC_HOST = "invoc-host";
+	public static final String KEY_INVOC_TIME_SCHED = "invoc-time-sched";
+	public static final String KEY_INVOC_TIME_STAGEIN = "invoc-time-stagein";
+	public static final String KEY_INVOC_TIME_STAGEOUT = "invoc-time-stageout";
+	public static final String KEY_WF_NAME = "wf-name";
+	public static final String KEY_WF_TIME = "wf-time";
+	public static final String POST_SCRIPT_FILENAME = "__post_script__";
+	
+	public static final String PRE_SCRIPT_FILENAME = "__pre_script__";
+	
 	// how often a task is to be retried before the workflow fails
 	public static int retries = 1;
+
+	// the directory in which Hi-WAY stores intermediate and output files
+	public static final String SANDBOX_DIRECTORY = "hiway";
+
+	// the names of scripts created by Hi-WAY for each invocation
+	public static final String SUPER_SCRIPT_FILENAME = "__super_script__";
 
 }

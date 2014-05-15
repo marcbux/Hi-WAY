@@ -34,11 +34,31 @@ import edu.isi.pegasus.planner.parser.dax.DAXParser;
 
 public class DaxApplicationMaster extends AbstractApplicationMaster {
 	
+	protected class DaxRMCallbackHandler extends RMCallbackHandler {
+		
+		@Override
+		public void onContainersCompleted(
+				List<ContainerStatus> completedContainers) {
+			super.onContainersCompleted(completedContainers);
+			if (scheduler.getNumberOfReadyTasks() == 0 && scheduler.getNumberOfRunningTasks() == 0) {
+				done = true;
+			}
+//			else {
+//				// ask for more containers if new tasks are available or containers have failed
+//				while (scheduler.hasNextNodeRequest()) {
+//					numRequestedContainers.incrementAndGet();
+//					ContainerRequest containerAsk = setupContainerAskForRM(scheduler.getNextNodeRequest());
+//					amRMClient.addContainerRequest(containerAsk);
+//				}
+//			}
+		}
+	}
+
 	private static final Log log = LogFactory
 			.getLog(DaxApplicationMaster.class);
 
 	private ADag dag;
-
+	
 	public DaxApplicationMaster() throws IOException {
 		super();
 	}
@@ -176,26 +196,6 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 		super.taskSuccess(task, containerId);
 		for (Data data : task.getOutputData()) {
 			Data.hdfsDirectoryMidfixes.put(data, containerId.toString());
-		}
-	}
-	
-	protected class DaxRMCallbackHandler extends RMCallbackHandler {
-		
-		@Override
-		public void onContainersCompleted(
-				List<ContainerStatus> completedContainers) {
-			super.onContainersCompleted(completedContainers);
-			if (scheduler.getNumberOfReadyTasks() == 0 && scheduler.getNumberOfRunningTasks() == 0) {
-				done = true;
-			}
-//			else {
-//				// ask for more containers if new tasks are available or containers have failed
-//				while (scheduler.hasNextNodeRequest()) {
-//					numRequestedContainers.incrementAndGet();
-//					ContainerRequest containerAsk = setupContainerAskForRM(scheduler.getNextNodeRequest());
-//					amRMClient.addContainerRequest(containerAsk);
-//				}
-//			}
 		}
 	}
 

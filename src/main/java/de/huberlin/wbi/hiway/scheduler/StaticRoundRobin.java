@@ -63,13 +63,6 @@ public class StaticRoundRobin extends StaticScheduler {
 	}
 
 	@Override
-	public void addTasks(Collection<TaskInstance> tasks) {
-		List<TaskInstance> taskList = new LinkedList<>(tasks);
-		Collections.sort(taskList, StaticTaskInstance.Comparators.DEPTH);
-		super.addTasks(taskList);
-	}
-
-	@Override
 	public void addTask(TaskInstance task) {
 		super.addTask(task);
 		if (!nodeIterator.hasNext()) {
@@ -81,6 +74,13 @@ public class StaticRoundRobin extends StaticScheduler {
 		if (task.readyToExecute()) {
 			addTaskToQueue(task);
 		}
+	}
+
+	@Override
+	public void addTasks(Collection<TaskInstance> tasks) {
+		List<TaskInstance> taskList = new LinkedList<>(tasks);
+		Collections.sort(taskList, StaticTaskInstance.Comparators.DEPTH);
+		super.addTasks(taskList);
 	}
 
 }

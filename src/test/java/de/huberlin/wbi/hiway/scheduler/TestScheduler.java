@@ -57,74 +57,6 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
 
 public class TestScheduler {
 
-	@Test
-	public void shakeRattelRollGreedyQueue() {
-		shakeRattelRoll(new GreedyQueue());
-	}
-
-	@Test
-	public void shakeRattelRollC3PO() {
-		C3PO c3po = new C3PO(0);
-		c3po.setnClones(0);
-		shakeRattelRoll(c3po);
-	}
-
-//	@Test
-//	public void montage05GreedyQueue() {
-//		montage05("greedyQueue");
-//	}
-
-//	@Test
-//	public void montage05C3PO() {
-//		montage05("c3po");
-//	}
-
-//	private void montage05(String scheduler) {
-//		List<String> nodeNames = new ArrayList<>();
-//		nodeNames.add("Worker");
-//		ApplicationMaster workflow;
-//		try {
-//			workflow = new DaxApplicationMaster();
-//			String[] args = { "--workflow", "examples/dag_0.5.xml",
-//					"--scheduler", scheduler };
-//			workflow.init(args);
-//			workflow.parseWorkflow();
-//
-//			run(workflow.getScheduler(), nodeNames, null, null);
-//		} catch (IOException e1) {
-//			e1.printStackTrace();
-//		} catch (ParseException e) {
-//			e.printStackTrace();
-//		}
-//	}
-
-	private void shakeRattelRoll(Scheduler scheduler) {
-
-		List<String> nodeNames = new ArrayList<>();
-		nodeNames.add("Charlie");
-		nodeNames.add("Tango");
-		nodeNames.add("Foxtrot");
-		List<String> taskNames = new ArrayList<>();
-		taskNames.add("Shake");
-		taskNames.add("Rattle");
-		taskNames.add("Roll");
-		int[] nTasks = { 50, 100, 30 };
-		int[][] runtimes = { { 5, 10, 20 }, { 10, 5, 50 }, { 15, 5, 30 } };
-
-		List<TaskInstance> tasks = new ArrayList<>();
-		for (String taskName : taskNames) {
-			for (int i = 0; i < nTasks[taskNames.indexOf(taskName)]; i++)
-				tasks.add(new StaticTaskInstance(UUID
-						.randomUUID(), taskName, taskName
-						.hashCode()));
-		}
-
-		scheduler.addTasks(tasks);
-
-		run(scheduler, nodeNames, taskNames, runtimes);
-
-	}
-
 	private void run(Scheduler scheduler, List<String> nodeNames,
 			List<String> taskNames, int[][] runtimes) {
 
@@ -173,6 +105,74 @@ public class TestScheduler {
 
 			clock++;
 		}
+	}
+
+	private void shakeRattelRoll(Scheduler scheduler) {
+
+		List<String> nodeNames = new ArrayList<>();
+		nodeNames.add("Charlie");
+		nodeNames.add("Tango");
+		nodeNames.add("Foxtrot");
+		List<String> taskNames = new ArrayList<>();
+		taskNames.add("Shake");
+		taskNames.add("Rattle");
+		taskNames.add("Roll");
+		int[] nTasks = { 50, 100, 30 };
+		int[][] runtimes = { { 5, 10, 20 }, { 10, 5, 50 }, { 15, 5, 30 } };
+
+		List<TaskInstance> tasks = new ArrayList<>();
+		for (String taskName : taskNames) {
+			for (int i = 0; i < nTasks[taskNames.indexOf(taskName)]; i++)
+				tasks.add(new StaticTaskInstance(UUID
+						.randomUUID(), taskName, taskName
+						.hashCode()));
+		}
+
+		scheduler.addTasks(tasks);
+
+		run(scheduler, nodeNames, taskNames, runtimes);
+
+	}
+
+//	@Test
+//	public void montage05GreedyQueue() {
+//		montage05("greedyQueue");
+//	}
+
+//	@Test
+//	public void montage05C3PO() {
+//		montage05("c3po");
+//	}
+
+//	private void montage05(String scheduler) {
+//		List<String> nodeNames = new ArrayList<>();
+//		nodeNames.add("Worker");
+//		ApplicationMaster workflow;
+//		try {
+//			workflow = new DaxApplicationMaster();
+//			String[] args = { "--workflow", "examples/dag_0.5.xml",
+//					"--scheduler", scheduler };
+//			workflow.init(args);
+//			workflow.parseWorkflow();
+//
+//			run(workflow.getScheduler(), nodeNames, null, null);
+//		} catch (IOException e1) {
+//			e1.printStackTrace();
+//		} catch (ParseException e) {
+//			e.printStackTrace();
+//		}
+//	}
+
+	@Test
+	public void shakeRattelRollC3PO() {
+		C3PO c3po = new C3PO(0);
+		c3po.setnClones(0);
+		shakeRattelRoll(c3po);
+	}
+
+	@Test
+	public void shakeRattelRollGreedyQueue() {
+		shakeRattelRoll(new GreedyQueue());
 	}
 
 }

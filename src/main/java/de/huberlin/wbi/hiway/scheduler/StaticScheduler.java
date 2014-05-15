@@ -53,11 +53,11 @@ public abstract class StaticScheduler extends AbstractScheduler {
 
 	private static final Log log = LogFactory.getLog(StaticScheduler.class);
 
-	// the static schedule
-	protected Map<TaskInstance, String> schedule;
-
 	// the tasks per compute node that are ready to execute
 	protected Map<String, Queue<TaskInstance>> queues;
+
+	// the static schedule
+	protected Map<TaskInstance, String> schedule;
 
 	public StaticScheduler(Map<String, Map<String, Double>> runtimeEstimate) {
 		schedule = new HashMap<>();
@@ -80,15 +80,6 @@ public abstract class StaticScheduler extends AbstractScheduler {
 	}
 
 	@Override
-	public int getNumberOfReadyTasks() {
-		int readyTasks = 0;
-		for (Queue<TaskInstance> queue : queues.values()) {
-			readyTasks += queue.size();
-		}
-		return readyTasks;
-	}
-
-	@Override
 	public TaskInstance getNextTask(Container container) {
 		super.getNextTask(container);
 		String node = container.getNodeId().getHost();
@@ -102,6 +93,15 @@ public abstract class StaticScheduler extends AbstractScheduler {
 		task.incTries();
 
 		return task;
+	}
+
+	@Override
+	public int getNumberOfReadyTasks() {
+		int readyTasks = 0;
+		for (Queue<TaskInstance> queue : queues.values()) {
+			readyTasks += queue.size();
+		}
+		return readyTasks;
 	}
 	
 	@Override

@@ -55,14 +55,26 @@ public abstract class AbstractScheduler implements Scheduler {
 	private static final Log log = LogFactory.getLog(AbstractScheduler.class);
 
 	private int numberOfFinishedTasks = 0;
-	private int numberOfRunningTasks = 0;
 	private int numberOfRemainingTasks = 0;
+	private int numberOfRunningTasks = 0;
 
 	// a queue of nodes on which containers are to be requested
 	protected Queue<String[]> unissuedNodeRequests;
 
 	public AbstractScheduler() {
 		unissuedNodeRequests = new LinkedList<>();
+	}
+
+	@Override
+	public void addTask(TaskInstance task) {
+		numberOfRemainingTasks++;
+	}
+
+	@Override
+	public void addTasks(Collection<TaskInstance> tasks) {
+		for (TaskInstance task : tasks) {
+			addTask(task);
+		}
 	}
 
 	protected void addTaskToQueue(TaskInstance task) {
@@ -75,20 +87,10 @@ public abstract class AbstractScheduler implements Scheduler {
 	}
 
 	@Override
-	public boolean hasNextNodeRequest() {
-		return !unissuedNodeRequests.isEmpty();
-	}
-
-	@Override
-	public void addTasks(Collection<TaskInstance> tasks) {
-		for (TaskInstance task : tasks) {
-			addTask(task);
-		}
-	}
-
-	@Override
-	public void addTask(TaskInstance task) {
-		numberOfRemainingTasks++;
+	public TaskInstance getNextTask(Container container) {
+		numberOfRemainingTasks--;
+		numberOfRunningTasks++;
+		return null;
 	}
 
 	@Override
@@ -113,10 +115,18 @@ public abstract class AbstractScheduler implements Scheduler {
 	}
 
 	@Override
-	public TaskInstance getNextTask(Container container) {
-		numberOfRemainingTasks--;
-		numberOfRunningTasks++;
-		return null;
+	public boolean hasNextNodeRequest() {
+		return !unissuedNodeRequests.isEmpty();
+	}
+
+	@Override
+	public boolean nothingToSchedule() {
+		return getNumberOfReadyTasks() == 0;
+	}
+
+	@Override
+	public boolean relaxLocality() {
+		return true;
 	}
 
 	@Override
@@ -137,7 +147,7 @@ public abstract class AbstractScheduler implements Scheduler {
 
 		return new ArrayList<>();
 	}
-
+	
 	@Override
 	public Collection<ContainerId> taskFailed(TaskInstance task, ContainerStatus containerStatus) {
 		numberOfRunningTasks--;
@@ -151,16 +161,6 @@ public abstract class AbstractScheduler implements Scheduler {
 		}
 
 		return new ArrayList<>();
-	}
-
-	@Override
-	public boolean nothingToSchedule() {
-		return getNumberOfReadyTasks() == 0;
-	}
-	
-	@Override
-	public boolean relaxLocality() {
-		return true;
 	}
 
 }

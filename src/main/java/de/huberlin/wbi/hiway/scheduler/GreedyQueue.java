@@ -65,11 +65,6 @@ public class GreedyQueue extends AbstractScheduler {
 	}
 
 	@Override
-	public int getNumberOfReadyTasks() {
-		return queue.size();
-	}
-
-	@Override
 	protected void addTaskToQueue(TaskInstance task) {
 		super.addTaskToQueue(task);
 		queue.add(task);
@@ -85,6 +80,11 @@ public class GreedyQueue extends AbstractScheduler {
 				+ container.getNodeId().getHost());
 		task.incTries();
 		return task;
+	}
+
+	@Override
+	public int getNumberOfReadyTasks() {
+		return queue.size();
 	}
 
 }

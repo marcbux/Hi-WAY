@@ -89,52 +89,6 @@ public class Client {
 	// a handle to the log, in which any events are recorded
 	private static final Log log = LogFactory.getLog(Client.class);
 
-	// the configuration of the Hadoop installation
-	private Configuration conf;
-
-	// a handle to the YARN ApplicationsManager (ASM)
-	private YarnClient yarnClient;
-
-	// application master specific info to register a new Application with RM/ASM
-	// the priority of the AM container
-	private int amPriority = 0;
-	// the queue to which this application is to be submitted in the RM
-	private String amQueue = "";
-	// amount of memory resource to request for to run the App Master
-	private int amMemory = 4096;
-
-	// ApplicationMaster jar file
-	private String appMasterJarPath = "";
-	// main class to invoke application master
-//	private final String appMasterMainClass;
-
-	// environment variables to be setup for the workflow tasks
-	private Map<String, String> shellEnv = new HashMap<String, String>();
-	// workflow task container priority
-	private int shellCmdPriority = 0;
-
-	// amount of memory and number of cores to request for containers in which workflow tasks will be executed
-	private int containerMemory = 4096;
-	private int containerCores = 1;
-
-	// the type of workflow scheduler
-	private Constant.SchedulingPolicy scheduler;
-
-	// the workflow format and its path in the file system
-	private String workflowPath;
-	private Constant.WorkflowFormat workflowType;
-
-	// start time for client
-	private final long clientStartTime = System.currentTimeMillis();
-	// timeout threshold for client. Kill app after time interval expires.
-	private long clientTimeout;
-
-	// debug flag
-	boolean debugFlag = false;
-
-	// command line options
-	private Options opts;
-
 	/**
 	 * The main routine.
 	 * 
@@ -167,6 +121,57 @@ public class Client {
 		}
 		log.error("Application failed to complete successfully");
 		System.exit(2);
+	}
+
+	// amount of memory resource to request for to run the App Master
+	private int amMemory = 4096;
+
+	// application master specific info to register a new Application with RM/ASM
+	// the priority of the AM container
+	private int amPriority = 0;
+	// the queue to which this application is to be submitted in the RM
+	private String amQueue = "";
+	// ApplicationMaster jar file
+	private String appMasterJarPath = "";
+	// main class to invoke application master
+//	private final String appMasterMainClass;
+
+	// start time for client
+	private final long clientStartTime = System.currentTimeMillis();
+
+	// timeout threshold for client. Kill app after time interval expires.
+	private long clientTimeout;
+	// the configuration of the Hadoop installation
+	private Configuration conf;
+
+	private int containerCores = 1;
+	// amount of memory and number of cores to request for containers in which workflow tasks will be executed
+	private int containerMemory = 4096;
+
+	// debug flag
+	boolean debugFlag = false;
+
+	// command line options
+	private Options opts;
+	// the type of workflow scheduler
+	private Constant.SchedulingPolicy scheduler;
+
+	// workflow task container priority
+	private int shellCmdPriority = 0;
+	// environment variables to be setup for the workflow tasks
+	private Map<String, String> shellEnv = new HashMap<String, String>();
+
+	// the workflow format and its path in the file system
+	private String workflowPath;
+
+	private Constant.WorkflowFormat workflowType;
+
+	// a handle to the YARN ApplicationsManager (ASM)
+	private YarnClient yarnClient;
+
+	public Client() throws Exception {
+		this(new YarnConfiguration());
+		conf.addResource(new Path(System.getenv("HADOOP_CONF_DIR") + "/core-site.xml"));
 	}
 
 	Client(Configuration conf) {
@@ -202,16 +207,18 @@ public class Client {
 		opts.addOption("help", false, "Print usage");
 	}
 
-	public Client() throws Exception {
-		this(new YarnConfiguration());
-		conf.addResource(new Path(System.getenv("HADOOP_CONF_DIR") + "/core-site.xml"));
-	}
-
 	/**
-	 * Helper function to print out usage.
+	 * Kill a submitted application by sending a call to the ASM.
+	 * 
+	 * @param appId
+	 * Application Id to be killed.
+	 * 
+	 * @throws YarnException
+	 * @throws IOException
 	 */
-	private void printUsage() {
-		new HelpFormatter().printHelp("Client", opts);
+	private void forceKillApplication(ApplicationId appId) throws YarnException, IOException {
+		// Response can be ignored as it is non-null on success or throws an exception in case of failures
+		yarnClient.killApplication(appId);
 	}
 
 	/**
@@ -301,6 +308,61 @@ public class Client {
 				.parseInt(cliParser.getOptionValue("timeout", Integer.toString(1 * 24 * 60 * 60 * 1000)));
 
 		return true;
+	}
+
+	/**
+	 * Monitor the submitted application for completion. Kill application if time expires.
+	 * 
+	 * @param appId
+	 * Application Id of application to be monitored
+	 * @return true if application completed successfully
+	 * @throws YarnException
+	 * @throws IOException
+	 */
+	private boolean monitorApplication(ApplicationId appId) throws YarnException, IOException {
+		while (true) {
+			// Check app status every 1 second.
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				log.debug("Thread sleep in monitoring loop interrupted");
+			}
+
+			// Get application report for the appId we are interested in
+			ApplicationReport report = yarnClient.getApplicationReport(appId);
+
+			YarnApplicationState state = report.getYarnApplicationState();
+			FinalApplicationStatus dsStatus = report.getFinalApplicationStatus();
+			if (YarnApplicationState.FINISHED == state) {
+				if (FinalApplicationStatus.SUCCEEDED == dsStatus) {
+					log.info("Application has completed successfully. Breaking monitoring loop");
+					log.info(report.getDiagnostics());
+					return true;
+				} else {
+					log.info("Application did finish unsuccessfully." + " YarnState=" + state.toString()
+							+ ", DSFinalStatus=" + dsStatus.toString() + ". Breaking monitoring loop");
+					return false;
+				}
+			} else if (YarnApplicationState.KILLED == state || YarnApplicationState.FAILED == state) {
+				log.info("Application did not finish." + " YarnState=" + state.toString() + ", DSFinalStatus="
+						+ dsStatus.toString() + ". Breaking monitoring loop");
+				return false;
+			}
+
+			if (System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
+				log.info("Reached client specified timeout for application. Killing application");
+				forceKillApplication(appId);
+				return false;
+			}
+		}
+
+	}
+
+	/**
+	 * Helper function to print out usage.
+	 */
+	private void printUsage() {
+		new HelpFormatter().printHelp("Client", opts);
 	}
 
 	/**
@@ -496,68 +558,6 @@ public class Client {
 
 		return success;
 
-	}
-
-	/**
-	 * Monitor the submitted application for completion. Kill application if time expires.
-	 * 
-	 * @param appId
-	 * Application Id of application to be monitored
-	 * @return true if application completed successfully
-	 * @throws YarnException
-	 * @throws IOException
-	 */
-	private boolean monitorApplication(ApplicationId appId) throws YarnException, IOException {
-		while (true) {
-			// Check app status every 1 second.
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				log.debug("Thread sleep in monitoring loop interrupted");
-			}
-
-			// Get application report for the appId we are interested in
-			ApplicationReport report = yarnClient.getApplicationReport(appId);
-
-			YarnApplicationState state = report.getYarnApplicationState();
-			FinalApplicationStatus dsStatus = report.getFinalApplicationStatus();
-			if (YarnApplicationState.FINISHED == state) {
-				if (FinalApplicationStatus.SUCCEEDED == dsStatus) {
-					log.info("Application has completed successfully. Breaking monitoring loop");
-					log.info(report.getDiagnostics());
-					return true;
-				} else {
-					log.info("Application did finish unsuccessfully." + " YarnState=" + state.toString()
-							+ ", DSFinalStatus=" + dsStatus.toString() + ". Breaking monitoring loop");
-					return false;
-				}
-			} else if (YarnApplicationState.KILLED == state || YarnApplicationState.FAILED == state) {
-				log.info("Application did not finish." + " YarnState=" + state.toString() + ", DSFinalStatus="
-						+ dsStatus.toString() + ". Breaking monitoring loop");
-				return false;
-			}
-
-			if (System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
-				log.info("Reached client specified timeout for application. Killing application");
-				forceKillApplication(appId);
-				return false;
-			}
-		}
-
-	}
-
-	/**
-	 * Kill a submitted application by sending a call to the ASM.
-	 * 
-	 * @param appId
-	 * Application Id to be killed.
-	 * 
-	 * @throws YarnException
-	 * @throws IOException
-	 */
-	private void forceKillApplication(ApplicationId appId) throws YarnException, IOException {
-		// Response can be ignored as it is non-null on success or throws an exception in case of failures
-		yarnClient.killApplication(appId);
 	}
 
 }

@@ -44,15 +44,6 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			this.invocation = invocation;
 		}
 
-		public Invocation getInvocation() {
-			return invocation;
-		}
-
-		@Override
-		public boolean readyToExecute() {
-			return true;
-		}
-		
 		@Override
 		public void addChildTask(TaskInstance childTask)
 				throws WorkflowStructureUnknownException {
@@ -66,7 +57,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			throw new WorkflowStructureUnknownException(
 					"Workflow structure not derivable in Cuneiform");
 		}
-
+		
 		@Override
 		public Set<TaskInstance> getChildTasks()
 				throws WorkflowStructureUnknownException {
@@ -80,6 +71,10 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 					"Workflow structure not derivable in Cuneiform");
 		}
 
+		public Invocation getInvocation() {
+			return invocation;
+		}
+
 		@Override
 		public Set<TaskInstance> getParentTasks()
 				throws WorkflowStructureUnknownException {
@@ -91,6 +86,11 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		public double getUpwardRank() throws WorkflowStructureUnknownException {
 			throw new WorkflowStructureUnknownException(
 					"Workflow structure not derivable in Cuneiform");
+		}
+
+		@Override
+		public boolean readyToExecute() {
+			return true;
 		}
 
 		@Override
@@ -169,16 +169,16 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 	}
 
-	private TicketSrcActor ticketSrc;
-	
 	private static final String CUNEIFORM_SCRIPT_FILENAME = "__cuneiform_script__";
-
+	
 	private static final Log log = LogFactory
 			.getLog(CuneiformApplicationMaster.class);
 
 	public static void main(String[] args) {
 		AbstractApplicationMaster.loop(new CuneiformApplicationMaster(), args);
 	}
+
+	private TicketSrcActor ticketSrc;
 
 	// private Map<Data, CuneiformTaskInstance> fileToProducer;
 

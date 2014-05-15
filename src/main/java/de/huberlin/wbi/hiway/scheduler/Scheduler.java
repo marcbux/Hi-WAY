@@ -47,31 +47,31 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  */
 public interface Scheduler {
 
-	public void addTasks(Collection<TaskInstance> tasks);
-
 	public void addTask(TaskInstance task);
 
-	public boolean nothingToSchedule();
-
-	public int getNumberOfFinishedTasks();
-
-	public int getNumberOfRunningTasks();
-
-	public int getNumberOfReadyTasks();
-
-	public int getNumberOfTotalTasks();
+	public void addTasks(Collection<TaskInstance> tasks);
 
 	public String[] getNextNodeRequest();
 
-	public boolean hasNextNodeRequest();
-
 	public TaskInstance getNextTask(Container container);
 
-	public Collection<ContainerId> taskCompleted(TaskInstance task, ContainerStatus containerStatus, long runtimeInMs);
+	public int getNumberOfFinishedTasks();
 
-	public Collection<ContainerId> taskFailed(TaskInstance task, ContainerStatus containerStatus);
-	
+	public int getNumberOfReadyTasks();
+
+	public int getNumberOfRunningTasks();
+
+	public int getNumberOfTotalTasks();
+
+	public boolean hasNextNodeRequest();
+
+	public boolean nothingToSchedule();
+
 	// determines whether container requests are tied to specific worker nodes
 	public boolean relaxLocality();
+
+	public Collection<ContainerId> taskCompleted(TaskInstance task, ContainerStatus containerStatus, long runtimeInMs);
+	
+	public Collection<ContainerId> taskFailed(TaskInstance task, ContainerStatus containerStatus);
 
 }

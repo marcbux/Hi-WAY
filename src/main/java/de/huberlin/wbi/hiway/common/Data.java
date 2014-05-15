@@ -56,23 +56,31 @@ import org.apache.hadoop.yarn.util.Records;
  * @author Marc Bux
  */
 public class Data implements Comparable<Data> {
-	private static final Log log = LogFactory.getLog(Data.class);
-
-	// The local directory and name of the file. The local directory is also the suffix of the directoy in HDFS.
-	private String directorySuffix;
-	private String name;
-
-	// The hdfs directory prefix (usually the Hi-WAY sandbx folder) for non-input files
-	private static String hdfsDirectoryPrefix = "";
-
 	// The hdfs directory midfixes (usually application and container id) for non-input files, e.g. for a
 	// non-input-file:
 	// local: my_folder/my_file.txt
 	// hdfs: sandbox/app_01/container_01/my_folder/my_file.txt
 	public static Map<Data, String> hdfsDirectoryMidfixes = new HashMap<>();
 
+	// The hdfs directory prefix (usually the Hi-WAY sandbx folder) for non-input files
+	private static String hdfsDirectoryPrefix = "";
+	private static final Log log = LogFactory.getLog(Data.class);
+
+	public static String getHdfsDirectoryPrefix() {
+		return hdfsDirectoryPrefix;
+	}
+
+	public static void setHdfsDirectoryPrefix(String hdfsDirectoryPrefixDefault) {
+		Data.hdfsDirectoryPrefix = hdfsDirectoryPrefixDefault;
+	}
+
+	// The local directory and name of the file. The local directory is also the suffix of the directoy in HDFS.
+	private String directorySuffix;
 	// is the file input or output of the workflow (otherwise, its an intermediate and possibly temporary file product)
 	private boolean input;
+
+	private String name;
+
 	private boolean output;
 
 	public Data(String path) {
@@ -85,81 +93,6 @@ public class Data implements Comparable<Data> {
 
 		this.directorySuffix = path.substring(0, endDirectory);
 		this.name = path.substring(startName);
-	}
-
-	public static void setHdfsDirectoryPrefix(String hdfsDirectoryPrefixDefault) {
-		Data.hdfsDirectoryPrefix = hdfsDirectoryPrefixDefault;
-	}
-
-	public static String getHdfsDirectoryPrefix() {
-		return hdfsDirectoryPrefix;
-	}
-
-	public void setInput(boolean isInput) {
-		this.input = isInput;
-	}
-
-	public void setOutput(boolean isOutput) {
-		this.output = isOutput;
-	}
-
-	public boolean isInput() {
-		return input;
-	}
-
-	public boolean isOutput() {
-		return output;
-	}
-
-	public String getLocalDirectory() {
-		return directorySuffix;
-	}
-
-	public String getHdfsDirectory(String hdfsDirectoryMidfix) {
-		List<String> directories = new ArrayList<>();
-		if (!isInput() && hdfsDirectoryPrefix.length() > 0)
-			directories.add(hdfsDirectoryPrefix);
-		if (!isInput() && hdfsDirectoryMidfix.length() > 0)
-			directories.add(hdfsDirectoryMidfix);
-		if (directorySuffix.length() > 0)
-			directories.add(directorySuffix);
-		String hdfsDirectory = directories.size() > 0 ? directories.get(0) : "";
-		for (int i = 1; i < directories.size(); i++) {
-			hdfsDirectory = hdfsDirectory + "/" + directories.get(i);
-		}
-		return hdfsDirectory;
-	}
-
-	public String getLocalPath() {
-		String localDirectory = getLocalDirectory();
-		return (localDirectory.length() == 0) ? name : localDirectory + "/" + name;
-	}
-
-	public String getHdfsPath(String hdfsDirectoryMidfix) {
-		String hdfsDirectory = getHdfsDirectory(hdfsDirectoryMidfix);
-		return (hdfsDirectory.length() == 0) ? name : hdfsDirectory + "/" + name;
-	}
-
-	public void stageIn(FileSystem fs, String hdfsDirectoryMidfix) throws IOException {
-		Path src = new Path(fs.getHomeDirectory(), getHdfsPath(hdfsDirectoryMidfix));
-		Path dest = new Path(getLocalPath());
-		log.debug("Staging in: " + src + " -> " + dest);
-		if (!getLocalDirectory().isEmpty()) {
-			Path dir = new Path(getLocalDirectory());
-			fs.mkdirs(dir);
-		}
-		fs.copyToLocalFile(false, src, dest);
-	}
-
-	public void stageOut(FileSystem fs, String hdfsDirectoryMidfix) throws IOException {
-		Path src = new Path(getLocalPath());
-		Path dest = new Path(fs.getHomeDirectory(), getHdfsPath(hdfsDirectoryMidfix));
-		log.debug("Staging out: " + src + " -> " + dest);
-		if (!getHdfsDirectory(hdfsDirectoryMidfix).isEmpty()) {
-			Path dir = new Path(fs.getHomeDirectory(), getHdfsDirectory(hdfsDirectoryMidfix));
-			fs.mkdirs(dir);
-		}
-		fs.copyFromLocalFile(false, true, src, dest);
 	}
 
 	public void addToLocalResourceMap(Map<String, LocalResource> localResources, FileSystem fs,
@@ -179,8 +112,8 @@ public class Data implements Comparable<Data> {
 	}
 
 	@Override
-	public String toString() {
-		return getLocalPath();
+	public int compareTo(Data other) {
+		return this.getLocalPath().compareTo(other.getLocalPath());
 	}
 
 	public long countAvailableLocalData(FileSystem fs, Container container) throws IOException {
@@ -214,23 +147,90 @@ public class Data implements Comparable<Data> {
 		return fileStatus.getLen();
 	}
 
-	public String getName() {
-		return name;
-	}
-	
-	@Override
-	public int compareTo(Data other) {
-		return this.getLocalPath().compareTo(other.getLocalPath());
-	}
-	
 	@Override
 	public boolean equals(Object obj) {
 		return obj instanceof Data ? this.getLocalPath().equals(((Data)obj).getLocalPath()) : false;
 	}
-	
+
+	public String getHdfsDirectory(String hdfsDirectoryMidfix) {
+		List<String> directories = new ArrayList<>();
+		if (!isInput() && hdfsDirectoryPrefix.length() > 0)
+			directories.add(hdfsDirectoryPrefix);
+		if (!isInput() && hdfsDirectoryMidfix.length() > 0)
+			directories.add(hdfsDirectoryMidfix);
+		if (directorySuffix.length() > 0)
+			directories.add(directorySuffix);
+		String hdfsDirectory = directories.size() > 0 ? directories.get(0) : "";
+		for (int i = 1; i < directories.size(); i++) {
+			hdfsDirectory = hdfsDirectory + "/" + directories.get(i);
+		}
+		return hdfsDirectory;
+	}
+
+	public String getHdfsPath(String hdfsDirectoryMidfix) {
+		String hdfsDirectory = getHdfsDirectory(hdfsDirectoryMidfix);
+		return (hdfsDirectory.length() == 0) ? name : hdfsDirectory + "/" + name;
+	}
+
+	public String getLocalDirectory() {
+		return directorySuffix;
+	}
+
+	public String getLocalPath() {
+		String localDirectory = getLocalDirectory();
+		return (localDirectory.length() == 0) ? name : localDirectory + "/" + name;
+	}
+
+	public String getName() {
+		return name;
+	}
+
 	@Override
 	public int hashCode() {
 		return this.getLocalPath().hashCode();
+	}
+
+	public boolean isInput() {
+		return input;
+	}
+
+	public boolean isOutput() {
+		return output;
+	}
+
+	public void setInput(boolean isInput) {
+		this.input = isInput;
+	}
+
+	public void setOutput(boolean isOutput) {
+		this.output = isOutput;
+	}
+	
+	public void stageIn(FileSystem fs, String hdfsDirectoryMidfix) throws IOException {
+		Path src = new Path(fs.getHomeDirectory(), getHdfsPath(hdfsDirectoryMidfix));
+		Path dest = new Path(getLocalPath());
+		log.debug("Staging in: " + src + " -> " + dest);
+		if (!getLocalDirectory().isEmpty()) {
+			Path dir = new Path(getLocalDirectory());
+			fs.mkdirs(dir);
+		}
+		fs.copyToLocalFile(false, src, dest);
+	}
+	
+	public void stageOut(FileSystem fs, String hdfsDirectoryMidfix) throws IOException {
+		Path src = new Path(getLocalPath());
+		Path dest = new Path(fs.getHomeDirectory(), getHdfsPath(hdfsDirectoryMidfix));
+		log.debug("Staging out: " + src + " -> " + dest);
+		if (!getHdfsDirectory(hdfsDirectoryMidfix).isEmpty()) {
+			Path dir = new Path(fs.getHomeDirectory(), getHdfsDirectory(hdfsDirectoryMidfix));
+			fs.mkdirs(dir);
+		}
+		fs.copyFromLocalFile(false, true, src, dest);
+	}
+	
+	@Override
+	public String toString() {
+		return getLocalPath();
 	}
 
 }
