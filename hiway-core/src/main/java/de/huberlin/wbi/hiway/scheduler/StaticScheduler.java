@@ -70,7 +70,7 @@ public abstract class StaticScheduler extends AbstractScheduler {
 	}
 
 	@Override
-	protected void addTaskToQueue(TaskInstance task) {
+	public void addTaskToQueue(TaskInstance task) {
 		String node = schedule.get(task);
 		String[] nodes = new String[1];
 		nodes[0] = node;

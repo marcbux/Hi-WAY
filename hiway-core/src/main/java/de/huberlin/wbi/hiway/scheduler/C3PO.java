@@ -301,7 +301,7 @@ public class C3PO extends AbstractScheduler {
 	}
 
 	@Override
-	protected void addTaskToQueue(TaskInstance task) {
+	public void addTaskToQueue(TaskInstance task) {
 		super.addTaskToQueue(task);
 		String jobName = task.getTaskName();
 		readyTasks.get(jobName).add(task);

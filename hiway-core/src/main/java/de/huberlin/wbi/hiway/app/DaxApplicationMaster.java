@@ -228,14 +228,14 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
 		super.taskSuccess(task, containerId);
-//		try {
-//			for (TaskInstance childTask : task.getChildTasks()) {
-//				if (childTask.readyToExecute())
-//					scheduler.addTaskToQueue(childTask);
-//			}
-//		} catch (WorkflowStructureUnknownException e) {
-//			throw new RuntimeException(e);
-//		}
+		try {
+			for (TaskInstance childTask : task.getChildTasks()) {
+				if (childTask.readyToExecute())
+					scheduler.addTaskToQueue(childTask);
+			}
+		} catch (WorkflowStructureUnknownException e) {
+			throw new RuntimeException(e);
+		}
 		for (Data data : task.getOutputData()) {
 			Data.hdfsDirectoryMidfixes.put(data, containerId.toString());
 		}

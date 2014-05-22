@@ -78,8 +78,8 @@ public abstract class AbstractScheduler implements Scheduler {
 		}
 	}
 
-	// all schedulers have an internal queue in which they store tasks that are ready to execute
-	protected void addTaskToQueue(TaskInstance task) {
+	@Override
+	public void addTaskToQueue(TaskInstance task) {
 		unissuedNodeRequests.add(new String[0]);
 	}
 

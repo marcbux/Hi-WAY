@@ -48,8 +48,11 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 public interface Scheduler {
 
 	public void addTask(TaskInstance task);
-
+	
 	public void addTasks(Collection<TaskInstance> tasks);
+
+	// all schedulers have an internal queue in which they store tasks that are ready to execute
+	public void addTaskToQueue(TaskInstance task);
 
 	public String[] getNextNodeRequest();
 
