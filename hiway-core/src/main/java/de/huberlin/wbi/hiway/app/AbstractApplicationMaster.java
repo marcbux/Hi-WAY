@@ -1203,39 +1203,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				null, Constant.KEY_HIWAY_EVENT, value));
 		return request;
 	}
-	
-	@Override
-	public void taskFailure(TaskInstance task, ContainerId containerId) {
-		String line;
-
-		try {
-			Data stdoutFile = new Data("stdout");
-			stdoutFile.stageIn(fs, containerId.toString());
-
-			System.err.println("[out]");
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stdoutFile.getLocalPath())))) {
-				while ((line = reader.readLine()) != null)
-					System.err.println(line);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		try {
-			Data stderrFile = new Data("stderr");
-			stderrFile.stageIn(fs, containerId.toString());
-
-			System.err.println("[err]");
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stderrFile.getLocalPath())))) {
-				while ((line = reader.readLine()) != null)
-					System.err.println(line);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-		System.err.println("[end]");
-	}
 
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {

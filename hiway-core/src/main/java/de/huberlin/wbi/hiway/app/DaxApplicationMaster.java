@@ -31,6 +31,9 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.app;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -220,9 +223,37 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 	
 	@Override
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
-		System.err.println("[script]");
-		System.err.println(task.getCommand());
-		super.taskFailure(task, containerId);
+		log.error("[script]\n");
+		log.error(task.getCommand() + "\n");
+		String line;
+
+		try {
+			Data stdoutFile = new Data("stdout");
+			stdoutFile.stageIn(fs, containerId.toString());
+
+			log.error("[out]\n");
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stdoutFile.getLocalPath())))) {
+				while ((line = reader.readLine()) != null)
+					log.error(line + "\n");
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		try {
+			Data stderrFile = new Data("stderr");
+			stderrFile.stageIn(fs, containerId.toString());
+
+			log.error("[err]\n");
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stderrFile.getLocalPath())))) {
+				while ((line = reader.readLine()) != null)
+					log.error(line + "\n");
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		log.error("[end]\n");
 	}
 	
 	@Override

@@ -38,6 +38,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -174,7 +175,8 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		}
 
 		@Override
-		protected void shutdown() {}
+		protected void shutdown() {
+		}
 
 	}
 
@@ -344,46 +346,48 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 	@Override
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
 		String line;
-//		try (BufferedReader reader = new BufferedReader(new StringReader(
-//				((CuneiformTaskInstance) task).getInvocation().toScript()))) {
-//			System.err.println("[script]");
-//			int i = 0;
-//			while ((line = reader.readLine()) != null)
-//				System.err.println(String.format("%02d  %s", ++i, line));
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-		Invocation invocation = ((CuneiformTaskInstance) task)
-				.getInvocation();
-		
+
+		Invocation invocation = ((CuneiformTaskInstance) task).getInvocation();
+
 		try {
 			Data stdoutFile = new Data("stdout");
 			stdoutFile.stageIn(fs, containerId.toString());
 			StringBuffer buf = new StringBuffer();
-			try( BufferedReader reader = new BufferedReader( new FileReader( new File(stdoutFile.getLocalPath()) ) ) ) {
-				
-				while( ( line = reader.readLine() ) != null )
-					buf.append( line ).append( '\n' );
+			try (BufferedReader reader = new BufferedReader(new FileReader(
+					new File(stdoutFile.getLocalPath())))) {
+
+				while ((line = reader.readLine()) != null)
+					buf.append(line).append('\n');
 			}
 			String stdOut = buf.toString();
 
-		
 			Data stderrFile = new Data("stderr");
 			stderrFile.stageIn(fs, containerId.toString());
 			buf = new StringBuffer();
-			try( BufferedReader reader = new BufferedReader( new FileReader( new File(stderrFile.getLocalPath()) ) ) ) {
-				
-				while( ( line = reader.readLine() ) != null )
-					buf.append( line ).append( '\n' );
-			}
-				String stdErr = buf.toString();
+			try (BufferedReader reader = new BufferedReader(new FileReader(
+					new File(stderrFile.getLocalPath())))) {
 
-			ticketSrc.sendMsg( new TicketFailedMsg( creActor, invocation.getTicket(), invocation.toScript(), stdOut, stdErr ) );
+				while ((line = reader.readLine()) != null)
+					buf.append(line).append('\n');
+			}
+			String stdErr = buf.toString();
+
+			log.error("[script]\n");
+			try (BufferedReader reader = new BufferedReader(new StringReader(
+					invocation.toScript()))) {
+				int i = 0;
+				while ((line = reader.readLine()) != null)
+					log.error(String.format("%02d  %s", ++i, line) + "\n");
+			}
+			log.error("[out]\n" + stdOut);
+			log.error("[out]\n" + stdErr);
+
+			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
+					.getTicket(), invocation.toScript(), stdOut, stdErr));
 
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-//		super.taskFailure(task, containerId);
 	}
 
 	@Override
