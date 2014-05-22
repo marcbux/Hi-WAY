@@ -48,7 +48,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import de.huberlin.wbi.cuneiform.core.invoc.JsonReportEntry;
+import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.AbstractTaskInstance;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
@@ -223,18 +223,18 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 	
 	@Override
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
-		log.error("[script]\n");
-		log.error(task.getCommand() + "\n");
+		log.error("[script]");
+		log.error(task.getCommand());
 		String line;
 
 		try {
 			Data stdoutFile = new Data("stdout");
 			stdoutFile.stageIn(fs, containerId.toString());
 
-			log.error("[out]\n");
+			log.error("[out]");
 			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stdoutFile.getLocalPath())))) {
 				while ((line = reader.readLine()) != null)
-					log.error(line + "\n");
+					log.error(line);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -244,16 +244,16 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 			Data stderrFile = new Data("stderr");
 			stderrFile.stageIn(fs, containerId.toString());
 
-			log.error("[err]\n");
+			log.error("[err]");
 			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stderrFile.getLocalPath())))) {
 				while ((line = reader.readLine()) != null)
-					log.error(line + "\n");
+					log.error(line);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		log.error("[end]\n");
+		log.error("[end]");
 	}
 	
 	@Override

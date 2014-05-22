@@ -41,7 +41,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 
-import de.huberlin.wbi.cuneiform.core.invoc.JsonReportEntry;
+import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.ForeignLambdaExpr;
 
 public class AbstractTaskInstance implements Comparable<TaskInstance>,

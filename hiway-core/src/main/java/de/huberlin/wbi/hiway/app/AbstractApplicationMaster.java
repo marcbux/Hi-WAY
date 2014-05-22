@@ -101,7 +101,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
-import de.huberlin.wbi.cuneiform.core.invoc.JsonReportEntry;
+import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.Constant;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
@@ -778,6 +778,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 		try {
 			federatedReportWriter.close();
+			Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY);
 			federatedReport.stageOut(fs, "");
 		} catch (IOException e) {
 			log.info("Error when attempting to stage out federated output log.");

@@ -149,6 +149,13 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		public void processMsg(TicketReadyMsg msg) {
 
 			Ticket ticket = msg.getTicket();
+			
+			try {
+				federatedReportWriter.write(ticket.getExecutableLogEntry().toString() + "\n");
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+			
 			Invocation invoc = Invocation.createInvocation(ticket);
 			TaskInstance task = new CuneiformTaskInstance(invoc);
 
@@ -372,15 +379,18 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			}
 			String stdErr = buf.toString();
 
-			log.error("[script]\n");
+			log.error("[script]");
 			try (BufferedReader reader = new BufferedReader(new StringReader(
 					invocation.toScript()))) {
 				int i = 0;
 				while ((line = reader.readLine()) != null)
-					log.error(String.format("%02d  %s", ++i, line) + "\n");
+					log.error(String.format("%02d  %s", ++i, line));
 			}
-			log.error("[out]\n" + stdOut);
-			log.error("[out]\n" + stdErr);
+			log.error("[out]");
+			log.error(stdOut);
+			log.error("[err]");
+			log.error(stdErr);
+			log.error("[end]");
 
 			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
 					.getTicket(), invocation.toScript(), stdOut, stdErr));
