@@ -1,0 +1,44 @@
+<assembly
+	xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.0 http://maven.apache.org/xsd/assembly-1.1.0.xsd">
+	<id>bin</id>
+	<formats>
+		<format>dir</format>
+		<format>tar.gz</format>
+	</formats>
+
+	<includeBaseDirectory>false</includeBaseDirectory>
+	<baseDirectory>hiway-${project.version}</baseDirectory>
+
+	<dependencySets>
+		<!-- copy all jar files and their dependencies -->
+		<dependencySet>
+			<outputDirectory>hiway-${project.version}/lib</outputDirectory>
+			<unpack>false</unpack>
+			<useTransitiveDependencies>true</useTransitiveDependencies>
+			<useProjectArtifact>false</useProjectArtifact>
+			<useProjectAttachments>false</useProjectAttachments>
+			<excludes>
+				<exclude>de.huberlin.wbi.hiway:hiway-core</exclude>
+			</excludes>
+		</dependencySet>
+
+		<dependencySet>
+			<outputDirectory>hiway-${project.version}</outputDirectory>
+			<unpack>false</unpack>
+			<useTransitiveDependencies>true</useTransitiveDependencies>
+			<useProjectArtifact>false</useProjectArtifact>
+			<useProjectAttachments>false</useProjectAttachments>
+			<includes>
+				<include>de.huberlin.wbi.hiway:hiway-core</include>
+			</includes>
+
+			<!-- <excludes> -->
+			<!-- <exclude>**/*javadoc*</exclude> -->
+			<!-- <exclude>**/*sources*</exclude> -->
+			<!-- </excludes> -->
+		</dependencySet>
+
+	</dependencySets>
+</assembly>
