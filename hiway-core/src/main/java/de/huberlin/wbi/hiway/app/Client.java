@@ -474,7 +474,6 @@ public class Client {
 		}
 		classPathEnv.append(File.pathSeparatorChar).append("./log4j.properties");
 
-		// add the runtime classpath needed for tests to work
 		if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
 			classPathEnv.append(':');
 			classPathEnv.append(System.getProperty("java.class.path"));
