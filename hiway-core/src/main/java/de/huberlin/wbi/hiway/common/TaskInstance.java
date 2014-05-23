@@ -52,7 +52,7 @@ public interface TaskInstance {
 	public void addParentTask(TaskInstance parentTask)
 			throws WorkflowStructureUnknownException;
 
-	public void addScript(Data script);
+//	public void addScript(Data script);
 
 	public long countAvailableLocalData(FileSystem fs, Container container)
 			throws IOException;
@@ -79,7 +79,7 @@ public interface TaskInstance {
 
 	public Set<JsonReportEntry> getReport();
 
-	public Set<Data> getScripts();
+//	public Set<Data> getScripts();
 
 	public long getSignature();
 

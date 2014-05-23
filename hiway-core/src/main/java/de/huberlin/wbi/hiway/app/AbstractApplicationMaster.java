@@ -224,10 +224,10 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			// Set the local resources
 			Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
 			try {
-				for (Data script : task.getScripts()) {
-					script.addToLocalResourceMap(localResources, fs, container
-							.getId().toString());
-				}
+//				for (Data script : task.getScripts()) {
+//					script.addToLocalResourceMap(localResources, fs, container
+//							.getId().toString());
+//				}
 				for (Data data : task.getInputData()) {
 					String hdfsDirectoryMidfix = Data.hdfsDirectoryMidfixes
 							.containsKey(data) ? Data.hdfsDirectoryMidfixes.get(data)
@@ -243,11 +243,27 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 			// Set the necessary command to execute on the allocated container
 			Vector<CharSequence> vargs = new Vector<CharSequence>(5);
-			vargs.add("./" + Constant.SUPER_SCRIPT_FILENAME);
-
+			
+			
+//			task.getCommand()
+			
+			vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
+			// Set Xmx based on am memory size
+			vargs.add("-Xmx" + containerMemory + "m");
+			// Set class name
+			vargs.add(HiWayConfiguration.HIWAY_WORKER_CLASS);
+			
+			vargs.add("--appId " + appId.toString());
+			vargs.add("--containerId " + container.getId().toString());
+			vargs.add("--workflowId " + task.getWorkflowId());
+			vargs.add("--taskId " + task.getTaskId());
+			vargs.add("--taskName " + task.getTaskName());
+			vargs.add("--langLabel " + task.getLanguageLabel());
+			vargs.add("--signature " + task.getSignature());
+			
 			// Add log redirect params
-			vargs.add("1>" + "stdout");
-			vargs.add("2>" + "stderr");
+			vargs.add("1>" + Invocation.STDOUT_FILENAME);
+			vargs.add("2>" + Invocation.STDERR_FILENAME);
 
 			// Get final commmand
 			StringBuilder command = new StringBuilder();
@@ -391,40 +407,44 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 									null, Constant.KEY_INVOC_HOST,
 									allocatedContainer.getNodeHttpAddress()));
 				}
-
-				containerIdToInvocation.put(allocatedContainer.getId().getId(),
-						new HiWayInvocation(task));
-				log.info("Launching workflow task on a new container."
-						+ ", task=" + task + ", containerId="
-						+ allocatedContainer.getId() + ", containerNode="
-						+ allocatedContainer.getNodeId().getHost() + ":"
-						+ allocatedContainer.getNodeId().getPort()
-						+ ", containerNodeURI="
-						+ allocatedContainer.getNodeHttpAddress()
-						+ ", containerResourceMemory"
-						+ allocatedContainer.getResource().getMemory());
-
-				try {
-					buildScripts(task, allocatedContainer);
-
-					LaunchContainerRunnable runnableLaunchContainer = new LaunchContainerRunnable(
-							allocatedContainer, containerListener, task);
-					Thread launchThread = new Thread(runnableLaunchContainer);
-
-					// launch and start the container on a separate thread to
-					// keep the main thread unblocked as all
-					// containers may not be allocated at one go.
-					launchThreads.add(launchThread);
-					launchThread.start();
-					metrics.endWaitingTask();
-					metrics.runningTask(task);
-					metrics.launchedTask(task);
-				} catch (IOException e) {
-					log.info("Error during invocation setup. exiting");
-					e.printStackTrace();
-					System.exit(1);
-				}
+				launchTask(task, allocatedContainer);
 			}
+		}
+		
+		protected void launchTask(TaskInstance task, Container allocatedContainer) {
+			containerIdToInvocation.put(allocatedContainer.getId().getId(),
+					new HiWayInvocation(task));
+			log.info("Launching workflow task on a new container."
+					+ ", task=" + task + ", containerId="
+					+ allocatedContainer.getId() + ", containerNode="
+					+ allocatedContainer.getNodeId().getHost() + ":"
+					+ allocatedContainer.getNodeId().getPort()
+					+ ", containerNodeURI="
+					+ allocatedContainer.getNodeHttpAddress()
+					+ ", containerResourceMemory"
+					+ allocatedContainer.getResource().getMemory());
+
+//			try {
+//				buildScripts(task, allocatedContainer);
+
+				LaunchContainerRunnable runnableLaunchContainer = new LaunchContainerRunnable(
+						allocatedContainer, containerListener, task);
+				Thread launchThread = new Thread(runnableLaunchContainer);
+
+				// launch and start the container on a separate thread to
+				// keep the main thread unblocked as all
+				// containers may not be allocated at one go.
+				launchThreads.add(launchThread);
+				launchThread.start();
+				metrics.endWaitingTask();
+				metrics.runningTask(task);
+				metrics.launchedTask(task);
+//			} catch (IOException e) {
+//				log.info("Error during invocation setup. exiting");
+//				e.printStackTrace();
+//				System.exit(1);
+//			}
+			
 		}
 
 		@SuppressWarnings("unchecked")
@@ -745,35 +765,35 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 	}
 
-	protected void buildPostScript(TaskInstance task, Container container)
-			throws IOException {
-		File postScript = new File(Constant.POST_SCRIPT_FILENAME);
-		BufferedWriter postScriptWriter = new BufferedWriter(new FileWriter(
-				postScript));
-		postScriptWriter.write(Constant.BASH_SHEBANG);
-
-		for (Data data : task.getOutputData()) {
-			if (data.getHdfsDirectory(container.getId().toString()).length() > 0) {
-				postScriptWriter.write("hdfs dfs -mkdir -p "
-						+ data.getHdfsDirectory(container.getId().toString())
-						+ " && ");
-			}
-			postScriptWriter.write(generateTimeString(task,
-					Constant.KEY_FILE_TIME_STAGEOUT)
-					+ "hdfs dfs -copyFromLocal -f "
-					+ data.getLocalPath()
-					+ " "
-					+ data.getHdfsPath(container.getId().toString()) + " &\n");
-			postScriptWriter
-					.write("\twhile [ $(jobs -l | grep -c Running) -ge "
-							+ hdfsInstancesPerContainer
-							+ " ]\ndo\n\tsleep 1\ndone\n");
-		}
-		postScriptWriter.write("for job in `jobs -p`\ndo\n\twait $job\ndone\n");
-
-		postScriptWriter.close();
-		task.addScript(new Data(postScript.getPath()));
-	}
+//	protected void buildPostScript(TaskInstance task, Container container)
+//			throws IOException {
+//		File postScript = new File(Constant.POST_SCRIPT_FILENAME);
+//		BufferedWriter postScriptWriter = new BufferedWriter(new FileWriter(
+//				postScript));
+//		postScriptWriter.write(Constant.BASH_SHEBANG);
+//
+//		for (Data data : task.getOutputData()) {
+//			if (data.getHdfsDirectory(container.getId().toString()).length() > 0) {
+//				postScriptWriter.write("hdfs dfs -mkdir -p "
+//						+ data.getHdfsDirectory(container.getId().toString())
+//						+ " && ");
+//			}
+//			postScriptWriter.write(generateTimeString(task,
+//					Constant.KEY_FILE_TIME_STAGEOUT)
+//					+ "hdfs dfs -copyFromLocal -f "
+//					+ data.getLocalPath()
+//					+ " "
+//					+ data.getHdfsPath(container.getId().toString()) + " &\n");
+//			postScriptWriter
+//					.write("\twhile [ $(jobs -l | grep -c Running) -ge "
+//							+ hdfsInstancesPerContainer
+//							+ " ]\ndo\n\tsleep 1\ndone\n");
+//		}
+//		postScriptWriter.write("for job in `jobs -p`\ndo\n\twait $job\ndone\n");
+//
+//		postScriptWriter.close();
+//		task.addScript(new Data(postScript.getPath()));
+//	}
 
 //	protected void buildPreScript(TaskInstance task, Container container)
 //			throws IOException {
@@ -811,55 +831,49 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 //		task.addScript(new Data(preScript.getPath()));
 //	}
 
-	@Override
-	public void buildScripts(TaskInstance task, Container container)
-			throws IOException {
-
-		buildSuperScript(task, container);
+//	@Override
+//	public void buildScripts(TaskInstance task, Container container)
+//			throws IOException {
+//
+//		buildSuperScript(task, container);
 //		buildPreScript(task, container);
-		buildPostScript(task, container);
+//		buildPostScript(task, container);
+//
+//		for (Data script : task.getScripts()) {
+//			script.stageOut(fs, container.getId().toString());
+//		}
+//	}
 
-		for (Data script : task.getScripts()) {
-			script.stageOut(fs, container.getId().toString());
-		}
-	}
-
-	protected void buildSuperScript(TaskInstance task, Container container)
-			throws IOException {
-		File superScript = new File(Constant.SUPER_SCRIPT_FILENAME);
-		BufferedWriter superScriptWriter = new BufferedWriter(new FileWriter(
-				superScript));
-		superScriptWriter.write(Constant.BASH_SHEBANG);
-		superScriptWriter.write("failure=0\n");
+//	protected void buildSuperScript(TaskInstance task, Container container)
+//			throws IOException {
+//		File superScript = new File(Constant.SUPER_SCRIPT_FILENAME);
+//		BufferedWriter superScriptWriter = new BufferedWriter(new FileWriter(
+//				superScript));
+//		superScriptWriter.write(Constant.BASH_SHEBANG);
+//		superScriptWriter.write("failure=0\n");
 //		superScriptWriter.write(generateTimeString(task,
-//				Constant.KEY_INVOC_TIME_STAGEIN)
-//				+ "./"
-//				+ Constant.PRE_SCRIPT_FILENAME + "\n");
+//				JsonReportEntry.KEY_INVOC_TIME) + task.getCommand() + "\n");
 //		superScriptWriter
-//				.write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Error during file stage-in. >&2\nfi\n");
-		superScriptWriter.write(generateTimeString(task,
-				JsonReportEntry.KEY_INVOC_TIME) + task.getCommand() + "\n");
-		superScriptWriter
-				.write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Task invocation returned non-zero exit value. >&2\nfi\n");
-		superScriptWriter.write(generateTimeString(task,
-				Constant.KEY_INVOC_TIME_STAGEOUT)
-				+ "./"
-				+ Constant.POST_SCRIPT_FILENAME + "\n");
-		superScriptWriter
-				.write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Error during file stage-out. >&2\nfi\n");
-		superScriptWriter.write("hdfs dfs -copyFromLocal -f stderr stdout "
-				+ Invocation.REPORT_FILENAME + " "
-				+ Data.getHdfsDirectoryPrefix() + "/"
-				+ container.getId().toString() + "\n");
-		superScriptWriter
-				.write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Error during report stage-out. >&2\nfi\n");
-		superScriptWriter
-				.write("if [ $failure -ne \"0\" ]\nthen\n\texit $failure\nfi\n");
-		superScriptWriter.close();
-		Data script = new Data(superScript.getPath());
-		// task.setSuperScript(script);
-		task.addScript(script);
-	}
+//				.write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Task invocation returned non-zero exit value. >&2\nfi\n");
+//		superScriptWriter.write(generateTimeString(task,
+//				Constant.KEY_INVOC_TIME_STAGEOUT)
+//				+ "./"
+//				+ Constant.POST_SCRIPT_FILENAME + "\n");
+//		superScriptWriter
+//				.write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Error during file stage-out. >&2\nfi\n");
+//		superScriptWriter.write("hdfs dfs -copyFromLocal -f stderr stdout "
+//				+ Invocation.REPORT_FILENAME + " "
+//				+ Data.getHdfsDirectoryPrefix() + "/"
+//				+ container.getId().toString() + "\n");
+//		superScriptWriter
+//				.write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Error during report stage-out. >&2\nfi\n");
+//		superScriptWriter
+//				.write("if [ $failure -ne \"0\" ]\nthen\n\texit $failure\nfi\n");
+//		superScriptWriter.close();
+//		Data script = new Data(superScript.getPath());
+//		// task.setSuperScript(script);
+//		task.addScript(script);
+//	}
 
 	/**
 	 * If the debug flag is set, dump out contents of current working directory
@@ -967,25 +981,25 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 	}
 
-	protected String generateTimeString(TaskInstance task, String key) {
-		return "/usr/bin/time -a -o " + Invocation.REPORT_FILENAME + " -f '{"
-				+ JsonReportEntry.ATT_TIMESTAMP + ":"
-				+ System.currentTimeMillis() + "," + JsonReportEntry.ATT_RUNID
-				+ ":\"" + task.getWorkflowId() + "\","
-				+ JsonReportEntry.ATT_TASKID + ":" + task.getTaskId() + ","
-				+ JsonReportEntry.ATT_TASKNAME + ":\"" + task.getTaskName()
-				+ "\"," + JsonReportEntry.ATT_LANG + ":\""
-				+ task.getLanguageLabel() + "\"," + JsonReportEntry.ATT_INVOCID
-				+ ":" + task.getSignature() + "," + JsonReportEntry.ATT_KEY
-				+ ":\"" + key + "\"," + JsonReportEntry.ATT_VALUE + ":"
-				+ "{\"realTime\":%e,\"userTime\":%U,\"sysTime\":%S,"
-				+ "\"maxResidentSetSize\":%M,\"avgResidentSetSize\":%t,"
-				+ "\"avgDataSize\":%D,\"avgStackSize\":%p,\"avgTextSize\":%X,"
-				+ "\"nMajPageFault\":%F,\"nMinPageFault\":%R,"
-				+ "\"nSwapOutMainMem\":%W,\"nForcedContextSwitch\":%c,"
-				+ "\"nWaitContextSwitch\":%w,\"nIoRead\":%I,\"nIoWrite\":%O,"
-				+ "\"nSocketRead\":%r,\"nSocketWrite\":%s,\"nSignal\":%k}}' ";
-	}
+//	protected String generateTimeString(TaskInstance task, String key) {
+//		return "/usr/bin/time -a -o " + Invocation.REPORT_FILENAME + " -f '{"
+//				+ JsonReportEntry.ATT_TIMESTAMP + ":"
+//				+ System.currentTimeMillis() + "," + JsonReportEntry.ATT_RUNID
+//				+ ":\"" + task.getWorkflowId() + "\","
+//				+ JsonReportEntry.ATT_TASKID + ":" + task.getTaskId() + ","
+//				+ JsonReportEntry.ATT_TASKNAME + ":\"" + task.getTaskName()
+//				+ "\"," + JsonReportEntry.ATT_LANG + ":\""
+//				+ task.getLanguageLabel() + "\"," + JsonReportEntry.ATT_INVOCID
+//				+ ":" + task.getSignature() + "," + JsonReportEntry.ATT_KEY
+//				+ ":\"" + key + "\"," + JsonReportEntry.ATT_VALUE + ":"
+//				+ "{\"realTime\":%e,\"userTime\":%U,\"sysTime\":%S,"
+//				+ "\"maxResidentSetSize\":%M,\"avgResidentSetSize\":%t,"
+//				+ "\"avgDataSize\":%D,\"avgStackSize\":%p,\"avgTextSize\":%X,"
+//				+ "\"nMajPageFault\":%F,\"nMinPageFault\":%R,"
+//				+ "\"nSwapOutMainMem\":%W,\"nForcedContextSwitch\":%c,"
+//				+ "\"nWaitContextSwitch\":%w,\"nIoRead\":%I,\"nIoWrite\":%O,"
+//				+ "\"nSocketRead\":%r,\"nSocketWrite\":%s,\"nSignal\":%k}}' ";
+//	}
 
 	@Override
 	public Collection<Data> getOutputFiles() {
@@ -1158,13 +1172,15 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		new HelpFormatter().printHelp("ApplicationMaster", opts);
 	}
 
+	protected AMRMClientAsync.CallbackHandler allocListener;
+	
 	/**
 	 * Main run function for the application master
 	 * 
 	 * @throws YarnException
 	 * @throws IOException
 	 */
-	@SuppressWarnings({ "unchecked" })
+	@SuppressWarnings("unchecked")
 	public boolean run() throws YarnException, IOException {
 		log.info("Starting ApplicationMaster");
 
@@ -1182,7 +1198,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 		allTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 
-		AMRMClientAsync.CallbackHandler allocListener = new RMCallbackHandler();
 		amRMClient = AMRMClientAsync.createAMRMClientAsync(1000, allocListener);
 		amRMClient.init(conf);
 		amRMClient.start();
@@ -1394,9 +1409,9 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 			Data reportFile = new Data(Invocation.REPORT_FILENAME);
 			reportFile.stageIn(fs, containerId.toString());
-			Data stdoutFile = new Data("stdout");
+			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
 			stdoutFile.stageIn(fs, containerId.toString());
-			Data stderrFile = new Data("stderr");
+			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
 			stderrFile.stageIn(fs, containerId.toString());
 
 			// (a) evaluate report
@@ -1412,7 +1427,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				}
 			}
 			try (BufferedReader reader = new BufferedReader(new FileReader(
-					"stdout"))) {
+					Invocation.STDOUT_FILENAME))) {
 				String line;
 				StringBuffer sb = new StringBuffer();
 				while ((line = reader.readLine()) != null) {
@@ -1431,7 +1446,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				}
 			}
 			try (BufferedReader reader = new BufferedReader(new FileReader(
-					"stderr"))) {
+					Invocation.STDERR_FILENAME))) {
 				String line;
 				StringBuffer sb = new StringBuffer();
 				while ((line = reader.readLine()) != null) {

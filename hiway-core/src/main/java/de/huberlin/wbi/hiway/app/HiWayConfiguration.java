@@ -43,6 +43,8 @@ public class HiWayConfiguration extends Configuration {
 	//	public static final String HIWAY_AM_URI = HIWAY_AM_PREFIX + "uri";
 	public static final String HIWAY_DAX_AM_CLASS = "de.huberlin.wbi.hiway.app.DaxApplicationMaster";	
 
+	public static final String HIWAY_WORKER_CLASS = "de.huberlin.wbi.hiway.app.Worker";
+	
 	public final static String HIWAY_SITE_XML = "hiway-site.xml";
 	static {
 		addDefaultResource(HIWAY_SITE_XML);

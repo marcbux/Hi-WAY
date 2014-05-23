@@ -34,6 +34,7 @@ package de.huberlin.wbi.hiway.app;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -44,9 +45,11 @@ import java.util.UUID;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.AbstractTaskInstance;
 import de.huberlin.wbi.hiway.common.Data;
@@ -84,6 +87,12 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 //		}
 //	}
 
+	@Override
+	public boolean run() throws YarnException, IOException {
+		allocListener = new RMCallbackHandler();
+		return super.run();
+	}
+	
 	private static final Log log = LogFactory
 			.getLog(DaxApplicationMaster.class);
 	
@@ -225,7 +234,7 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 		String line;
 
 		try {
-			Data stdoutFile = new Data("stdout");
+			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
 			stdoutFile.stageIn(fs, containerId.toString());
 
 			log.error("[out]");
@@ -238,7 +247,7 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 		}
 
 		try {
-			Data stderrFile = new Data("stderr");
+			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
 			stderrFile.stageIn(fs, containerId.toString());
 
 			log.error("[err]");

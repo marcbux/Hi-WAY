@@ -36,7 +36,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -102,7 +101,7 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 
 	// the scripts associated with this task
 	// private Data superScript;
-	private Set<Data> scripts;
+//	private Set<Data> scripts;
 
 	private long signature;
 
@@ -135,7 +134,7 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 		this.languageLabel = languageLabel;
 
 		this.completed = false;
-		scripts = new CopyOnWriteArraySet<>();
+//		scripts = new CopyOnWriteArraySet<>();
 		this.inputData = new HashSet<>();
 		this.outputData = new HashSet<>();
 		this.report = new HashSet<>();
@@ -166,10 +165,10 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 		this.setDepth(parentTask.getDepth() + 1);
 	}
 
-	@Override
-	public void addScript(Data script) {
-		scripts.add(script);
-	}
+//	@Override
+//	public void addScript(Data script) {
+//		scripts.add(script);
+//	}
 
 	@Override
 	public int compareTo(TaskInstance other) {
@@ -242,10 +241,10 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 		return report;
 	}
 
-	@Override
-	public Set<Data> getScripts() {
-		return scripts;
-	}
+//	@Override
+//	public Set<Data> getScripts() {
+//		return scripts;
+//	}
 
 	@Override
 	public long getSignature() {
