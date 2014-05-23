@@ -44,7 +44,6 @@ import java.util.UUID;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -67,15 +66,13 @@ import edu.isi.pegasus.planner.parser.dax.DAXParser;
 
 public class DaxApplicationMaster extends AbstractApplicationMaster {
 	
-	protected class DaxRMCallbackHandler extends RMCallbackHandler {
-		
-		@Override
-		public void onContainersCompleted(
-				List<ContainerStatus> completedContainers) {
-			super.onContainersCompleted(completedContainers);
-			if (scheduler.getNumberOfReadyTasks() == 0 && scheduler.getNumberOfRunningTasks() == 0) {
-				done = true;
-			}
+//	protected class DaxRMCallbackHandler extends RMCallbackHandler {
+//		
+//		@Override
+//		public void onContainersCompleted(
+//				List<ContainerStatus> completedContainers) {
+//			super.onContainersCompleted(completedContainers);
+//			
 //			else {
 //				// ask for more containers if new tasks are available or containers have failed
 //				while (scheduler.hasNextNodeRequest()) {
@@ -84,8 +81,8 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 //					amRMClient.addContainerRequest(containerAsk);
 //				}
 //			}
-		}
-	}
+//		}
+//	}
 
 	private static final Log log = LogFactory
 			.getLog(DaxApplicationMaster.class);
@@ -269,6 +266,9 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 		}
 		for (Data data : task.getOutputData()) {
 			Data.hdfsDirectoryMidfixes.put(data, containerId.toString());
+		}
+		if (scheduler.getNumberOfReadyTasks() == 0 && scheduler.getNumberOfRunningTasks() == 0) {
+			done = true;
 		}
 	}
 
