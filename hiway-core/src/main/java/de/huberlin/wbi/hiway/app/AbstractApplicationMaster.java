@@ -228,6 +228,12 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 					script.addToLocalResourceMap(localResources, fs, container
 							.getId().toString());
 				}
+				for (Data data : task.getInputData()) {
+					String hdfsDirectoryMidfix = Data.hdfsDirectoryMidfixes
+							.containsKey(data) ? Data.hdfsDirectoryMidfixes.get(data)
+							: "";
+					data.addToLocalResourceMap(localResources, fs, hdfsDirectoryMidfix);
+				}
 			} catch (IOException e1) {
 				log.info("Error during Container startup. exiting");
 				e1.printStackTrace();
@@ -769,48 +775,48 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		task.addScript(new Data(postScript.getPath()));
 	}
 
-	protected void buildPreScript(TaskInstance task, Container container)
-			throws IOException {
-		File preScript = new File(Constant.PRE_SCRIPT_FILENAME);
-		BufferedWriter preScriptWriter = new BufferedWriter(new FileWriter(
-				preScript));
-		preScriptWriter.write(Constant.BASH_SHEBANG);
-
-		for (Data data : task.getInputData()) {
-			if (data.getLocalDirectory().length() > 0) {
-				preScriptWriter.write("mkdir -p " + data.getLocalDirectory()
-						+ " && ");
-			}
-			String hdfsDirectoryMidfix = Data.hdfsDirectoryMidfixes
-					.containsKey(data) ? Data.hdfsDirectoryMidfixes.get(data)
-					: "";
-			preScriptWriter.write(generateTimeString(task,
-					Constant.KEY_FILE_TIME_STAGEIN)
-					+ "hdfs dfs -copyToLocal "
-					+ data.getHdfsPath(hdfsDirectoryMidfix)
-					+ " "
-					+ data.getLocalPath() + " &\n");
-			preScriptWriter.write("\twhile [ $(jobs -l | grep -c Running) -ge "
-					+ hdfsInstancesPerContainer + " ]\ndo\n\tsleep 1\ndone\n");
-		}
-		for (Data data : task.getOutputData()) {
-			if (data.getLocalDirectory().length() > 0) {
-				preScriptWriter.write("mkdir -p " + data.getLocalDirectory()
-						+ " &\n");
-			}
-		}
-		preScriptWriter.write("for job in `jobs -p`\ndo\n\twait $job\ndone\n");
-
-		preScriptWriter.close();
-		task.addScript(new Data(preScript.getPath()));
-	}
+//	protected void buildPreScript(TaskInstance task, Container container)
+//			throws IOException {
+//		File preScript = new File(Constant.PRE_SCRIPT_FILENAME);
+//		BufferedWriter preScriptWriter = new BufferedWriter(new FileWriter(
+//				preScript));
+//		preScriptWriter.write(Constant.BASH_SHEBANG);
+//
+//		for (Data data : task.getInputData()) {
+//			if (data.getLocalDirectory().length() > 0) {
+//				preScriptWriter.write("mkdir -p " + data.getLocalDirectory()
+//						+ " && ");
+//			}
+//			String hdfsDirectoryMidfix = Data.hdfsDirectoryMidfixes
+//					.containsKey(data) ? Data.hdfsDirectoryMidfixes.get(data)
+//					: "";
+//			preScriptWriter.write(generateTimeString(task,
+//					Constant.KEY_FILE_TIME_STAGEIN)
+//					+ "hdfs dfs -copyToLocal "
+//					+ data.getHdfsPath(hdfsDirectoryMidfix)
+//					+ " "
+//					+ data.getLocalPath() + " &\n");
+//			preScriptWriter.write("\twhile [ $(jobs -l | grep -c Running) -ge "
+//					+ hdfsInstancesPerContainer + " ]\ndo\n\tsleep 1\ndone\n");
+//		}
+//		for (Data data : task.getOutputData()) {
+//			if (data.getLocalDirectory().length() > 0) {
+//				preScriptWriter.write("mkdir -p " + data.getLocalDirectory()
+//						+ " &\n");
+//			}
+//		}
+//		preScriptWriter.write("for job in `jobs -p`\ndo\n\twait $job\ndone\n");
+//
+//		preScriptWriter.close();
+//		task.addScript(new Data(preScript.getPath()));
+//	}
 
 	@Override
 	public void buildScripts(TaskInstance task, Container container)
 			throws IOException {
 
 		buildSuperScript(task, container);
-		buildPreScript(task, container);
+//		buildPreScript(task, container);
 		buildPostScript(task, container);
 
 		for (Data script : task.getScripts()) {
@@ -825,12 +831,12 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				superScript));
 		superScriptWriter.write(Constant.BASH_SHEBANG);
 		superScriptWriter.write("failure=0\n");
-		superScriptWriter.write(generateTimeString(task,
-				Constant.KEY_INVOC_TIME_STAGEIN)
-				+ "./"
-				+ Constant.PRE_SCRIPT_FILENAME + "\n");
-		superScriptWriter
-				.write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Error during file stage-in. >&2\nfi\n");
+//		superScriptWriter.write(generateTimeString(task,
+//				Constant.KEY_INVOC_TIME_STAGEIN)
+//				+ "./"
+//				+ Constant.PRE_SCRIPT_FILENAME + "\n");
+//		superScriptWriter
+//				.write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Error during file stage-in. >&2\nfi\n");
 		superScriptWriter.write(generateTimeString(task,
 				JsonReportEntry.KEY_INVOC_TIME) + task.getCommand() + "\n");
 		superScriptWriter
