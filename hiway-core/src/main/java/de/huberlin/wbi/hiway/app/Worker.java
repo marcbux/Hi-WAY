@@ -27,8 +27,6 @@ import de.huberlin.wbi.hiway.common.Data;
 public class Worker {
 
 	private Path dir;
-	private Configuration conf;
-	private FileSystem fs;
 	private String appId;
 	private String containerId;
 	private UUID workflowId;
@@ -38,15 +36,6 @@ public class Worker {
 	private long signature;
 
 	public Worker() {
-		conf = new YarnConfiguration();
-		conf.addResource("core-site.xml");
-		// conf.addResource(new Path(System.getenv("HADOOP_CONF_DIR") +
-		// "/core-site.xml"));
-		try {
-			fs = FileSystem.get(conf);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 	public static void main(String[] args) {
@@ -90,10 +79,13 @@ public class Worker {
 		Set<Path> oldFiles = parseDir(dir);
 		oldFiles.remove(Paths.get("./", Invocation.STDOUT_FILENAME));
 		oldFiles.remove(Paths.get("./", Invocation.STDERR_FILENAME));
+		System.out.println("Starting execution");
 		exec();
+		System.out.println("Starting traversal");
 		Set<Path> newFiles = parseDir(dir);
 		newFiles.removeAll(oldFiles);
 		newFiles.removeAll(traverseSymbolicLinks(newFiles));
+		System.out.println("Starting stageout");
 		stageOut(newFiles);
 	}
 
@@ -108,12 +100,13 @@ public class Worker {
 		}
 		return files;
 	}
-	
+
 	private Set<Path> traverseSymbolicLinks(Set<Path> files) throws IOException {
 		Set<Path> traversals = new HashSet<>();
 		for (Path file : files) {
 			if (Files.isSymbolicLink(file)) {
-				traversals.add(Paths.get("./", Files.readSymbolicLink(file).toString()));
+				traversals.add(Paths.get("./", Files.readSymbolicLink(file)
+						.toString()));
 			}
 		}
 		return traversals;
@@ -149,14 +142,18 @@ public class Worker {
 		Process process;
 		int exitValue = -1;
 		try {
-			process = processBuilder.start();
-			exitValue = process.waitFor();
+			// File stdInFile = new File("__stdin__.txt");
 			File stdOutFile = new File(Invocation.STDOUT_FILENAME);
 			File stdErrFile = new File(Invocation.STDERR_FILENAME);
-			stdOutFile.createNewFile();
-			stdErrFile.createNewFile();
+			// stdInFile.createNewFile();
+			// stdOutFile.createNewFile();
+			// stdErrFile.createNewFile();
+			// processBuilder.redirectInput(stdInFile);
 			processBuilder.redirectOutput(stdOutFile);
 			processBuilder.redirectError(stdErrFile);
+			// processBuilder.inheritIO();
+			process = processBuilder.start();
+			exitValue = process.waitFor();
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -164,19 +161,23 @@ public class Worker {
 			e.printStackTrace();
 		}
 		if (exitValue != 0) {
-			throw new RuntimeException();
+			System.exit(exitValue);
 		}
 	}
 
 	private void stageOut(Set<Path> files) {
-		for (Path file : files) {
-			Data data = new Data(dir.relativize(file).toString());
-			try {
+		Configuration conf = new YarnConfiguration();
+		conf.addResource("core-site.xml");
+		try {
+			FileSystem fs = FileSystem.get(conf);
+			for (Path file : files) {
+				Data data = new Data(dir.relativize(file).toString());
 				data.stageOut(fs, containerId);
-			} catch (IOException e) {
-				e.printStackTrace();
 			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
+
 	}
 
 }
