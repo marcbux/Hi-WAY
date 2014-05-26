@@ -580,6 +580,11 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 					// The container failed horribly.
 					else {
+						
+						taskFailure(finishedTask, containerId);
+						numFailedContainers.incrementAndGet();
+						metrics.failedTask(finishedTask);
+						
 						if (exitStatus == ExitCode.TERMINATED.getExitCode()) {
 							log.info("Container was terminated."
 									+ ", containerId="
@@ -601,10 +606,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 							}
 						}
-						taskFailure(finishedTask, containerId);
-						numFailedContainers.incrementAndGet();
-						metrics.failedTask(finishedTask);
-
 					}
 				}
 

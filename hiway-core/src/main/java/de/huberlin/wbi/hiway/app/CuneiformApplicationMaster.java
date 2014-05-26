@@ -68,10 +68,12 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 	protected class CuneiformRMCallbackHandler extends RMCallbackHandler {
-		
+
 		@Override
-		protected void launchTask(TaskInstance task, Container allocatedContainer) {
-			File cuneiformScript = new File(allocatedContainer.getId().toString() + ".sh");
+		protected void launchTask(TaskInstance task,
+				Container allocatedContainer) {
+			File cuneiformScript = new File(allocatedContainer.getId()
+					.toString() + ".sh");
 			try (BufferedWriter cuneiformScriptWriter = new BufferedWriter(
 					new FileWriter(cuneiformScript))) {
 				cuneiformScriptWriter.write(((CuneiformTaskInstance) task)
@@ -92,9 +94,9 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			super.launchTask(task, allocatedContainer);
 		}
 	}
-	
+
 	public class CuneiformTaskInstance extends AbstractTaskInstance {
-		
+
 		private Invocation invocation;
 
 		public CuneiformTaskInstance(Invocation invocation) {
@@ -167,7 +169,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		}
 
 	}
-	
+
 	@Override
 	public boolean run() throws YarnException, IOException {
 		allocListener = new CuneiformRMCallbackHandler();
@@ -181,13 +183,14 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		public void processMsg(TicketReadyMsg msg) {
 
 			Ticket ticket = msg.getTicket();
-			
+
 			try {
-				federatedReportWriter.write(ticket.getExecutableLogEntry().toString() + "\n");
+				federatedReportWriter.write(ticket.getExecutableLogEntry()
+						.toString() + "\n");
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-			
+
 			Invocation invoc = Invocation.createInvocation(ticket);
 			TaskInstance task = new CuneiformTaskInstance(invoc);
 
@@ -207,7 +210,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			} catch (NotDerivableException e) {
 				e.printStackTrace();
 			}
-			
+
 			task.setCommand("./" + CUNEIFORM_SCRIPT_FILENAME);
 			scheduler.addTask(task);
 			// scheduler.addTaskToQueue(task);
@@ -274,77 +277,77 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		// fileToProducer = new HashMap<>();
 	}
 
-//	@Override
-//	protected void buildPostScript(TaskInstance task, Container container)
-//			throws IOException {
-//		File postScript = new File(Constant.POST_SCRIPT_FILENAME);
-//		BufferedWriter postScriptWriter = new BufferedWriter(new FileWriter(
-//				postScript));
-//		postScriptWriter.write(Constant.BASH_SHEBANG);
-//		String[] containerFiles = { Constant.SUPER_SCRIPT_FILENAME,
-//				Constant.PRE_SCRIPT_FILENAME, CUNEIFORM_SCRIPT_FILENAME,
-//				Constant.POST_SCRIPT_FILENAME };
-//
-//		postScriptWriter
-//				.write("for file in $( find * -type l \\( ! -path 'tmp/*'");
-//		for (String containerFile : containerFiles) {
-//			postScriptWriter.write(" -a ! -path '" + containerFile + "'");
-//		}
-//		// for (Data data : task.getInputData()) {
-//		// postScriptWriter.write(" -a ! -path '" + data.getLocalPath() + "'");
-//		// }
-//		postScriptWriter.write(" \\) )\ndo\n");
-//
-//		String timeString = generateTimeString(task,
-//				Constant.KEY_FILE_TIME_STAGEOUT)
-//				+ "hdfs dfs -copyFromLocal -f $file "
-//				+ Data.getHdfsDirectoryPrefix()
-//				+ "/"
-//				+ container.getId().toString() + "/$file &";
-//		postScriptWriter
-//				.write("\tif [ `dirname $file` != '.' ]\n\tthen\n\t\thdfs dfs -mkdir -p "
-//						+ Data.getHdfsDirectoryPrefix()
-//						+ "/"
-//						+ container.getId().toString()
-//						+ "/`dirname $file` && "
-//						+ timeString
-//						+ "\n\telse\n\t\t"
-//						+ timeString
-//						+ "\n\tfi\n");
-//
-//		postScriptWriter
-//				.write("\twhile [ $(jobs -l | grep -c Running) -ge "
-//						+ hdfsInstancesPerContainer
-//						+ " ]\n\tdo\n\t\tsleep 1\n\tdone\n");
-//
-//		postScriptWriter.write("done\n");
-//
-//		postScriptWriter.write("for job in `jobs -p`\ndo\n\twait $job\ndone\n");
-//		postScriptWriter.close();
-//		task.addScript(new Data(postScript.getPath()));
-//	}
+	// @Override
+	// protected void buildPostScript(TaskInstance task, Container container)
+	// throws IOException {
+	// File postScript = new File(Constant.POST_SCRIPT_FILENAME);
+	// BufferedWriter postScriptWriter = new BufferedWriter(new FileWriter(
+	// postScript));
+	// postScriptWriter.write(Constant.BASH_SHEBANG);
+	// String[] containerFiles = { Constant.SUPER_SCRIPT_FILENAME,
+	// Constant.PRE_SCRIPT_FILENAME, CUNEIFORM_SCRIPT_FILENAME,
+	// Constant.POST_SCRIPT_FILENAME };
+	//
+	// postScriptWriter
+	// .write("for file in $( find * -type l \\( ! -path 'tmp/*'");
+	// for (String containerFile : containerFiles) {
+	// postScriptWriter.write(" -a ! -path '" + containerFile + "'");
+	// }
+	// // for (Data data : task.getInputData()) {
+	// // postScriptWriter.write(" -a ! -path '" + data.getLocalPath() + "'");
+	// // }
+	// postScriptWriter.write(" \\) )\ndo\n");
+	//
+	// String timeString = generateTimeString(task,
+	// Constant.KEY_FILE_TIME_STAGEOUT)
+	// + "hdfs dfs -copyFromLocal -f $file "
+	// + Data.getHdfsDirectoryPrefix()
+	// + "/"
+	// + container.getId().toString() + "/$file &";
+	// postScriptWriter
+	// .write("\tif [ `dirname $file` != '.' ]\n\tthen\n\t\thdfs dfs -mkdir -p "
+	// + Data.getHdfsDirectoryPrefix()
+	// + "/"
+	// + container.getId().toString()
+	// + "/`dirname $file` && "
+	// + timeString
+	// + "\n\telse\n\t\t"
+	// + timeString
+	// + "\n\tfi\n");
+	//
+	// postScriptWriter
+	// .write("\twhile [ $(jobs -l | grep -c Running) -ge "
+	// + hdfsInstancesPerContainer
+	// + " ]\n\tdo\n\t\tsleep 1\n\tdone\n");
+	//
+	// postScriptWriter.write("done\n");
+	//
+	// postScriptWriter.write("for job in `jobs -p`\ndo\n\twait $job\ndone\n");
+	// postScriptWriter.close();
+	// task.addScript(new Data(postScript.getPath()));
+	// }
 
-//	@Override
-//	protected void buildSuperScript(TaskInstance task, Container container)
-//			throws IOException {
-//		super.buildSuperScript(task, container);
-//		File cuneiformScript = new File(CUNEIFORM_SCRIPT_FILENAME);
-//		BufferedWriter cuneiformScriptWriter = new BufferedWriter(
-//				new FileWriter(cuneiformScript));
-//		try {
-//			cuneiformScriptWriter.write(((CuneiformTaskInstance) task)
-//					.getInvocation().toScript());
-//		} catch (Exception e) {
-//			log.info("Error when attempting to write Cuneiform script for task "
-//					+ task.toString() + " to file. exiting");
-//			e.printStackTrace();
-//			System.exit(1);
-//		}
-//		cuneiformScriptWriter.close();
-//		Data script = new Data(cuneiformScript.getPath());
-//		// task.setSuperScript(script);
-//		task.addScript(script);
-//	}
+	// @Override
+	// protected void buildSuperScript(TaskInstance task, Container container)
+	// throws IOException {
+	// super.buildSuperScript(task, container);
+	// File cuneiformScript = new File(CUNEIFORM_SCRIPT_FILENAME);
+	// BufferedWriter cuneiformScriptWriter = new BufferedWriter(
+	// new FileWriter(cuneiformScript));
+	// try {
+	// cuneiformScriptWriter.write(((CuneiformTaskInstance) task)
+	// .getInvocation().toScript());
+	// } catch (Exception e) {
+	// log.info("Error when attempting to write Cuneiform script for task "
+	// + task.toString() + " to file. exiting");
+	// e.printStackTrace();
+	// System.exit(1);
+	// }
+	// cuneiformScriptWriter.close();
+	// Data script = new Data(cuneiformScript.getPath());
+	// // task.setSuperScript(script);
+	// task.addScript(script);
+	// }
 
 	@Override
 	public String getRunId() {
@@ -387,7 +390,23 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		String line;
 
 		Invocation invocation = ((CuneiformTaskInstance) task).getInvocation();
-
+		String script = "";
+		String stdOut = "";
+		String stdErr = "";
+		
+		try {
+			script = invocation.toScript();
+			log.error("[script]");
+			try (BufferedReader reader = new BufferedReader(new StringReader(
+					script))) {
+				int i = 0;
+				while ((line = reader.readLine()) != null)
+					log.error(String.format("%02d  %s", ++i, line));
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
 		try {
 			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
 			stdoutFile.stageIn(fs, containerId.toString());
@@ -398,38 +417,37 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 				while ((line = reader.readLine()) != null)
 					buf.append(line).append('\n');
 			}
-			String stdOut = buf.toString();
-
+			stdOut = buf.toString();
+			log.error("[out]");
+			log.error(stdOut);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		try {
 			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
 			stderrFile.stageIn(fs, containerId.toString());
-			buf = new StringBuffer();
+			StringBuffer buf = new StringBuffer();
 			try (BufferedReader reader = new BufferedReader(new FileReader(
 					new File(stderrFile.getLocalPath())))) {
 
 				while ((line = reader.readLine()) != null)
 					buf.append(line).append('\n');
 			}
-			String stdErr = buf.toString();
-
-			log.error("[script]");
-			try (BufferedReader reader = new BufferedReader(new StringReader(
-					invocation.toScript()))) {
-				int i = 0;
-				while ((line = reader.readLine()) != null)
-					log.error(String.format("%02d  %s", ++i, line));
-			}
-			log.error("[out]");
-			log.error(stdOut);
+			stdErr = buf.toString();
 			log.error("[err]");
 			log.error(stdErr);
-			log.error("[end]");
-
-			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
-					.getTicket(), invocation.toScript(), stdOut, stdErr));
-
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+			e.printStackTrace();
 		}
+		
+		log.error("[end]");
+		
+		if (!task.retry()) {
+			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
+					.getTicket(), script, stdOut, stdErr));
+		}
+		
 	}
 
 	@Override
