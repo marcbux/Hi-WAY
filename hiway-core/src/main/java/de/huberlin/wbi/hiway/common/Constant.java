@@ -73,5 +73,8 @@ public class Constant {
 	public static final String SUPER_SCRIPT_FILENAME = "__super_script__";
 	
 	public static final boolean useHiwayDB = true;
+	
+	public static final String LOG_PREFIX = "log_";
+	public static final String LOG_SUFFIX = ".csv";
 
 }

@@ -214,6 +214,7 @@ public class Data implements Comparable<Data> {
 			Path dir = new Path(getLocalDirectory());
 			fs.mkdirs(dir);
 		}
+		
 		fs.copyToLocalFile(false, src, dest);
 	}
 	
@@ -225,6 +226,8 @@ public class Data implements Comparable<Data> {
 			Path dir = new Path(fs.getHomeDirectory(), getHdfsDirectory(hdfsDirectoryMidfix));
 			fs.mkdirs(dir);
 		}
+//		short replication = 1;
+//		fs.setReplication(dest, replication);
 		fs.copyFromLocalFile(false, true, src, dest);
 	}
 	

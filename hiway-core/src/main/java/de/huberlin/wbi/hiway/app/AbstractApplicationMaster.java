@@ -1308,12 +1308,16 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				c3po.setOutlookWeight(12d);
 				break;
 			default:
+				c3po.setConservatismWeight(3d);
+				c3po.setnClones(2);
+				c3po.setPlacementAwarenessWeight(1d);
+				c3po.setOutlookWeight(2d);
 			}
 			scheduler = c3po;
 		}
 
 		parseWorkflow();
-		federatedReport = new Data("log_" + getRunId() + ".csv");
+		federatedReport = new Data(Constant.LOG_PREFIX + getRunId() + Constant.LOG_PREFIX);
 		federatedReportWriter = new BufferedWriter(new FileWriter(
 				federatedReport.getLocalPath()));
 		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,

@@ -40,11 +40,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Container;
 
+import de.huberlin.wbi.hiway.common.InvocStat;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
- * An abstract implementation of a static workflow scheduler (i.e., a scheduler that build a static schedule of which
- * task to assign to which resource prior to workflow execution).
+ * An abstract implementation of a static workflow scheduler (i.e., a scheduler
+ * that build a static schedule of which task to assign to which resource prior
+ * to workflow execution).
  * 
  * @author Marc Bux
  * 
@@ -84,12 +86,14 @@ public abstract class StaticScheduler extends AbstractScheduler {
 		super.getNextTask(container);
 		String node = container.getNodeId().getHost();
 
-		log.info("Looking for task on container " + container.getId().getId() + " on node " + node);
+		log.info("Looking for task on container " + container.getId().getId()
+				+ " on node " + node);
 		log.info("Queue: " + queues.get(node).toString());
 
 		TaskInstance task = queues.get(node).remove();
 
-		log.info("Assigned task " + task + " to container " + container.getId().getId() + " on node " + node);
+		log.info("Assigned task " + task + " to container "
+				+ container.getId().getId() + " on node " + node);
 		task.incTries();
 
 		return task;
@@ -103,7 +107,7 @@ public abstract class StaticScheduler extends AbstractScheduler {
 		}
 		return readyTasks;
 	}
-	
+
 	@Override
 	public boolean relaxLocality() {
 		return false;

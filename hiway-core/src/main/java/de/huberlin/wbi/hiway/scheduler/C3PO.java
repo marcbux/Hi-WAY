@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 
+
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -374,7 +375,7 @@ public class C3PO extends AbstractScheduler {
 
 	private void computePlacementAwarenessWeights(Container container,
 			boolean replicate) {
-		for (String jobName : jobStatistics.keySet()) {
+		for (String jobName : new ArrayList<>(jobStatistics.keySet())) {
 			Queue<TaskInstance> queue = replicate ? runningTasks.get(jobName)
 					: readyTasks.get(jobName);
 			DataLocalityStatistic dataLocalityStatistic = dataLocalityStatistics
