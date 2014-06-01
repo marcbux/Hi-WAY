@@ -53,7 +53,8 @@ public class GreedyQueue extends AbstractScheduler {
 
 	private Queue<TaskInstance> queue;
 
-	public GreedyQueue() {
+	public GreedyQueue(String workflowName) {
+		super(workflowName);
 		queue = new LinkedList<>();
 	}
 

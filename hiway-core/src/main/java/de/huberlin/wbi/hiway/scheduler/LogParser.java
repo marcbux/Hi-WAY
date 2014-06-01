@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import org.json.JSONException;
 
@@ -17,34 +18,26 @@ import de.huberlin.wbi.hiway.common.InvocStat;
 
 public class LogParser implements HiwayDBI {
 
-	Map<Long, InvocStat> invocStats;
+	private Map<UUID, String> runToWorkflowName;
+	private Map<String, Set<Long>> workflowNameToTaskIds;
+	private Set<String> hostNames;
+	private Map<Long, InvocStat> invocStats;
 
 	public LogParser() {
+		runToWorkflowName = new HashMap<>();
+		workflowNameToTaskIds = new HashMap<>();
+		hostNames = new HashSet<>();
 		invocStats = new HashMap<>();
 	}
-
+	
 	@Override
 	public Set<String> getHostNames() {
-		Set<String> hostNames = new HashSet<>();
-		for (InvocStat stat : invocStats.values()) {
-			String hostName = stat.getHostname();
-			if (!hostNames.contains(hostName)) {
-				hostNames.add(hostName);
-			}
-		}
 		return hostNames;
 	}
 
 	@Override
-	public Set<Long> getTaskIds() {
-		Set<Long> taskIds = new HashSet<>();
-		for (InvocStat stat : invocStats.values()) {
-			long taskId = stat.getTaskId();
-			if (!taskIds.contains(taskId)) {
-				taskIds.add(taskId);
-			}
-		}
-		return taskIds;
+	public Set<Long> getTaskIdsForWorkflow(String workflowName) {
+		return workflowNameToTaskIds.get(workflowName);
 	}
 
 	@Override
@@ -64,7 +57,11 @@ public class LogParser implements HiwayDBI {
 
 	@Override
 	public Collection<InvocStat> getLogEntriesSince(long sinceTimestamp) {
-		return getLogEntriesSinceForTasks(getTaskIds(), 0l);
+		Set<Long> taskIds = new HashSet<>();
+		for (Set<Long> newTaskIds : workflowNameToTaskIds.values()) {
+			taskIds.addAll(newTaskIds);
+		}
+		return getLogEntriesSinceForTasks(taskIds, 0l);
 	}
 
 	@Override
@@ -96,6 +93,7 @@ public class LogParser implements HiwayDBI {
 		if (invocId != null && !invocStats.containsKey(invocId)) {
 			InvocStat invocStat = new InvocStat(entry.getTimestamp(),
 					entry.getTaskId());
+			workflowNameToTaskIds.get(runToWorkflowName.get(entry.getRunId())).add(entry.getTaskId());
 			invocStats.put(invocId, invocStat);
 		}
 		InvocStat invocStat = invocStats.get(invocId);
@@ -118,12 +116,17 @@ public class LogParser implements HiwayDBI {
 
 		try {
 			switch (entry.getKey()) {
+			case Constant.KEY_WF_NAME:
+				runToWorkflowName.put(entry.getRunId(), entry.getValue());
+				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
 				invocStat.setRealTime(entry.getValueJsonObj().getLong(
 						"realTime"));
 				break;
 			case Constant.KEY_INVOC_HOST:
-				invocStat.setHostname(entry.getValueRawString());
+				String hostName = entry.getValueRawString();
+				invocStat.setHostname(hostName);
+				hostNames.add(hostName);
 				break;
 			case JsonReportEntry.KEY_FILE_SIZE_STAGEIN:
 				invocStat.getInputFile(fileName).setSize(

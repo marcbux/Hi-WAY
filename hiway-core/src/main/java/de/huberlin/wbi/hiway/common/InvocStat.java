@@ -7,7 +7,7 @@ import java.util.Map;
 public class InvocStat {
 
 	private long timestamp;
-	private long realTime;
+	private double realTime;
 	private long taskId;
 	private String hostname;
 	
@@ -56,7 +56,7 @@ public class InvocStat {
 		this.hostname = hostname;
 	}
 
-	public long getRealTime() {
+	public double getRealTime() {
 		return this.realTime;
 	}
 

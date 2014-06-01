@@ -56,6 +56,8 @@ import de.huberlin.wbi.hiway.common.Constant;
 import de.huberlin.wbi.hiway.common.HiwayDBI;
 import de.huberlin.wbi.hiway.common.InvocStat;
 import de.huberlin.wbi.hiway.common.TaskInstance;
+//import de.huberlin.wbi.hiway.scheduler.C3PO.ConservatismEstimate;
+//import de.huberlin.wbi.hiway.scheduler.C3PO.Estimate;
 
 /**
  * An abstract implementation of a workflow scheduler.
@@ -65,12 +67,25 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  */
 public abstract class AbstractScheduler implements Scheduler {
 
+	String workflowName;
+	
 	// node -> task -> invocstats
 //	protected Map<String, Map<String, Set<InvocStat>>> invocStats;
 	protected HiwayDBI dbInterface;
 	
 	private static final Log log = LogFactory.getLog(AbstractScheduler.class);
 
+	protected class RuntimeEstimate extends Estimate {
+		int finishedTasks;
+//		int remainingTasks;
+//		int runningTasks;
+		double timeSpent;
+	}
+
+	protected class Estimate {
+		double weight = 1d;
+	}
+	
 	private int numberOfFinishedTasks = 0;
 	private int numberOfRemainingTasks = 0;
 	private int numberOfRunningTasks = 0;
@@ -78,40 +93,65 @@ public abstract class AbstractScheduler implements Scheduler {
 	// a queue of nodes on which containers are to be requested
 	protected Queue<String[]> unissuedNodeRequests;
 
-	protected Map<String, Map<Long, Long>> totalRuntimes;
-	protected Map<String, Map<Long, Long>> nExecutions;
-	protected Map<String, Map<Long, Double>> runtimeEstimates;
+//	protected Map<String, Map<Long, Long>> totalRuntimes;
+//	protected Map<String, Map<Long, Long>> nExecutions;
+//	protected Map<String, Map<Long, Double>> runtimeEstimates;
+	
+//	private Set<String> nodeIds;
+//	private Set<Long> taskIds;
+	protected Map<String, Map<Long, RuntimeEstimate>> runtimeEstimatesPerNode;
 	protected long maxTimestamp;
 	
+	protected Set<String> getNodeIds() {
+		return runtimeEstimatesPerNode.keySet();
+	}
 	
+	protected Set<Long> getTaskIds() {
+		return runtimeEstimatesPerNode.values().iterator().next().keySet();
+	}
 	
 	protected void updateRuntimeEstimates() {
-		Collection<String> newHosts = dbInterface.getHostNames();
-		newHosts.removeAll(totalRuntimes.keySet());
-		for (String newHost : newHosts) {
-			newHost(newHost);
+		Collection<String> newHostIds = dbInterface.getHostNames();
+		newHostIds.removeAll(getNodeIds());
+		for (String newHostId : newHostIds) {
+			newHost(newHostId);
+		}
+		Collection<Long> newTaskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
+		newTaskIds.removeAll(getTaskIds());
+		for (long newTaskId : newTaskIds) {
+			newTask(newTaskId);
+		}
+		for (InvocStat stat : dbInterface.getLogEntriesSinceForTasks(getTaskIds(), maxTimestamp)) {
+			maxTimestamp = Math.max(maxTimestamp, stat.getTimestamp());
+			RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostname()).get(stat.getTaskId());
+			re.finishedTasks += 1;
+			re.timeSpent += stat.getRealTime();
+			re.weight = re.timeSpent / re.finishedTasks;
+		}	
+	}
+	
+	protected void newHost(String nodeId) {
+		Map<Long, RuntimeEstimate> runtimeEstimates = new HashMap<>();
+		for (long taskId : getTaskIds()) {
+			runtimeEstimates.put(taskId, new RuntimeEstimate());
+		}
+		runtimeEstimatesPerNode.put(nodeId, runtimeEstimates);
+	}
+	
+	protected void newTask(long taskId) {
+		for (Map<Long, RuntimeEstimate> runtimeEstimates : runtimeEstimatesPerNode.values()) {
+			runtimeEstimates.put(taskId, new RuntimeEstimate());
 		}
 	}
 	
-	private void newHost(String newHost) {
-		Map<Long, Long> totalRuntime = new HashMap<>();
-		Map<Long, Long> nExecution = new HashMap<>();
-		Map<Long, Long> runtimeEstimate = new HashMap<>();
-	}
-	
-	private void newTask() {
-		
-	}
-	
-	public AbstractScheduler() {
+	public AbstractScheduler(String workflowName) {
 		// statistics = new HashMap<Long, Map<String, Set<InvocStat>>>();
+		this.workflowName = workflowName;
 		unissuedNodeRequests = new LinkedList<>();
 		dbInterface = Constant.useHiwayDB ? new LogParser() : new LogParser();
 //		invocStats = new HashMap<>();
 		
-		totalRuntimes = new HashMap<>();
-		nExecutions = new HashMap<>();
-		runtimeEstimates = new HashMap<>();
+		runtimeEstimatesPerNode = new HashMap<>();
 		maxTimestamp = 0l;
 	}
 	
@@ -206,6 +246,7 @@ public abstract class AbstractScheduler implements Scheduler {
 	@Override
 	public Collection<ContainerId> taskCompleted(TaskInstance task,
 			ContainerStatus containerStatus, long runtimeInMs) {
+		
 		numberOfRunningTasks--;
 		numberOfFinishedTasks++;
 
@@ -235,4 +276,9 @@ public abstract class AbstractScheduler implements Scheduler {
 		return new ArrayList<>();
 	}
 
+	@Override
+	public void addEntryToDB(JsonReportEntry entry) {
+		dbInterface.logToDB(entry);
+	}
+	
 }

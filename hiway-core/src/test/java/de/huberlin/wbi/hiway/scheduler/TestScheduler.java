@@ -165,14 +165,14 @@ public class TestScheduler {
 
 	@Test
 	public void shakeRattelRollC3PO() {
-		C3PO c3po = new C3PO(0);
+		C3PO c3po = new C3PO("shakeRattleRoll", 0);
 		c3po.setnClones(0);
 		shakeRattelRoll(c3po);
 	}
 
 	@Test
 	public void shakeRattelRollGreedyQueue() {
-		shakeRattelRoll(new GreedyQueue());
+		shakeRattelRoll(new GreedyQueue("shakeRattleRoll"));
 	}
 
 }

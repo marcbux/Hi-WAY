@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
+import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -76,6 +77,8 @@ public interface Scheduler {
 	public Collection<ContainerId> taskCompleted(TaskInstance task, ContainerStatus containerStatus, long runtimeInMs);
 	
 	public Collection<ContainerId> taskFailed(TaskInstance task, ContainerStatus containerStatus);
+	
+	public void addEntryToDB(JsonReportEntry entry);
 	
 //	public void addTaskToQueue(TaskInstance task);
 

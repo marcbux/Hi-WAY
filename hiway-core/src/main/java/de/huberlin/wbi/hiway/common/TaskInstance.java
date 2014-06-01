@@ -66,7 +66,7 @@ public interface TaskInstance {
 
 	public int getDepth() throws WorkflowStructureUnknownException;
 
-	public int getId();
+	public long getId();
 
 	public Set<Data> getInputData();
 

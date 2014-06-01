@@ -42,6 +42,7 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
 
 import de.huberlin.wbi.hiway.common.AbstractTaskInstance;
 import de.huberlin.wbi.hiway.common.TaskInstance;
@@ -69,15 +70,12 @@ public class HEFT extends StaticScheduler {
 
 	Map<TaskInstance, Double> readyTimePerTask;
 
-	Map<String, Map<String, Double>> runtimeEstimate;
-
-	public HEFT(Map<String, Map<String, Double>> runtimeEstimate) {
-		super(runtimeEstimate);
-		this.runtimeEstimate = runtimeEstimate;
+	public HEFT(String workflowName, FileSystem fs) {
+		super(workflowName, fs);
 		readyTimePerTask = new HashMap<>();
 		freeTimeSlotStartsPerNode = new HashMap<>();
 		freeTimeSlotLengthsPerNode = new HashMap<>();
-		for (String node : runtimeEstimate.keySet()) {
+		for (String node : runtimeEstimatesPerNode.keySet()) {
 			TreeSet<Double> occupiedTimeSlotStarts = new TreeSet<>();
 			occupiedTimeSlotStarts.add(0d);
 			freeTimeSlotStartsPerNode.put(node, occupiedTimeSlotStarts);
@@ -90,7 +88,7 @@ public class HEFT extends StaticScheduler {
 	@Override
 	public void addTask(TaskInstance task) {
 		super.addTask(task);
-		Collection<String> nodes = runtimeEstimate.keySet();
+		Collection<String> nodes = runtimeEstimatesPerNode.keySet();
 		double readyTime = readyTimePerTask.get(task);
 
 		String bestNode = null;
@@ -98,7 +96,7 @@ public class HEFT extends StaticScheduler {
 		double bestFinish = Double.MAX_VALUE;
 
 		for (String node : nodes) {
-			double computationCost = runtimeEstimate.get(node).get(task.getTaskName());
+			double computationCost = runtimeEstimatesPerNode.get(node).get(task.getId()).weight;
 
 			// the readytime of this task will have been set by now, as all predecessor tasks have a higher upward
 			// rank and thus have been assigned to a vm already
@@ -166,7 +164,7 @@ public class HEFT extends StaticScheduler {
 		List<TaskInstance> taskList = new LinkedList<>(tasks);
 		Collections.sort(taskList, AbstractTaskInstance.Comparators.DEPTH);
 
-		Collection<String> nodes = runtimeEstimate.keySet();
+		Collection<String> nodes = runtimeEstimatesPerNode.keySet();
 
 		// compute upward ranks of all tasks
 		for (int i = taskList.size() - 1; i >= 0; i--) {
@@ -185,7 +183,7 @@ public class HEFT extends StaticScheduler {
 
 			double averageComputationCost = 0;
 			for (String node : nodes) {
-				averageComputationCost += runtimeEstimate.get(node).get(task.getTaskName());
+				averageComputationCost += runtimeEstimatesPerNode.get(node).get(task.getId()).weight;
 			}
 			averageComputationCost /= nodes.size();
 

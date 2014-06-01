@@ -38,9 +38,9 @@ import java.util.Queue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 
-import de.huberlin.wbi.hiway.common.InvocStat;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -61,11 +61,15 @@ public abstract class StaticScheduler extends AbstractScheduler {
 	// the static schedule
 	protected Map<TaskInstance, String> schedule;
 
-	public StaticScheduler(Map<String, Map<String, Double>> runtimeEstimate) {
+	public StaticScheduler(String workflowName, FileSystem fs) {
+		super(workflowName);
 		schedule = new HashMap<>();
 		queues = new HashMap<>();
 
-		for (String node : runtimeEstimate.keySet()) {
+		parseLogs(fs);
+		updateRuntimeEstimates();
+		
+		for (String node : runtimeEstimatesPerNode.keySet()) {
 			Queue<TaskInstance> queue = new LinkedList<>();
 			queues.put(node, queue);
 		}

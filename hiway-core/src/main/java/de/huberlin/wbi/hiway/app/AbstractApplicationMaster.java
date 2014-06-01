@@ -580,11 +580,11 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 					// The container failed horribly.
 					else {
-						
+
 						taskFailure(finishedTask, containerId);
 						numFailedContainers.incrementAndGet();
 						metrics.failedTask(finishedTask);
-						
+
 						if (exitStatus == ExitCode.TERMINATED.getExitCode()) {
 							log.info("Container was terminated."
 									+ ", containerId="
@@ -593,7 +593,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 							log.info("Container completed with failure."
 									+ ", containerId="
 									+ containerStatus.getContainerId());
-							
+
 							Collection<ContainerId> toBeReleasedContainers = scheduler
 									.taskFailed(finishedTask, containerStatus);
 							for (ContainerId toBeReleasedContainer : toBeReleasedContainers) {
@@ -1232,56 +1232,56 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		switch (schedulerName) {
 		case staticRoundRobin:
 		case heft:
-			Map<String, Map<String, Double>> runtimeEstimates = new HashMap<>();
-
-			Data estimates = new Data("estimates.csv");
-			estimates.setInput(true);
-			estimates.stageIn(fs, "");
-			BufferedReader reader = new BufferedReader(new FileReader(new File(
-					"estimates.csv")));
-
-			List<List<String>> table = new ArrayList<>();
-			String line;
-			while ((line = reader.readLine()) != null) {
-				List<String> row = new ArrayList<>();
-				table.add(row);
-				String[] splittedLine = line.split(";");
-				for (int i = 0; i < splittedLine.length; i++) {
-					row.add(splittedLine[i]);
-				}
-			}
-			reader.close();
-
-			for (int j = 1; j < table.get(0).size(); j++) {
-				Map<String, Double> runtimeEstimate = new HashMap<>();
-				runtimeEstimates.put(table.get(0).get(j), runtimeEstimate);
-			}
-
-			for (int i = 1; i < table.size(); i++) {
-				String rowName = table.get(i).get(0);
-				for (int j = 1; j < table.get(i).size(); j++) {
-					String columnName = table.get(0).get(j);
-					Double value = Double.parseDouble(table.get(i).get(j));
-					runtimeEstimates.get(columnName).put(rowName, value);
-				}
-			}
-
-			for (int j = 1; j < table.get(0).size(); j++) {
-				String host = table.get(0).get(j);
-				if (appMasterHostname.contains(host)) {
-					runtimeEstimates.remove(host);
-				}
-			}
+//			Map<String, Map<String, Double>> runtimeEstimates = new HashMap<>();
+//
+//			Data estimates = new Data("estimates.csv");
+//			estimates.setInput(true);
+//			estimates.stageIn(fs, "");
+//			BufferedReader reader = new BufferedReader(new FileReader(new File(
+//					"estimates.csv")));
+//
+//			List<List<String>> table = new ArrayList<>();
+//			String line;
+//			while ((line = reader.readLine()) != null) {
+//				List<String> row = new ArrayList<>();
+//				table.add(row);
+//				String[] splittedLine = line.split(";");
+//				for (int i = 0; i < splittedLine.length; i++) {
+//					row.add(splittedLine[i]);
+//				}
+//			}
+//			reader.close();
+//
+//			for (int j = 1; j < table.get(0).size(); j++) {
+//				Map<String, Double> runtimeEstimate = new HashMap<>();
+//				runtimeEstimates.put(table.get(0).get(j), runtimeEstimate);
+//			}
+//
+//			for (int i = 1; i < table.size(); i++) {
+//				String rowName = table.get(i).get(0);
+//				for (int j = 1; j < table.get(i).size(); j++) {
+//					String columnName = table.get(0).get(j);
+//					Double value = Double.parseDouble(table.get(i).get(j));
+//					runtimeEstimates.get(columnName).put(rowName, value);
+//				}
+//			}
+//
+//			for (int j = 1; j < table.get(0).size(); j++) {
+//				String host = table.get(0).get(j);
+//				if (appMasterHostname.contains(host)) {
+//					runtimeEstimates.remove(host);
+//				}
+//			}
 
 			scheduler = schedulerName
 					.equals(Constant.SchedulingPolicy.staticRoundRobin) ? new StaticRoundRobin(
-					runtimeEstimates) : new HEFT(runtimeEstimates);
+					getWorkflowName(), fs) : new HEFT(getWorkflowName(), fs);
 			break;
 		case greedyQueue:
-			scheduler = new GreedyQueue();
+			scheduler = new GreedyQueue(getWorkflowName());
 			break;
 		default:
-			C3PO c3po = new C3PO(fs);
+			C3PO c3po = new C3PO(getWorkflowName(), fs);
 			switch (schedulerName) {
 			case conservative:
 				c3po.setConservatismWeight(12d);
@@ -1317,7 +1317,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 
 		parseWorkflow();
-		federatedReport = new Data(Constant.LOG_PREFIX + getRunId() + Constant.LOG_PREFIX);
+		federatedReport = new Data(Constant.LOG_PREFIX + getRunId()
+				+ Constant.LOG_PREFIX);
 		federatedReportWriter = new BufferedWriter(new FileWriter(
 				federatedReport.getLocalPath()));
 		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
@@ -1489,6 +1490,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		scheduler.addEntryToDB(entry);
 	}
 
 }

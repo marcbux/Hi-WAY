@@ -85,7 +85,7 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 	private int depth = 0;
 
 	// this task instance's id
-	private final int id;
+	private final long id;
 
 	// input and output data
 	private Set<Data> inputData;
@@ -172,7 +172,7 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 
 	@Override
 	public int compareTo(TaskInstance other) {
-		return Integer.compare(this.getId(), other.getId());
+		return Long.compare(this.getId(), other.getId());
 	}
 
 	@Override
@@ -211,7 +211,7 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 	}
 
 	@Override
-	public int getId() {
+	public long getId() {
 		return id;
 	}
 

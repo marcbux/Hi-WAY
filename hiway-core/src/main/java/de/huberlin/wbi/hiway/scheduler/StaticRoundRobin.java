@@ -36,10 +36,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
 
 import de.huberlin.wbi.hiway.common.AbstractTaskInstance;
 import de.huberlin.wbi.hiway.common.TaskInstance;
@@ -57,8 +57,8 @@ public class StaticRoundRobin extends StaticScheduler {
 
 	private Iterator<String> nodeIterator;
 
-	public StaticRoundRobin(Map<String, Map<String, Double>> runtimeEstimate) {
-		super(runtimeEstimate);
+	public StaticRoundRobin(String workflowName, FileSystem fs) {
+		super(workflowName, fs);
 		nodeIterator = queues.keySet().iterator();
 	}
 
