@@ -12,6 +12,7 @@
 
 	<modules>
 		<module>hiway-core</module>
+		<module>hiway-addons</module>
 		<module>hiway-dist</module>
 	</modules>
 

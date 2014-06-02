@@ -261,6 +261,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 	private BaseCreActor creActor;
 
 	private TicketSrcActor ticketSrc;
+
 	public CuneiformApplicationMaster() {
 		super();
 		// taskToInvocation = new HashMap<>();

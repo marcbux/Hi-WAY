@@ -123,9 +123,8 @@ public class TestScheduler {
 		List<TaskInstance> tasks = new ArrayList<>();
 		for (String taskName : taskNames) {
 			for (int i = 0; i < nTasks[taskNames.indexOf(taskName)]; i++)
-				tasks.add(new AbstractTaskInstance(UUID
-						.randomUUID(), taskName, taskName
-						.hashCode()));
+				tasks.add(new AbstractTaskInstance(UUID.randomUUID(), taskName,
+						taskName.hashCode()));
 		}
 
 		scheduler.addTasks(tasks);
@@ -134,34 +133,34 @@ public class TestScheduler {
 
 	}
 
-//	@Test
-//	public void montage05GreedyQueue() {
-//		montage05("greedyQueue");
-//	}
+	// @Test
+	// public void montage05GreedyQueue() {
+	// montage05("greedyQueue");
+	// }
 
-//	@Test
-//	public void montage05C3PO() {
-//		montage05("c3po");
-//	}
+	// @Test
+	// public void montage05C3PO() {
+	// montage05("c3po");
+	// }
 
-//	private void montage05(String scheduler) {
-//		List<String> nodeNames = new ArrayList<>();
-//		nodeNames.add("Worker");
-//		ApplicationMaster workflow;
-//		try {
-//			workflow = new DaxApplicationMaster();
-//			String[] args = { "--workflow", "examples/dag_0.5.xml",
-//					"--scheduler", scheduler };
-//			workflow.init(args);
-//			workflow.parseWorkflow();
-//
-//			run(workflow.getScheduler(), nodeNames, null, null);
-//		} catch (IOException e1) {
-//			e1.printStackTrace();
-//		} catch (ParseException e) {
-//			e.printStackTrace();
-//		}
-//	}
+	// private void montage05(String scheduler) {
+	// List<String> nodeNames = new ArrayList<>();
+	// nodeNames.add("Worker");
+	// ApplicationMaster workflow;
+	// try {
+	// workflow = new DaxApplicationMaster();
+	// String[] args = { "--workflow", "examples/dag_0.5.xml",
+	// "--scheduler", scheduler };
+	// workflow.init(args);
+	// workflow.parseWorkflow();
+	//
+	// run(workflow.getScheduler(), nodeNames, null, null);
+	// } catch (IOException e1) {
+	// e1.printStackTrace();
+	// } catch (ParseException e) {
+	// e.printStackTrace();
+	// }
+	// }
 
 	@Test
 	public void shakeRattelRollC3PO() {

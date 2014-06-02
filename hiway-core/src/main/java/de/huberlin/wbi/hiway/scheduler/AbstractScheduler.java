@@ -268,7 +268,7 @@ public abstract class AbstractScheduler implements Scheduler {
 	}
 
 	protected void updateRuntimeEstimate(InvocStat stat) {
-		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostname())
+		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostName())
 				.get(stat.getTaskId());
 		re.finishedTasks += 1;
 		re.timeSpent += stat.getRealTime();

@@ -445,14 +445,14 @@ public class C3PO extends AbstractScheduler {
 				placementAwarenessWeight);
 		normalizeWeights(combinedWeights.values());
 
-		log.debug("Updated Decision Vector for node " + nodeId + ":");
-		log.debug("\tConservatism (x" + (int) (conservatismWeight + 0.5d)
+		log.info("Updated Decision Vector for node " + nodeId + ":");
+		log.info("\tConservatism (x" + (int) (conservatismWeight + 0.5d)
 				+ ")\t" + printWeights(runtimeEstimatesPerNode.get(nodeId)));
-		log.debug("\tOutlook (x" + (int) (outlookWeight + 0.5d) + ")\t\t"
+		log.info("\tOutlook (x" + (int) (outlookWeight + 0.5d) + ")\t\t"
 				+ printWeights(jobStatistics));
-		log.debug("\tPlacement (x" + (int) (placementAwarenessWeight + 0.5d)
+		log.info("\tPlacement (x" + (int) (placementAwarenessWeight + 0.5d)
 				+ ")\t\t" + printWeights(dataLocalityStatistics));
-		log.debug("\tCombined\t\t" + printWeights(combinedWeights));
+		log.info("\tCombined\t\t" + printWeights(combinedWeights));
 
 		double sample = numGen.nextDouble();
 		double min = 0d;
@@ -562,9 +562,9 @@ public class C3PO extends AbstractScheduler {
 	}
 
 	private void printJobStatisticsWeight() {
-		log.debug("Updated Job Statistics:");
+		log.info("Updated Job Statistics:");
 
-		log.debug("\t\t#finish\tavg\t#remain\t#ready\tshare");
+		log.info("\t\t#finish\tavg\t#remain\t#ready\tshare");
 		for (long taskId : getTaskIds()) {
 			String jobName = dbInterface.getTaskName(taskId);
 			String jobName6 = (jobName.length() > 6) ? jobName.substring(0, 6)
@@ -573,7 +573,7 @@ public class C3PO extends AbstractScheduler {
 			double avgRuntime = (jobStatistic.finishedTasks != 0) ? jobStatistic.timeSpent
 					/ jobStatistic.finishedTasks
 					: 0d;
-			log.debug("\t" + jobName6 + "\t"
+			log.info("\t" + jobName6 + "\t"
 					+ df.format(jobStatistic.finishedTasks) + "\t"
 					+ df.format(avgRuntime) + "\t"
 					+ df.format(jobStatistic.remainingTasks) + "\t"
@@ -605,7 +605,7 @@ public class C3PO extends AbstractScheduler {
 	}
 
 	private void printTaskStatisticsWeights() {
-		log.debug("Updated Task Statistics:");
+		log.info("Updated Task Statistics:");
 
 		String row = "";
 		for (long taskId : getTaskIds()) {
@@ -614,7 +614,7 @@ public class C3PO extends AbstractScheduler {
 					: jobName;
 			row += "\t\t" + jobName7;
 		}
-		log.debug(row);
+		log.info(row);
 
 		for (String nodeId : getNodeIds()) {
 			// String nodeName = nodeId.getHost();
@@ -629,7 +629,7 @@ public class C3PO extends AbstractScheduler {
 						+ df.format(taskStatistic.weight);
 			}
 
-			log.debug("\t" + nodeName7 + row);
+			log.info("\t" + nodeName7 + row);
 		}
 	}
 

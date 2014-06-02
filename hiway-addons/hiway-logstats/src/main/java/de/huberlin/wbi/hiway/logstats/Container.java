@@ -29,32 +29,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app;
+package de.huberlin.wbi.hiway.logstats;
 
-import org.apache.hadoop.conf.Configuration;
+public class Container {
 
-public class HiWayConfiguration extends Configuration {
+	private long allocatedTimestamp;
+	private long completedTimestamp;
 
-	public static final String HIWAY_CF_AM_CLASS = "de.huberlin.wbi.hiway.app.CuneiformApplicationMaster";
-
-	// public static final String HIWAY_AM_URI = HIWAY_AM_PREFIX + "uri";
-	public static final String HIWAY_DAX_AM_CLASS = "de.huberlin.wbi.hiway.app.DaxApplicationMaster";
-	public static final String HIWAY_PREFIX = "hiway.";
-	public static final String HIWAY_AM_PREFIX = HIWAY_PREFIX + "am.";
-
-	public final static String HIWAY_SITE_XML = "hiway-site.xml";
-
-	public static final String HIWAY_WORKER_CLASS = "de.huberlin.wbi.hiway.app.Worker";
-	static {
-		addDefaultResource(HIWAY_SITE_XML);
+	public Container(long allocatedTimestamp) {
+		this.allocatedTimestamp = allocatedTimestamp;
 	}
 
-	public HiWayConfiguration() {
-		super();
+	public long getAllocatedTimestamp() {
+		return allocatedTimestamp;
 	}
 
-	public HiWayConfiguration(Configuration conf) {
-		super(conf);
+	public long getCompletedTimestamp() {
+		return completedTimestamp;
+	}
+
+	public void setCompletedTimestamp(long completedTimestamp) {
+		this.completedTimestamp = completedTimestamp;
 	}
 
 }

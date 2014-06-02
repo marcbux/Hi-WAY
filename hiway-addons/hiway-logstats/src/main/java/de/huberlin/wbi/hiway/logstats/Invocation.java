@@ -29,32 +29,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app;
+package de.huberlin.wbi.hiway.logstats;
 
-import org.apache.hadoop.conf.Configuration;
+public class Invocation {
 
-public class HiWayConfiguration extends Configuration {
+	// information obtained from container-allocated
+	private Container container;
 
-	public static final String HIWAY_CF_AM_CLASS = "de.huberlin.wbi.hiway.app.CuneiformApplicationMaster";
+	private long execFinishTimestamp;
 
-	// public static final String HIWAY_AM_URI = HIWAY_AM_PREFIX + "uri";
-	public static final String HIWAY_DAX_AM_CLASS = "de.huberlin.wbi.hiway.app.DaxApplicationMaster";
-	public static final String HIWAY_PREFIX = "hiway.";
-	public static final String HIWAY_AM_PREFIX = HIWAY_PREFIX + "am.";
+	private long execOnsetTimestamp;
+	private long schedTime;
+	// information obtained from invoc-exec
+	private String taskName;
 
-	public final static String HIWAY_SITE_XML = "hiway-site.xml";
-
-	public static final String HIWAY_WORKER_CLASS = "de.huberlin.wbi.hiway.app.Worker";
-	static {
-		addDefaultResource(HIWAY_SITE_XML);
+	public Invocation(String taskName) {
+		this.taskName = taskName;
 	}
 
-	public HiWayConfiguration() {
-		super();
+	public long getExecTime() {
+		return execFinishTimestamp - execOnsetTimestamp;
 	}
 
-	public HiWayConfiguration(Configuration conf) {
-		super(conf);
+	public long getSchedTime() {
+		return schedTime;
 	}
 
+	public long getShutdownTime() {
+		return container.getCompletedTimestamp() - execFinishTimestamp;
+	}
+
+	public long getStartupTime() {
+		return execOnsetTimestamp - container.getAllocatedTimestamp()
+				- schedTime;
+	}
+
+	public String getTaskName() {
+		return taskName;
+	}
+
+	public void setContainer(Container container) {
+		this.container = container;
+	}
+
+	public void setExecFinishTimestamp(long execFinishTimestamp) {
+		this.execFinishTimestamp = execFinishTimestamp;
+	}
+
+	public void setExecOnsetTimestamp(long execOnsetTimestamp) {
+		this.execOnsetTimestamp = execOnsetTimestamp;
+	}
+
+	public void setSchedTime(long schedTime) {
+		this.schedTime = schedTime;
+	}
 }

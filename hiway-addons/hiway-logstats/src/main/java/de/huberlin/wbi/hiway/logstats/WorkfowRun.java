@@ -29,32 +29,48 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app;
+package de.huberlin.wbi.hiway.logstats;
 
-import org.apache.hadoop.conf.Configuration;
+public class WorkfowRun {
 
-public class HiWayConfiguration extends Configuration {
+	private int maxConcurrentNodes;
+	private long noTaskReadyTime;
+	private long runFinishTimestamp;
+	private long runOnsetTimestamp;
 
-	public static final String HIWAY_CF_AM_CLASS = "de.huberlin.wbi.hiway.app.CuneiformApplicationMaster";
-
-	// public static final String HIWAY_AM_URI = HIWAY_AM_PREFIX + "uri";
-	public static final String HIWAY_DAX_AM_CLASS = "de.huberlin.wbi.hiway.app.DaxApplicationMaster";
-	public static final String HIWAY_PREFIX = "hiway.";
-	public static final String HIWAY_AM_PREFIX = HIWAY_PREFIX + "am.";
-
-	public final static String HIWAY_SITE_XML = "hiway-site.xml";
-
-	public static final String HIWAY_WORKER_CLASS = "de.huberlin.wbi.hiway.app.Worker";
-	static {
-		addDefaultResource(HIWAY_SITE_XML);
+	public WorkfowRun() {
 	}
 
-	public HiWayConfiguration() {
-		super();
+	public int getMaxConcurrentNodes() {
+		return maxConcurrentNodes;
 	}
 
-	public HiWayConfiguration(Configuration conf) {
-		super(conf);
+	public long getNoTaskReadyTime() {
+		return noTaskReadyTime;
+	}
+
+	public long getRunFinishTimestamp() {
+		return runFinishTimestamp;
+	}
+
+	public long getRunOnsetTimestamp() {
+		return runOnsetTimestamp;
+	}
+
+	public void setMaxConcurrentNodes(int maxConcurrentNodes) {
+		this.maxConcurrentNodes = maxConcurrentNodes;
+	}
+
+	public void setNoTaskReadyTime(long noTaskReadyTime) {
+		this.noTaskReadyTime = noTaskReadyTime;
+	}
+
+	public void setRunFinishTimestamp(long runFinishTimestamp) {
+		this.runFinishTimestamp = runFinishTimestamp;
+	}
+
+	public void setRunOnsetTimestamp(long runOnsetTimestamp) {
+		this.runOnsetTimestamp = runOnsetTimestamp;
 	}
 
 }
