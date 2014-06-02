@@ -101,7 +101,7 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 
 	// the scripts associated with this task
 	// private Data superScript;
-//	private Set<Data> scripts;
+	// private Set<Data> scripts;
 
 	private long signature;
 
@@ -120,11 +120,11 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 
 	// the id of the workflow this task instance belongs to
 	private UUID workflowId;
-	
+
 	public AbstractTaskInstance(UUID workflowId, String taskName, long taskId) {
 		this(workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);
 	}
-	
+
 	public AbstractTaskInstance(UUID workflowId, String taskName, long taskId,
 			String languageLabel) {
 		this.id = runningId++;
@@ -134,7 +134,7 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 		this.languageLabel = languageLabel;
 
 		this.completed = false;
-//		scripts = new CopyOnWriteArraySet<>();
+		// scripts = new CopyOnWriteArraySet<>();
 		this.inputData = new HashSet<>();
 		this.outputData = new HashSet<>();
 		this.report = new HashSet<>();
@@ -165,10 +165,10 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 		this.setDepth(parentTask.getDepth() + 1);
 	}
 
-//	@Override
-//	public void addScript(Data script) {
-//		scripts.add(script);
-//	}
+	// @Override
+	// public void addScript(Data script) {
+	// scripts.add(script);
+	// }
 
 	@Override
 	public int compareTo(TaskInstance other) {
@@ -241,10 +241,10 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 		return report;
 	}
 
-//	@Override
-//	public Set<Data> getScripts() {
-//		return scripts;
-//	}
+	// @Override
+	// public Set<Data> getScripts() {
+	// return scripts;
+	// }
 
 	@Override
 	public long getSignature() {
@@ -326,7 +326,8 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 	}
 
 	@Override
-	public void setUpwardRank(double upwardRank) throws WorkflowStructureUnknownException {
+	public void setUpwardRank(double upwardRank)
+			throws WorkflowStructureUnknownException {
 		this.upwardRank = upwardRank;
 	}
 

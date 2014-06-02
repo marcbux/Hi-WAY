@@ -68,49 +68,45 @@ import edu.isi.pegasus.planner.parser.dax.DAX2CDAG;
 import edu.isi.pegasus.planner.parser.dax.DAXParser;
 
 public class DaxApplicationMaster extends AbstractApplicationMaster {
-	
-//	protected class DaxRMCallbackHandler extends RMCallbackHandler {
-//		
-//		@Override
-//		public void onContainersCompleted(
-//				List<ContainerStatus> completedContainers) {
-//			super.onContainersCompleted(completedContainers);
-//			
-//			else {
-//				// ask for more containers if new tasks are available or containers have failed
-//				while (scheduler.hasNextNodeRequest()) {
-//					numRequestedContainers.incrementAndGet();
-//					ContainerRequest containerAsk = setupContainerAskForRM(scheduler.getNextNodeRequest());
-//					amRMClient.addContainerRequest(containerAsk);
-//				}
-//			}
-//		}
-//	}
 
-	@Override
-	public boolean run() throws YarnException, IOException {
-		allocListener = new RMCallbackHandler();
-		return super.run();
-	}
-	
+	// protected class DaxRMCallbackHandler extends RMCallbackHandler {
+	//
+	// @Override
+	// public void onContainersCompleted(
+	// List<ContainerStatus> completedContainers) {
+	// super.onContainersCompleted(completedContainers);
+	//
+	// else {
+	// // ask for more containers if new tasks are available or containers have
+	// failed
+	// while (scheduler.hasNextNodeRequest()) {
+	// numRequestedContainers.incrementAndGet();
+	// ContainerRequest containerAsk =
+	// setupContainerAskForRM(scheduler.getNextNodeRequest());
+	// amRMClient.addContainerRequest(containerAsk);
+	// }
+	// }
+	// }
+	// }
+
 	private static final Log log = LogFactory
 			.getLog(DaxApplicationMaster.class);
-	
+
 	public static void main(String[] args) {
 		AbstractApplicationMaster.loop(new DaxApplicationMaster(), args);
 	}
 
 	private ADag dag;
-	
+
 	public DaxApplicationMaster() {
 		super();
 	}
-	
+
 	@Override
 	public String getRunId() {
 		return dag.getWorkflowUUID();
 	}
-	
+
 	@Override
 	public void parseWorkflow() {
 		Map<Object, TaskInstance> tasks = new HashMap<>();
@@ -226,7 +222,13 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 
 		scheduler.addTasks(tasks.values());
 	}
-	
+
+	@Override
+	public boolean run() throws YarnException, IOException {
+		allocListener = new RMCallbackHandler();
+		return super.run();
+	}
+
 	@Override
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
 		log.error("[script]");
@@ -238,7 +240,8 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 			stdoutFile.stageIn(fs, containerId.toString());
 
 			log.error("[out]");
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stdoutFile.getLocalPath())))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(
+					new File(stdoutFile.getLocalPath())))) {
 				while ((line = reader.readLine()) != null)
 					log.error(line);
 			}
@@ -251,7 +254,8 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 			stderrFile.stageIn(fs, containerId.toString());
 
 			log.error("[err]");
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stderrFile.getLocalPath())))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(
+					new File(stderrFile.getLocalPath())))) {
 				while ((line = reader.readLine()) != null)
 					log.error(line);
 			}
@@ -261,7 +265,7 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 
 		log.error("[end]");
 	}
-	
+
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
 		super.taskSuccess(task, containerId);
@@ -276,7 +280,8 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 		for (Data data : task.getOutputData()) {
 			Data.hdfsDirectoryMidfixes.put(data, containerId.toString());
 		}
-		if (scheduler.getNumberOfReadyTasks() == 0 && scheduler.getNumberOfRunningTasks() == 0) {
+		if (scheduler.getNumberOfReadyTasks() == 0
+				&& scheduler.getNumberOfRunningTasks() == 0) {
 			done = true;
 		}
 	}

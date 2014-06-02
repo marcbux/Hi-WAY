@@ -26,18 +26,6 @@ import de.huberlin.wbi.hiway.common.Data;
 
 public class Worker {
 
-	private Path dir;
-	private String appId;
-	private String containerId;
-	private UUID workflowId;
-	private long taskId;
-	private String taskName;
-	private String langLabel;
-	private long signature;
-
-	public Worker() {
-	}
-
 	public static void main(String[] args) {
 		Worker worker = new Worker();
 		try {
@@ -49,67 +37,17 @@ public class Worker {
 			e.printStackTrace();
 		}
 	}
+	private String appId;
+	private String containerId;
+	private Path dir;
+	private String langLabel;
+	private long signature;
+	private long taskId;
+	private String taskName;
 
-	public void init(String[] args) throws ParseException {
-		dir = Paths.get(".");
+	private UUID workflowId;
 
-		Options opts = new Options();
-		opts.addOption("appId", true,
-				"Id of this Container's Application Master.");
-		opts.addOption("containerId", true, "Id of this Container.");
-		opts.addOption("workflowId", true, "");
-		opts.addOption("taskId", true, "");
-		opts.addOption("taskName", true, "");
-		opts.addOption("langLabel", true, "");
-		opts.addOption("signature", true, "");
-
-		CommandLine cliParser = new GnuParser().parse(opts, args);
-		appId = cliParser.getOptionValue("appId");
-		containerId = cliParser.getOptionValue("containerId");
-		workflowId = UUID.fromString(cliParser.getOptionValue("workflowId"));
-		taskId = Long.parseLong(cliParser.getOptionValue("taskId"));
-		taskName = cliParser.getOptionValue("taskName");
-		langLabel = cliParser.getOptionValue("langLabel");
-		signature = Long.parseLong(cliParser.getOptionValue("signature"));
-
-		Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY + "/" + appId);
-	}
-
-	public void run() throws IOException {
-		Set<Path> oldFiles = parseDir(dir);
-		oldFiles.remove(Paths.get("./", Invocation.STDOUT_FILENAME));
-		oldFiles.remove(Paths.get("./", Invocation.STDERR_FILENAME));
-		System.out.println("Starting execution");
-		exec();
-		System.out.println("Starting traversal");
-		Set<Path> newFiles = parseDir(dir);
-		newFiles.removeAll(oldFiles);
-		newFiles.removeAll(traverseSymbolicLinks(newFiles));
-		System.out.println("Starting stageout");
-		stageOut(newFiles);
-	}
-
-	private Set<Path> parseDir(Path dir) throws IOException {
-		Set<Path> files = new HashSet<>();
-		for (Path file : Files.newDirectoryStream(dir)) {
-			if (Files.isDirectory(file)) {
-				files.addAll(parseDir(file));
-			} else {
-				files.add(file);
-			}
-		}
-		return files;
-	}
-
-	private Set<Path> traverseSymbolicLinks(Set<Path> files) throws IOException {
-		Set<Path> traversals = new HashSet<>();
-		for (Path file : files) {
-			if (Files.isSymbolicLink(file)) {
-				traversals.add(Paths.get("./", Files.readSymbolicLink(file)
-						.toString()));
-			}
-		}
-		return traversals;
+	public Worker() {
 	}
 
 	private void exec() {
@@ -165,6 +103,57 @@ public class Worker {
 		}
 	}
 
+	public void init(String[] args) throws ParseException {
+		dir = Paths.get(".");
+
+		Options opts = new Options();
+		opts.addOption("appId", true,
+				"Id of this Container's Application Master.");
+		opts.addOption("containerId", true, "Id of this Container.");
+		opts.addOption("workflowId", true, "");
+		opts.addOption("taskId", true, "");
+		opts.addOption("taskName", true, "");
+		opts.addOption("langLabel", true, "");
+		opts.addOption("signature", true, "");
+
+		CommandLine cliParser = new GnuParser().parse(opts, args);
+		appId = cliParser.getOptionValue("appId");
+		containerId = cliParser.getOptionValue("containerId");
+		workflowId = UUID.fromString(cliParser.getOptionValue("workflowId"));
+		taskId = Long.parseLong(cliParser.getOptionValue("taskId"));
+		taskName = cliParser.getOptionValue("taskName");
+		langLabel = cliParser.getOptionValue("langLabel");
+		signature = Long.parseLong(cliParser.getOptionValue("signature"));
+
+		Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY + "/" + appId);
+	}
+
+	private Set<Path> parseDir(Path dir) throws IOException {
+		Set<Path> files = new HashSet<>();
+		for (Path file : Files.newDirectoryStream(dir)) {
+			if (Files.isDirectory(file)) {
+				files.addAll(parseDir(file));
+			} else {
+				files.add(file);
+			}
+		}
+		return files;
+	}
+
+	public void run() throws IOException {
+		Set<Path> oldFiles = parseDir(dir);
+		oldFiles.remove(Paths.get("./", Invocation.STDOUT_FILENAME));
+		oldFiles.remove(Paths.get("./", Invocation.STDERR_FILENAME));
+		System.out.println("Starting execution");
+		exec();
+		System.out.println("Starting traversal");
+		Set<Path> newFiles = parseDir(dir);
+		newFiles.removeAll(oldFiles);
+		newFiles.removeAll(traverseSymbolicLinks(newFiles));
+		System.out.println("Starting stageout");
+		stageOut(newFiles);
+	}
+
 	private void stageOut(Set<Path> files) {
 		Configuration conf = new YarnConfiguration();
 		conf.addResource("core-site.xml");
@@ -178,6 +167,17 @@ public class Worker {
 			e.printStackTrace();
 		}
 
+	}
+
+	private Set<Path> traverseSymbolicLinks(Set<Path> files) throws IOException {
+		Set<Path> traversals = new HashSet<>();
+		for (Path file : files) {
+			if (Files.isSymbolicLink(file)) {
+				traversals.add(Paths.get("./", Files.readSymbolicLink(file)
+						.toString()));
+			}
+		}
+		return traversals;
 	}
 
 }

@@ -41,8 +41,9 @@ import org.apache.hadoop.yarn.api.records.Container;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
- * A basic implementation of a scheduler that stores ready-to-execute tasks in a queue. Whenever a container has been
- * allocated, this container is greedily assigned the first task from the queue.
+ * A basic implementation of a scheduler that stores ready-to-execute tasks in a
+ * queue. Whenever a container has been allocated, this container is greedily
+ * assigned the first task from the queue.
  * 
  * @author Marc Bux
  * 
@@ -77,7 +78,8 @@ public class GreedyQueue extends AbstractScheduler {
 		super.getNextTask(container);
 		TaskInstance task = queue.remove();
 
-		log.info("Assigned task " + task + " to container " + container.getId().getId() + " on node "
+		log.info("Assigned task " + task + " to container "
+				+ container.getId().getId() + " on node "
 				+ container.getNodeId().getHost());
 		task.incTries();
 		return task;

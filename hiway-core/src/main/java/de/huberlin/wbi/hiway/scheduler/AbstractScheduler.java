@@ -37,6 +37,7 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
@@ -67,115 +68,56 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  */
 public abstract class AbstractScheduler implements Scheduler {
 
-	String workflowName;
-	
-	// node -> task -> invocstats
-//	protected Map<String, Map<String, Set<InvocStat>>> invocStats;
-	protected HiwayDBI dbInterface;
-	
-	private static final Log log = LogFactory.getLog(AbstractScheduler.class);
-
-	protected class RuntimeEstimate extends Estimate {
-		int finishedTasks;
-//		int remainingTasks;
-//		int runningTasks;
-		double timeSpent;
-	}
-
 	protected class Estimate {
 		double weight = 1d;
 	}
-	
+
+	protected class RuntimeEstimate extends Estimate {
+		double averageRuntime;
+		int finishedTasks;
+		// int remainingTasks;
+		// int runningTasks;
+		double timeSpent;
+	}
+
+	private static final Log log = LogFactory.getLog(AbstractScheduler.class);
+
+	// node -> task -> invocstats
+	// protected Map<String, Map<String, Set<InvocStat>>> invocStats;
+	protected HiwayDBI dbInterface;
+
+	protected long maxTimestamp;
+
 	private int numberOfFinishedTasks = 0;
 	private int numberOfRemainingTasks = 0;
 	private int numberOfRunningTasks = 0;
 
+	// private Set<String> nodeIds;
+	// private Set<Long> taskIds;
+	protected Map<String, Map<Long, RuntimeEstimate>> runtimeEstimatesPerNode;
+
+	// protected Map<String, Map<Long, Long>> totalRuntimes;
+	// protected Map<String, Map<Long, Long>> nExecutions;
+	// protected Map<String, Map<Long, Double>> runtimeEstimates;
+
 	// a queue of nodes on which containers are to be requested
 	protected Queue<String[]> unissuedNodeRequests;
+	String workflowName;
 
-//	protected Map<String, Map<Long, Long>> totalRuntimes;
-//	protected Map<String, Map<Long, Long>> nExecutions;
-//	protected Map<String, Map<Long, Double>> runtimeEstimates;
-	
-//	private Set<String> nodeIds;
-//	private Set<Long> taskIds;
-	protected Map<String, Map<Long, RuntimeEstimate>> runtimeEstimatesPerNode;
-	protected long maxTimestamp;
-	
-	protected Set<String> getNodeIds() {
-		return runtimeEstimatesPerNode.keySet();
-	}
-	
-	protected Set<Long> getTaskIds() {
-		return runtimeEstimatesPerNode.values().iterator().next().keySet();
-	}
-	
-	protected void updateRuntimeEstimates() {
-		Collection<String> newHostIds = dbInterface.getHostNames();
-		newHostIds.removeAll(getNodeIds());
-		for (String newHostId : newHostIds) {
-			newHost(newHostId);
-		}
-		Collection<Long> newTaskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
-		newTaskIds.removeAll(getTaskIds());
-		for (long newTaskId : newTaskIds) {
-			newTask(newTaskId);
-		}
-		for (InvocStat stat : dbInterface.getLogEntriesSinceForTasks(getTaskIds(), maxTimestamp)) {
-			maxTimestamp = Math.max(maxTimestamp, stat.getTimestamp());
-			RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostname()).get(stat.getTaskId());
-			re.finishedTasks += 1;
-			re.timeSpent += stat.getRealTime();
-			re.weight = re.timeSpent / re.finishedTasks;
-		}	
-	}
-	
-	protected void newHost(String nodeId) {
-		Map<Long, RuntimeEstimate> runtimeEstimates = new HashMap<>();
-		for (long taskId : getTaskIds()) {
-			runtimeEstimates.put(taskId, new RuntimeEstimate());
-		}
-		runtimeEstimatesPerNode.put(nodeId, runtimeEstimates);
-	}
-	
-	protected void newTask(long taskId) {
-		for (Map<Long, RuntimeEstimate> runtimeEstimates : runtimeEstimatesPerNode.values()) {
-			runtimeEstimates.put(taskId, new RuntimeEstimate());
-		}
-	}
-	
 	public AbstractScheduler(String workflowName) {
 		// statistics = new HashMap<Long, Map<String, Set<InvocStat>>>();
 		this.workflowName = workflowName;
 		unissuedNodeRequests = new LinkedList<>();
 		dbInterface = Constant.useHiwayDB ? new LogParser() : new LogParser();
-//		invocStats = new HashMap<>();
-		
+		// invocStats = new HashMap<>();
+
 		runtimeEstimatesPerNode = new HashMap<>();
 		maxTimestamp = 0l;
 	}
-	
-	protected void parseLogs(FileSystem fs) {
-		Path dir = new Path(fs.getHomeDirectory(), Constant.SANDBOX_DIRECTORY);
-		try {
-			for (FileStatus fileStatus : fs.listStatus(dir)) {
-				Path src = fileStatus.getPath();
-				String srcName = src.getName();
-				if (srcName.startsWith(Constant.LOG_PREFIX) && srcName.endsWith(Constant.LOG_SUFFIX)) {
-					Path dest = new Path(srcName);
-					fs.copyFromLocalFile(false, true, src, dest);
-					
-					try (BufferedReader reader = new BufferedReader(new FileReader(new File(srcName)))) {
-						String line;
-						while ((line = reader.readLine()) != null) {
-							dbInterface.logToDB(new JsonReportEntry(line));
-						}
-					}
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+
+	@Override
+	public void addEntryToDB(JsonReportEntry entry) {
+		dbInterface.logToDB(entry);
 	}
 
 	@Override
@@ -207,6 +149,10 @@ public abstract class AbstractScheduler implements Scheduler {
 		return null;
 	}
 
+	protected Set<String> getNodeIds() {
+		return new HashSet<>(runtimeEstimatesPerNode.keySet());
+	}
+
 	@Override
 	public int getNumberOfFinishedTasks() {
 		return numberOfFinishedTasks;
@@ -228,14 +174,59 @@ public abstract class AbstractScheduler implements Scheduler {
 		return finishedTasks + runningTasks + numberOfRemainingTasks;
 	}
 
+	protected Set<Long> getTaskIds() {
+		return new HashSet<>(runtimeEstimatesPerNode.values().iterator().next()
+				.keySet());
+	}
+
 	@Override
 	public boolean hasNextNodeRequest() {
 		return !unissuedNodeRequests.isEmpty();
 	}
 
+	protected void newHost(String nodeId) {
+		Map<Long, RuntimeEstimate> runtimeEstimates = new HashMap<>();
+		for (long taskId : getTaskIds()) {
+			runtimeEstimates.put(taskId, new RuntimeEstimate());
+		}
+		runtimeEstimatesPerNode.put(nodeId, runtimeEstimates);
+	}
+
+	protected void newTask(long taskId) {
+		for (Map<Long, RuntimeEstimate> runtimeEstimates : runtimeEstimatesPerNode
+				.values()) {
+			runtimeEstimates.put(taskId, new RuntimeEstimate());
+		}
+	}
+
 	@Override
 	public boolean nothingToSchedule() {
 		return getNumberOfReadyTasks() == 0;
+	}
+
+	protected void parseLogs(FileSystem fs) {
+		Path dir = new Path(fs.getHomeDirectory(), Constant.SANDBOX_DIRECTORY);
+		try {
+			for (FileStatus fileStatus : fs.listStatus(dir)) {
+				Path src = fileStatus.getPath();
+				String srcName = src.getName();
+				if (srcName.startsWith(Constant.LOG_PREFIX)
+						&& srcName.endsWith(Constant.LOG_SUFFIX)) {
+					Path dest = new Path(srcName);
+					fs.copyFromLocalFile(false, true, src, dest);
+
+					try (BufferedReader reader = new BufferedReader(
+							new FileReader(new File(srcName)))) {
+						String line;
+						while ((line = reader.readLine()) != null) {
+							dbInterface.logToDB(new JsonReportEntry(line));
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override
@@ -246,7 +237,7 @@ public abstract class AbstractScheduler implements Scheduler {
 	@Override
 	public Collection<ContainerId> taskCompleted(TaskInstance task,
 			ContainerStatus containerStatus, long runtimeInMs) {
-		
+
 		numberOfRunningTasks--;
 		numberOfFinishedTasks++;
 
@@ -276,9 +267,31 @@ public abstract class AbstractScheduler implements Scheduler {
 		return new ArrayList<>();
 	}
 
-	@Override
-	public void addEntryToDB(JsonReportEntry entry) {
-		dbInterface.logToDB(entry);
+	protected void updateRuntimeEstimate(InvocStat stat) {
+		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostname())
+				.get(stat.getTaskId());
+		re.finishedTasks += 1;
+		re.timeSpent += stat.getRealTime();
+		re.weight = re.averageRuntime = re.timeSpent / re.finishedTasks;
 	}
-	
+
+	protected void updateRuntimeEstimates() {
+		Collection<String> newHostIds = dbInterface.getHostNames();
+		newHostIds.removeAll(getNodeIds());
+		for (String newHostId : newHostIds) {
+			newHost(newHostId);
+		}
+		Collection<Long> newTaskIds = dbInterface
+				.getTaskIdsForWorkflow(workflowName);
+		newTaskIds.removeAll(getTaskIds());
+		for (long newTaskId : newTaskIds) {
+			newTask(newTaskId);
+		}
+		for (InvocStat stat : dbInterface.getLogEntriesSinceForTasks(
+				getTaskIds(), maxTimestamp)) {
+			maxTimestamp = Math.max(maxTimestamp, stat.getTimestamp());
+			updateRuntimeEstimate(stat);
+		}
+	}
+
 }

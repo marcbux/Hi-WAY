@@ -18,26 +18,23 @@ import de.huberlin.wbi.hiway.common.InvocStat;
 
 public class LogParser implements HiwayDBI {
 
-	private Map<UUID, String> runToWorkflowName;
-	private Map<String, Set<Long>> workflowNameToTaskIds;
 	private Set<String> hostNames;
 	private Map<Long, InvocStat> invocStats;
+	private Map<UUID, String> runToWorkflowName;
+	private Map<Long, String> taskIdToTaskName;
+	private Map<String, Set<Long>> workflowNameToTaskIds;
 
 	public LogParser() {
 		runToWorkflowName = new HashMap<>();
 		workflowNameToTaskIds = new HashMap<>();
+		taskIdToTaskName = new HashMap<>();
 		hostNames = new HashSet<>();
 		invocStats = new HashMap<>();
 	}
-	
+
 	@Override
 	public Set<String> getHostNames() {
 		return hostNames;
-	}
-
-	@Override
-	public Set<Long> getTaskIdsForWorkflow(String workflowName) {
-		return workflowNameToTaskIds.get(workflowName);
 	}
 
 	@Override
@@ -86,6 +83,16 @@ public class LogParser implements HiwayDBI {
 	}
 
 	@Override
+	public Set<Long> getTaskIdsForWorkflow(String workflowName) {
+		return workflowNameToTaskIds.get(workflowName);
+	}
+
+	@Override
+	public String getTaskName(long taskId) {
+		return taskIdToTaskName.get(taskId);
+	}
+
+	@Override
 	public void logToDB(JsonReportEntry entry) {
 		Long invocId = entry.getInvocId();
 		String fileName = entry.getFile();
@@ -93,7 +100,9 @@ public class LogParser implements HiwayDBI {
 		if (invocId != null && !invocStats.containsKey(invocId)) {
 			InvocStat invocStat = new InvocStat(entry.getTimestamp(),
 					entry.getTaskId());
-			workflowNameToTaskIds.get(runToWorkflowName.get(entry.getRunId())).add(entry.getTaskId());
+			workflowNameToTaskIds.get(runToWorkflowName.get(entry.getRunId()))
+					.add(entry.getTaskId());
+			taskIdToTaskName.put(entry.getTaskId(), entry.getTaskName());
 			invocStats.put(invocId, invocStat);
 		}
 		InvocStat invocStat = invocStats.get(invocId);

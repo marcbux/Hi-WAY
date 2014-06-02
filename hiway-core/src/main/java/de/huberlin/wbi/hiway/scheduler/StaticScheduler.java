@@ -68,7 +68,7 @@ public abstract class StaticScheduler extends AbstractScheduler {
 
 		parseLogs(fs);
 		updateRuntimeEstimates();
-		
+
 		for (String node : runtimeEstimatesPerNode.keySet()) {
 			Queue<TaskInstance> queue = new LinkedList<>();
 			queues.put(node, queue);

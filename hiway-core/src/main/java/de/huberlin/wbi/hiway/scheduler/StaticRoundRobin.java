@@ -45,8 +45,8 @@ import de.huberlin.wbi.hiway.common.AbstractTaskInstance;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
- * The static round robin scheduler that traverses the workflow from the beginning to the end, assigning tasks to
- * compute resources in turn.
+ * The static round robin scheduler that traverses the workflow from the
+ * beginning to the end, assigning tasks to compute resources in turn.
  * 
  * @author Marc Bux
  * 

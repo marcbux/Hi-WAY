@@ -170,12 +170,6 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 	}
 
-	@Override
-	public boolean run() throws YarnException, IOException {
-		allocListener = new CuneiformRMCallbackHandler();
-		return super.run();
-	}
-
 	// Cre - Cuneiform Runtime Environment
 	public class HiWayCreActor extends BaseCreActor {
 
@@ -265,16 +259,21 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 	}
 
 	private BaseCreActor creActor;
+
 	private TicketSrcActor ticketSrc;
+	public CuneiformApplicationMaster() {
+		super();
+		// taskToInvocation = new HashMap<>();
+		// fileToProducer = new HashMap<>();
+	}
 
 	// private Map<Data, CuneiformTaskInstance> fileToProducer;
 
 	// private Map<CuneiformTaskInstance, Invocation> taskToInvocation;
 
-	public CuneiformApplicationMaster() {
-		super();
-		// taskToInvocation = new HashMap<>();
-		// fileToProducer = new HashMap<>();
+	@Override
+	public String getRunId() {
+		return (ticketSrc.getRunId().toString());
 	}
 
 	// @Override
@@ -350,11 +349,6 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 	// }
 
 	@Override
-	public String getRunId() {
-		return (ticketSrc.getRunId().toString());
-	}
-
-	@Override
 	public void parseWorkflow() {
 		ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -386,6 +380,12 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 	}
 
 	@Override
+	public boolean run() throws YarnException, IOException {
+		allocListener = new CuneiformRMCallbackHandler();
+		return super.run();
+	}
+
+	@Override
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
 		String line;
 
@@ -393,7 +393,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		String script = "";
 		String stdOut = "";
 		String stdErr = "";
-		
+
 		try {
 			script = invocation.toScript();
 			log.error("[script]");
@@ -406,7 +406,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 		try {
 			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
 			stdoutFile.stageIn(fs, containerId.toString());
@@ -423,7 +423,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 		try {
 			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
 			stderrFile.stageIn(fs, containerId.toString());
@@ -440,14 +440,14 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 		log.error("[end]");
-		
+
 		if (!task.retry()) {
 			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
 					.getTicket(), script, stdOut, stdErr));
 		}
-		
+
 	}
 
 	@Override

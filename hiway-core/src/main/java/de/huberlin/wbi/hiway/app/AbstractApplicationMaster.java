@@ -385,32 +385,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			return progress;
 		}
 
-		protected void launchTasks() {
-			while (!containerQueue.isEmpty() && !scheduler.nothingToSchedule()) {
-				Container allocatedContainer = containerQueue.remove();
-
-				long schedulingTime = System.currentTimeMillis();
-				TaskInstance task = scheduler.getNextTask(allocatedContainer);
-				schedulingTime = System.currentTimeMillis() - schedulingTime;
-
-				if (task.getTries() == 1) {
-					task.getReport().add(
-							new JsonReportEntry(task.getWorkflowId(), task
-									.getTaskId(), task.getTaskName(), task
-									.getLanguageLabel(), task.getSignature(),
-									null, Constant.KEY_INVOC_TIME_SCHED, Long
-											.toString(schedulingTime)));
-					task.getReport().add(
-							new JsonReportEntry(task.getWorkflowId(), task
-									.getTaskId(), task.getTaskName(), task
-									.getLanguageLabel(), task.getSignature(),
-									null, Constant.KEY_INVOC_HOST,
-									allocatedContainer.getNodeHttpAddress()));
-				}
-				launchTask(task, allocatedContainer);
-			}
-		}
-
 		protected void launchTask(TaskInstance task,
 				Container allocatedContainer) {
 			containerIdToInvocation.put(allocatedContainer.getId().getId(),
@@ -446,6 +420,32 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			// System.exit(1);
 			// }
 
+		}
+
+		protected void launchTasks() {
+			while (!containerQueue.isEmpty() && !scheduler.nothingToSchedule()) {
+				Container allocatedContainer = containerQueue.remove();
+
+				long schedulingTime = System.currentTimeMillis();
+				TaskInstance task = scheduler.getNextTask(allocatedContainer);
+				schedulingTime = System.currentTimeMillis() - schedulingTime;
+
+				if (task.getTries() == 1) {
+					task.getReport().add(
+							new JsonReportEntry(task.getWorkflowId(), task
+									.getTaskId(), task.getTaskName(), task
+									.getLanguageLabel(), task.getSignature(),
+									null, Constant.KEY_INVOC_TIME_SCHED, Long
+											.toString(schedulingTime)));
+					task.getReport().add(
+							new JsonReportEntry(task.getWorkflowId(), task
+									.getTaskId(), task.getTaskName(), task
+									.getLanguageLabel(), task.getSignature(),
+									null, Constant.KEY_INVOC_HOST,
+									allocatedContainer.getNodeHttpAddress()));
+				}
+				launchTask(task, allocatedContainer);
+			}
 		}
 
 		@SuppressWarnings("unchecked")
@@ -675,30 +675,31 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 	}
 
+	protected AMRMClientAsync.CallbackHandler allocListener;
+
 	// the yarn tokens to be passed to any launched containers
 	protected ByteBuffer allTokens;
-
 	// a handle to the YARN ResourceManager
 	@SuppressWarnings("rawtypes")
 	protected AMRMClientAsync amRMClient;
+
 	// this application's attempt id (combination of attemptId and fail count)
 	protected ApplicationAttemptId appAttemptID;
-
 	// the internal id assigned to this application by the YARN ResourceManager
 	protected String appId;
 	// the hostname of the container running the Hi-WAY ApplicationMaster
 	protected String appMasterHostname = "";
+
 	// the port on which the ApplicationMaster listens for status updates from
 	// clients
 	protected int appMasterRpcPort = -1;
-
 	// the tracking URL to which the ApplicationMaster publishes info for
 	// clients to monitor
 	protected String appMasterTrackingUrl = "";
 	// the configuration of the Hadoop installation
 	protected Configuration conf;
-	protected int containerCores = 1;
 
+	protected int containerCores = 1;
 	// a data structure storing the invocation launched by each container
 	protected Map<Integer, HiWayInvocation> containerIdToInvocation = new HashMap<>();
 	// a listener for processing the responses from the NodeManagers
@@ -708,27 +709,28 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	protected int containerMemory = 4096;
 	// a queue for allocated containers that have yet to be assigned a task
 	protected Queue<Container> containerQueue = new LinkedList<>();
+
 	// flags denoting workflow execution has finished and been successful
 	protected volatile boolean done;
 
 	// the report, in which provenance information is stored
 	protected Data federatedReport;
-
 	protected BufferedWriter federatedReportWriter;
-	protected Map<String, Data> files = new HashMap<>();
 
+	protected Map<String, Data> files = new HashMap<>();
 	// a handle to the hdfs
 	protected FileSystem fs;
 	// a list of threads, one for each container launch
 	protected List<Thread> launchThreads = new ArrayList<Thread>();
+
 	// a structure that stores various metrics during workflow execution
 	protected final WFAppMetrics metrics = WFAppMetrics.create();
 
 	// a handle to communicate with the YARN NodeManagers
 	protected NMClientAsync nmClientAsync;
-
 	// a counter for allocated containers
 	protected AtomicInteger numAllocatedContainers = new AtomicInteger();
+
 	// a counter for completed containers (complete denotes successful or failed
 	protected AtomicInteger numCompletedContainers = new AtomicInteger();
 
@@ -740,9 +742,9 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 	// a counter for requested containers
 	protected AtomicInteger numRequestedContainers = new AtomicInteger();
-
 	// priority of the container request
 	protected int requestPriority;
+
 	// the workflow scheduler, as defined at workflow launch time
 	protected Scheduler scheduler;
 
@@ -758,18 +760,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	// the workflow to be executed along with its format and path in the file
 	// system
 	protected String workflowPath;
-
-	public AbstractApplicationMaster() {
-		conf = new YarnConfiguration();
-		conf.addResource("core-site.xml");
-		// conf.addResource(new Path(System.getenv("HADOOP_CONF_DIR") +
-		// "/core-site.xml"));
-		try {
-			fs = FileSystem.get(conf);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
 
 	// protected void buildPostScript(TaskInstance task, Container container)
 	// throws IOException {
@@ -881,6 +871,18 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	// task.addScript(script);
 	// }
 
+	public AbstractApplicationMaster() {
+		conf = new YarnConfiguration();
+		conf.addResource("core-site.xml");
+		// conf.addResource(new Path(System.getenv("HADOOP_CONF_DIR") +
+		// "/core-site.xml"));
+		try {
+			fs = FileSystem.get(conf);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
 	/**
 	 * If the debug flag is set, dump out contents of current working directory
 	 * and the environment to stdout for debugging.
@@ -916,6 +918,26 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			e.printStackTrace();
 		}
 	}
+
+	// protected String generateTimeString(TaskInstance task, String key) {
+	// return "/usr/bin/time -a -o " + Invocation.REPORT_FILENAME + " -f '{"
+	// + JsonReportEntry.ATT_TIMESTAMP + ":"
+	// + System.currentTimeMillis() + "," + JsonReportEntry.ATT_RUNID
+	// + ":\"" + task.getWorkflowId() + "\","
+	// + JsonReportEntry.ATT_TASKID + ":" + task.getTaskId() + ","
+	// + JsonReportEntry.ATT_TASKNAME + ":\"" + task.getTaskName()
+	// + "\"," + JsonReportEntry.ATT_LANG + ":\""
+	// + task.getLanguageLabel() + "\"," + JsonReportEntry.ATT_INVOCID
+	// + ":" + task.getSignature() + "," + JsonReportEntry.ATT_KEY
+	// + ":\"" + key + "\"," + JsonReportEntry.ATT_VALUE + ":"
+	// + "{\"realTime\":%e,\"userTime\":%U,\"sysTime\":%S,"
+	// + "\"maxResidentSetSize\":%M,\"avgResidentSetSize\":%t,"
+	// + "\"avgDataSize\":%D,\"avgStackSize\":%p,\"avgTextSize\":%X,"
+	// + "\"nMajPageFault\":%F,\"nMinPageFault\":%R,"
+	// + "\"nSwapOutMainMem\":%W,\"nForcedContextSwitch\":%c,"
+	// + "\"nWaitContextSwitch\":%w,\"nIoRead\":%I,\"nIoWrite\":%O,"
+	// + "\"nSocketRead\":%r,\"nSocketWrite\":%s,\"nSignal\":%k}}' ";
+	// }
 
 	private void finish() {
 		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
@@ -986,26 +1008,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 
 	}
-
-	// protected String generateTimeString(TaskInstance task, String key) {
-	// return "/usr/bin/time -a -o " + Invocation.REPORT_FILENAME + " -f '{"
-	// + JsonReportEntry.ATT_TIMESTAMP + ":"
-	// + System.currentTimeMillis() + "," + JsonReportEntry.ATT_RUNID
-	// + ":\"" + task.getWorkflowId() + "\","
-	// + JsonReportEntry.ATT_TASKID + ":" + task.getTaskId() + ","
-	// + JsonReportEntry.ATT_TASKNAME + ":\"" + task.getTaskName()
-	// + "\"," + JsonReportEntry.ATT_LANG + ":\""
-	// + task.getLanguageLabel() + "\"," + JsonReportEntry.ATT_INVOCID
-	// + ":" + task.getSignature() + "," + JsonReportEntry.ATT_KEY
-	// + ":\"" + key + "\"," + JsonReportEntry.ATT_VALUE + ":"
-	// + "{\"realTime\":%e,\"userTime\":%U,\"sysTime\":%S,"
-	// + "\"maxResidentSetSize\":%M,\"avgResidentSetSize\":%t,"
-	// + "\"avgDataSize\":%D,\"avgStackSize\":%p,\"avgTextSize\":%X,"
-	// + "\"nMajPageFault\":%F,\"nMinPageFault\":%R,"
-	// + "\"nSwapOutMainMem\":%W,\"nForcedContextSwitch\":%c,"
-	// + "\"nWaitContextSwitch\":%w,\"nIoRead\":%I,\"nIoWrite\":%O,"
-	// + "\"nSocketRead\":%r,\"nSocketWrite\":%s,\"nSignal\":%k}}' ";
-	// }
 
 	@Override
 	public Collection<Data> getOutputFiles() {
@@ -1178,8 +1180,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		new HelpFormatter().printHelp("ApplicationMaster", opts);
 	}
 
-	protected AMRMClientAsync.CallbackHandler allocListener;
-
 	/**
 	 * Main run function for the application master
 	 * 
@@ -1232,46 +1232,48 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		switch (schedulerName) {
 		case staticRoundRobin:
 		case heft:
-//			Map<String, Map<String, Double>> runtimeEstimates = new HashMap<>();
-//
-//			Data estimates = new Data("estimates.csv");
-//			estimates.setInput(true);
-//			estimates.stageIn(fs, "");
-//			BufferedReader reader = new BufferedReader(new FileReader(new File(
-//					"estimates.csv")));
-//
-//			List<List<String>> table = new ArrayList<>();
-//			String line;
-//			while ((line = reader.readLine()) != null) {
-//				List<String> row = new ArrayList<>();
-//				table.add(row);
-//				String[] splittedLine = line.split(";");
-//				for (int i = 0; i < splittedLine.length; i++) {
-//					row.add(splittedLine[i]);
-//				}
-//			}
-//			reader.close();
-//
-//			for (int j = 1; j < table.get(0).size(); j++) {
-//				Map<String, Double> runtimeEstimate = new HashMap<>();
-//				runtimeEstimates.put(table.get(0).get(j), runtimeEstimate);
-//			}
-//
-//			for (int i = 1; i < table.size(); i++) {
-//				String rowName = table.get(i).get(0);
-//				for (int j = 1; j < table.get(i).size(); j++) {
-//					String columnName = table.get(0).get(j);
-//					Double value = Double.parseDouble(table.get(i).get(j));
-//					runtimeEstimates.get(columnName).put(rowName, value);
-//				}
-//			}
-//
-//			for (int j = 1; j < table.get(0).size(); j++) {
-//				String host = table.get(0).get(j);
-//				if (appMasterHostname.contains(host)) {
-//					runtimeEstimates.remove(host);
-//				}
-//			}
+			// Map<String, Map<String, Double>> runtimeEstimates = new
+			// HashMap<>();
+			//
+			// Data estimates = new Data("estimates.csv");
+			// estimates.setInput(true);
+			// estimates.stageIn(fs, "");
+			// BufferedReader reader = new BufferedReader(new FileReader(new
+			// File(
+			// "estimates.csv")));
+			//
+			// List<List<String>> table = new ArrayList<>();
+			// String line;
+			// while ((line = reader.readLine()) != null) {
+			// List<String> row = new ArrayList<>();
+			// table.add(row);
+			// String[] splittedLine = line.split(";");
+			// for (int i = 0; i < splittedLine.length; i++) {
+			// row.add(splittedLine[i]);
+			// }
+			// }
+			// reader.close();
+			//
+			// for (int j = 1; j < table.get(0).size(); j++) {
+			// Map<String, Double> runtimeEstimate = new HashMap<>();
+			// runtimeEstimates.put(table.get(0).get(j), runtimeEstimate);
+			// }
+			//
+			// for (int i = 1; i < table.size(); i++) {
+			// String rowName = table.get(i).get(0);
+			// for (int j = 1; j < table.get(i).size(); j++) {
+			// String columnName = table.get(0).get(j);
+			// Double value = Double.parseDouble(table.get(i).get(j));
+			// runtimeEstimates.get(columnName).put(rowName, value);
+			// }
+			// }
+			//
+			// for (int j = 1; j < table.get(0).size(); j++) {
+			// String host = table.get(0).get(j);
+			// if (appMasterHostname.contains(host)) {
+			// runtimeEstimates.remove(host);
+			// }
+			// }
 
 			scheduler = schedulerName
 					.equals(Constant.SchedulingPolicy.staticRoundRobin) ? new StaticRoundRobin(

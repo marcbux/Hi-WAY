@@ -50,13 +50,14 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 /**
  * <p>
- * The HEFT scheduler, as described in [1]. This implementation of HEFT does not yet make use of estimates for data
- * transfer times between nodes.
+ * The HEFT scheduler, as described in [1]. This implementation of HEFT does not
+ * yet make use of estimates for data transfer times between nodes.
  * </p>
  * 
  * <p>
- * [1] Topcuoglu, H., Hariri, S., & Wu, M.-Y. (2002). <i>Performance-Effective and Low-Complexity Task Scheduling for
- * Heterogeneous Computing.</i> IEEE Transactions on Parallel and Distributed Systems, 13(3), 260�274.
+ * [1] Topcuoglu, H., Hariri, S., & Wu, M.-Y. (2002). <i>Performance-Effective
+ * and Low-Complexity Task Scheduling for Heterogeneous Computing.</i> IEEE
+ * Transactions on Parallel and Distributed Systems, 13(3), 260�274.
  * </p>
  * 
  * @author Marc Bux
@@ -96,24 +97,33 @@ public class HEFT extends StaticScheduler {
 		double bestFinish = Double.MAX_VALUE;
 
 		for (String node : nodes) {
-			double computationCost = runtimeEstimatesPerNode.get(node).get(task.getId()).weight;
+			double computationCost = runtimeEstimatesPerNode.get(node).get(
+					task.getId()).weight;
 
-			// the readytime of this task will have been set by now, as all predecessor tasks have a higher upward
+			// the readytime of this task will have been set by now, as all
+			// predecessor tasks have a higher upward
 			// rank and thus have been assigned to a vm already
-			TreeSet<Double> freeTimeSlotStarts = freeTimeSlotStartsPerNode.get(node);
-			Map<Double, Double> freeTimeSlotLengths = freeTimeSlotLengthsPerNode.get(node);
+			TreeSet<Double> freeTimeSlotStarts = freeTimeSlotStartsPerNode
+					.get(node);
+			Map<Double, Double> freeTimeSlotLengths = freeTimeSlotLengthsPerNode
+					.get(node);
 
-			SortedSet<Double> freeTimeSlotStartsAfterReadyTime = (freeTimeSlotStarts.floor(readyTime) != null) ? freeTimeSlotStarts
-					.tailSet(freeTimeSlotStarts.floor(readyTime)) : freeTimeSlotStarts.tailSet(freeTimeSlotStarts
-					.ceiling(readyTime));
+			SortedSet<Double> freeTimeSlotStartsAfterReadyTime = (freeTimeSlotStarts
+					.floor(readyTime) != null) ? freeTimeSlotStarts
+					.tailSet(freeTimeSlotStarts.floor(readyTime))
+					: freeTimeSlotStarts.tailSet(freeTimeSlotStarts
+							.ceiling(readyTime));
 
 			for (double freeTimeSlotStart : freeTimeSlotStartsAfterReadyTime) {
-				double freeTimeSlotActualStart = Math.max(readyTime, freeTimeSlotStart);
+				double freeTimeSlotActualStart = Math.max(readyTime,
+						freeTimeSlotStart);
 				if (freeTimeSlotActualStart + computationCost > bestFinish)
 					break;
-				double freeTimeSlotLength = freeTimeSlotLengths.get(freeTimeSlotStart);
+				double freeTimeSlotLength = freeTimeSlotLengths
+						.get(freeTimeSlotStart);
 				if (freeTimeSlotActualStart > freeTimeSlotStart)
-					freeTimeSlotLength -= freeTimeSlotActualStart - freeTimeSlotStart;
+					freeTimeSlotLength -= freeTimeSlotActualStart
+							- freeTimeSlotStart;
 				if (computationCost < freeTimeSlotLength) {
 					bestNode = node;
 					bestNodeFreeTimeSlotActualStart = freeTimeSlotActualStart;
@@ -140,8 +150,10 @@ public class HEFT extends StaticScheduler {
 			throw new RuntimeException(e);
 		}
 
-		double timeslotStart = freeTimeSlotStartsPerNode.get(bestNode).floor(bestNodeFreeTimeSlotActualStart);
-		double timeslotLength = freeTimeSlotLengthsPerNode.get(bestNode).get(timeslotStart);
+		double timeslotStart = freeTimeSlotStartsPerNode.get(bestNode).floor(
+				bestNodeFreeTimeSlotActualStart);
+		double timeslotLength = freeTimeSlotLengthsPerNode.get(bestNode).get(
+				timeslotStart);
 		double diff = bestNodeFreeTimeSlotActualStart - timeslotStart;
 		// add time slots before and after
 		if (bestNodeFreeTimeSlotActualStart > timeslotStart) {
@@ -155,7 +167,8 @@ public class HEFT extends StaticScheduler {
 		double actualTimeSlotLength = timeslotLength - diff;
 		if (computationCost < actualTimeSlotLength) {
 			freeTimeSlotStartsPerNode.get(bestNode).add(bestFinish);
-			freeTimeSlotLengthsPerNode.get(bestNode).put(bestFinish, actualTimeSlotLength - computationCost);
+			freeTimeSlotLengthsPerNode.get(bestNode).put(bestFinish,
+					actualTimeSlotLength - computationCost);
 		}
 	}
 
@@ -183,11 +196,13 @@ public class HEFT extends StaticScheduler {
 
 			double averageComputationCost = 0;
 			for (String node : nodes) {
-				averageComputationCost += runtimeEstimatesPerNode.get(node).get(task.getId()).weight;
+				averageComputationCost += runtimeEstimatesPerNode.get(node)
+						.get(task.getId()).weight;
 			}
 			averageComputationCost /= nodes.size();
 
-			// note that the upward rank of a task will always be greater than that of its successors
+			// note that the upward rank of a task will always be greater than
+			// that of its successors
 			try {
 				task.setUpwardRank(averageComputationCost + maxSuccessorRank);
 			} catch (WorkflowStructureUnknownException e) {
@@ -196,7 +211,8 @@ public class HEFT extends StaticScheduler {
 		}
 
 		// Phase 1: Task Prioritizing (sort by decreasing order of rank)
-		Collections.sort(taskList, AbstractTaskInstance.Comparators.UPWARDSRANK);
+		Collections
+				.sort(taskList, AbstractTaskInstance.Comparators.UPWARDSRANK);
 
 		// Phase 2: Processor Selection
 		for (TaskInstance task : taskList) {

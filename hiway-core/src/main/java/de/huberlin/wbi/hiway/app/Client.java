@@ -92,7 +92,7 @@ public class Client {
 	 * The main routine.
 	 * 
 	 * @param args
-	 * Command line arguments passed to the Client.
+	 *            Command line arguments passed to the Client.
 	 */
 	public static void main(String[] args) {
 		boolean result = false;
@@ -125,15 +125,16 @@ public class Client {
 	// amount of memory resource to request for to run the App Master
 	private int amMemory = 4096;
 
-	// application master specific info to register a new Application with RM/ASM
+	// application master specific info to register a new Application with
+	// RM/ASM
 	// the priority of the AM container
 	private int amPriority = 0;
 	// the queue to which this application is to be submitted in the RM
 	private String amQueue = "";
 	// ApplicationMaster jar file
-//	private String appMasterJarPath = "";
+	// private String appMasterJarPath = "";
 	// main class to invoke application master
-//	private final String appMasterMainClass;
+	// private final String appMasterMainClass;
 
 	// start time for client
 	private final long clientStartTime = System.currentTimeMillis();
@@ -142,10 +143,11 @@ public class Client {
 	private long clientTimeout;
 	// the configuration of the Hadoop installation
 	private Configuration conf;
-//	private Configuration hiwayConf;
+	// private Configuration hiwayConf;
 
 	private int containerCores = 1;
-	// amount of memory and number of cores to request for containers in which workflow tasks will be executed
+	// amount of memory and number of cores to request for containers in which
+	// workflow tasks will be executed
 	private int containerMemory = 4096;
 
 	// debug flag
@@ -176,34 +178,45 @@ public class Client {
 
 	public Client(Configuration conf) {
 		this.conf = conf;
-//		hiwayConf = new HiWayConfiguration();
+		// hiwayConf = new HiWayConfiguration();
 		yarnClient = YarnClient.createYarnClient();
 		yarnClient.init(conf);
 		opts = new Options();
 		opts.addOption("priority", true, "Application Priority. Default 0");
-		opts.addOption("queue", true, "RM Queue in which this application is to be submitted");
-		opts.addOption("timeout", true, "Application timeout in milliseconds. Default: 1 day.");
-		opts.addOption("master_memory", true,
+		opts.addOption("queue", true,
+				"RM Queue in which this application is to be submitted");
+		opts.addOption("timeout", true,
+				"Application timeout in milliseconds. Default: 1 day.");
+		opts.addOption(
+				"master_memory",
+				true,
 				"Amount of memory in MB to be requested to run the application master. Default 4096");
-//		opts.addOption("jar", true, "Jar file containing the application master");
-		opts.addOption("shell_env", true, "Environment for shell script. Specified as env_key=env_val pairs");
-		opts.addOption("shell_cmd_priority", true, "Priority for the shell command containers");
+		// opts.addOption("jar", true,
+		// "Jar file containing the application master");
+		opts.addOption("shell_env", true,
+				"Environment for shell script. Specified as env_key=env_val pairs");
+		opts.addOption("shell_cmd_priority", true,
+				"Priority for the shell command containers");
 		opts.addOption("container_memory", true,
 				"Amount of memory in MB to be requested to run the shell command. Default 4096");
 		opts.addOption("container_vcores", true,
 				"Number of virtual vores to be requested to run the shell command. Default 1");
-		opts.addOption("workflow", true, "The workflow file to be executed by the Application Master");
+		opts.addOption("workflow", true,
+				"The workflow file to be executed by the Application Master");
 		String workflowFormats = "";
 		for (Constant.WorkflowFormat format : Constant.WorkflowFormat.values()) {
 			workflowFormats += ", " + format.toString();
 		}
-		opts.addOption("type", true, "The input file format. Valid arguments: " + workflowFormats.substring(2));
+		opts.addOption("type", true, "The input file format. Valid arguments: "
+				+ workflowFormats.substring(2));
 		String schedulingPolicies = "";
-		for (Constant.SchedulingPolicy policy : Constant.SchedulingPolicy.values()) {
+		for (Constant.SchedulingPolicy policy : Constant.SchedulingPolicy
+				.values()) {
 			schedulingPolicies += ", " + policy.toString();
 		}
 		opts.addOption("scheduler", true,
-				"The workflow scheduling policy. Valid arguments: " + schedulingPolicies.substring(2));
+				"The workflow scheduling policy. Valid arguments: "
+						+ schedulingPolicies.substring(2));
 		opts.addOption("debug", false, "Dump out debug information");
 		opts.addOption("help", false, "Print usage");
 	}
@@ -212,13 +225,15 @@ public class Client {
 	 * Kill a submitted application by sending a call to the ASM.
 	 * 
 	 * @param appId
-	 * Application Id to be killed.
+	 *            Application Id to be killed.
 	 * 
 	 * @throws YarnException
 	 * @throws IOException
 	 */
-	private void forceKillApplication(ApplicationId appId) throws YarnException, IOException {
-		// Response can be ignored as it is non-null on success or throws an exception in case of failures
+	private void forceKillApplication(ApplicationId appId)
+			throws YarnException, IOException {
+		// Response can be ignored as it is non-null on success or throws an
+		// exception in case of failures
 		yarnClient.killApplication(appId);
 	}
 
@@ -226,7 +241,7 @@ public class Client {
 	 * Parse command line options.
 	 * 
 	 * @param args
-	 * Parsed command line options.
+	 *            Parsed command line options.
 	 * @return Whether the init was successful to run the client.
 	 * @throws ParseException
 	 */
@@ -235,7 +250,8 @@ public class Client {
 		CommandLine cliParser = new GnuParser().parse(opts, args);
 
 		if (args.length == 0) {
-			throw new IllegalArgumentException("No args specified for client to initialize");
+			throw new IllegalArgumentException(
+					"No args specified for client to initialize");
 		}
 
 		if (cliParser.hasOption("help")) {
@@ -247,28 +263,33 @@ public class Client {
 			debugFlag = true;
 		}
 
-		amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
+		amPriority = Integer
+				.parseInt(cliParser.getOptionValue("priority", "0"));
 		amQueue = cliParser.getOptionValue("queue", "default");
-		amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "4096"));
+		amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory",
+				"4096"));
 
 		if (amMemory < 0) {
-			throw new IllegalArgumentException("Invalid memory specified for application master, exiting."
-					+ " Specified memory=" + amMemory);
+			throw new IllegalArgumentException(
+					"Invalid memory specified for application master, exiting."
+							+ " Specified memory=" + amMemory);
 		}
 
-//		if (!cliParser.hasOption("jar")) {
-//			throw new IllegalArgumentException("No jar file specified for application master");
-//		}
-//		appMasterJarPath = cliParser.getOptionValue("jar");
-//		if (appMasterJarPath.startsWith("/")) {
-//			throw new IllegalArgumentException("Only relative paths supported");
-//		}
-//		if (appMasterJarPath.contains("./")) {
-//			throw new IllegalArgumentException("./ and ../ not allowed in path");
-//		}
+		// if (!cliParser.hasOption("jar")) {
+		// throw new
+		// IllegalArgumentException("No jar file specified for application master");
+		// }
+		// appMasterJarPath = cliParser.getOptionValue("jar");
+		// if (appMasterJarPath.startsWith("/")) {
+		// throw new IllegalArgumentException("Only relative paths supported");
+		// }
+		// if (appMasterJarPath.contains("./")) {
+		// throw new IllegalArgumentException("./ and ../ not allowed in path");
+		// }
 
 		if (!cliParser.hasOption("workflow")) {
-			throw new IllegalArgumentException("No workflow file specified to be executed by application master");
+			throw new IllegalArgumentException(
+					"No workflow file specified to be executed by application master");
 		}
 
 		workflowPath = cliParser.getOptionValue("workflow");
@@ -278,10 +299,11 @@ public class Client {
 		if (workflowPath.contains("./")) {
 			throw new IllegalArgumentException("./ and ../ not allowed in path");
 		}
-		workflowType = Constant.WorkflowFormat.valueOf(cliParser.getOptionValue("type",
-				Constant.WorkflowFormat.cuneiform.toString()));
-		scheduler = Constant.SchedulingPolicy.valueOf(cliParser.getOptionValue("scheduler",
-				Constant.SchedulingPolicy.c3po.toString()));
+		workflowType = Constant.WorkflowFormat.valueOf(cliParser
+				.getOptionValue("type",
+						Constant.WorkflowFormat.cuneiform.toString()));
+		scheduler = Constant.SchedulingPolicy.valueOf(cliParser.getOptionValue(
+				"scheduler", Constant.SchedulingPolicy.c3po.toString()));
 
 		if (cliParser.hasOption("shell_env")) {
 			String envs[] = cliParser.getOptionValues("shell_env");
@@ -300,27 +322,32 @@ public class Client {
 				shellEnv.put(key, val);
 			}
 		}
-		shellCmdPriority = Integer.parseInt(cliParser.getOptionValue("shell_cmd_priority", "0"));
+		shellCmdPriority = Integer.parseInt(cliParser.getOptionValue(
+				"shell_cmd_priority", "0"));
 
-		containerMemory = Integer.parseInt(cliParser.getOptionValue("container_memory", "4096"));
-		containerCores = Integer.parseInt(cliParser.getOptionValue("container_vcores", "1"));
+		containerMemory = Integer.parseInt(cliParser.getOptionValue(
+				"container_memory", "4096"));
+		containerCores = Integer.parseInt(cliParser.getOptionValue(
+				"container_vcores", "1"));
 
-		clientTimeout = Integer
-				.parseInt(cliParser.getOptionValue("timeout", Integer.toString(1 * 24 * 60 * 60 * 1000)));
+		clientTimeout = Integer.parseInt(cliParser.getOptionValue("timeout",
+				Integer.toString(1 * 24 * 60 * 60 * 1000)));
 
 		return true;
 	}
 
 	/**
-	 * Monitor the submitted application for completion. Kill application if time expires.
+	 * Monitor the submitted application for completion. Kill application if
+	 * time expires.
 	 * 
 	 * @param appId
-	 * Application Id of application to be monitored
+	 *            Application Id of application to be monitored
 	 * @return true if application completed successfully
 	 * @throws YarnException
 	 * @throws IOException
 	 */
-	private boolean monitorApplication(ApplicationId appId) throws YarnException, IOException {
+	private boolean monitorApplication(ApplicationId appId)
+			throws YarnException, IOException {
 		while (true) {
 			// Check app status every 1 second.
 			try {
@@ -333,19 +360,24 @@ public class Client {
 			ApplicationReport report = yarnClient.getApplicationReport(appId);
 
 			YarnApplicationState state = report.getYarnApplicationState();
-			FinalApplicationStatus dsStatus = report.getFinalApplicationStatus();
+			FinalApplicationStatus dsStatus = report
+					.getFinalApplicationStatus();
 			if (YarnApplicationState.FINISHED == state) {
 				if (FinalApplicationStatus.SUCCEEDED == dsStatus) {
 					log.info("Application has completed successfully. Breaking monitoring loop");
 					log.info(report.getDiagnostics());
 					return true;
 				} else {
-					log.info("Application did finish unsuccessfully." + " YarnState=" + state.toString()
-							+ ", DSFinalStatus=" + dsStatus.toString() + ". Breaking monitoring loop");
+					log.info("Application did finish unsuccessfully."
+							+ " YarnState=" + state.toString()
+							+ ", DSFinalStatus=" + dsStatus.toString()
+							+ ". Breaking monitoring loop");
 					return false;
 				}
-			} else if (YarnApplicationState.KILLED == state || YarnApplicationState.FAILED == state) {
-				log.info("Application did not finish." + " YarnState=" + state.toString() + ", DSFinalStatus="
+			} else if (YarnApplicationState.KILLED == state
+					|| YarnApplicationState.FAILED == state) {
+				log.info("Application did not finish." + " YarnState="
+						+ state.toString() + ", DSFinalStatus="
 						+ dsStatus.toString() + ". Breaking monitoring loop");
 				return false;
 			}
@@ -378,26 +410,33 @@ public class Client {
 		yarnClient.start();
 
 		YarnClusterMetrics clusterMetrics = yarnClient.getYarnClusterMetrics();
-		log.info("Got Cluster metric info from ASM" + ", numNodeManagers=" + clusterMetrics.getNumNodeManagers());
+		log.info("Got Cluster metric info from ASM" + ", numNodeManagers="
+				+ clusterMetrics.getNumNodeManagers());
 
-		List<NodeReport> clusterNodeReports = yarnClient.getNodeReports(NodeState.RUNNING);
+		List<NodeReport> clusterNodeReports = yarnClient
+				.getNodeReports(NodeState.RUNNING);
 		log.info("Got Cluster node info from ASM");
 		for (NodeReport node : clusterNodeReports) {
-			log.info("Got node report from ASM for" + ", nodeId=" + node.getNodeId() + ", nodeAddress"
-					+ node.getHttpAddress() + ", nodeRackName" + node.getRackName() + ", nodeNumContainers"
+			log.info("Got node report from ASM for" + ", nodeId="
+					+ node.getNodeId() + ", nodeAddress"
+					+ node.getHttpAddress() + ", nodeRackName"
+					+ node.getRackName() + ", nodeNumContainers"
 					+ node.getNumContainers());
 		}
 
 		QueueInfo queueInfo = yarnClient.getQueueInfo(this.amQueue);
-		log.info("Queue info" + ", queueName=" + queueInfo.getQueueName() + ", queueCurrentCapacity="
-				+ queueInfo.getCurrentCapacity() + ", queueMaxCapacity=" + queueInfo.getMaximumCapacity()
-				+ ", queueApplicationCount=" + queueInfo.getApplications().size() + ", queueChildQueueCount="
-				+ queueInfo.getChildQueues().size());
+		log.info("Queue info" + ", queueName=" + queueInfo.getQueueName()
+				+ ", queueCurrentCapacity=" + queueInfo.getCurrentCapacity()
+				+ ", queueMaxCapacity=" + queueInfo.getMaximumCapacity()
+				+ ", queueApplicationCount="
+				+ queueInfo.getApplications().size()
+				+ ", queueChildQueueCount=" + queueInfo.getChildQueues().size());
 
 		List<QueueUserACLInfo> listAclInfo = yarnClient.getQueueAclsInfo();
 		for (QueueUserACLInfo aclInfo : listAclInfo) {
 			for (QueueACL userAcl : aclInfo.getUserAcls()) {
-				log.info("User ACL Info for Queue" + ", queueName=" + aclInfo.getQueueName() + ", userAcl="
+				log.info("User ACL Info for Queue" + ", queueName="
+						+ aclInfo.getQueueName() + ", userAcl="
 						+ userAcl.name());
 			}
 		}
@@ -406,27 +445,31 @@ public class Client {
 		YarnClientApplication app = yarnClient.createApplication();
 		GetNewApplicationResponse appResponse = app.getNewApplicationResponse();
 
-		// Get min/max resource capabilities from RM and change memory ask if needed
+		// Get min/max resource capabilities from RM and change memory ask if
+		// needed
 		int maxMem = appResponse.getMaximumResourceCapability().getMemory();
 		log.info("Max mem capabililty of resources in this cluster " + maxMem);
 
 		// A resource ask cannot exceed the max.
 		if (amMemory > maxMem) {
-			log.info("AM memory specified above max threshold of cluster. Using max value." + ", specified=" + amMemory
-					+ ", max=" + maxMem);
+			log.info("AM memory specified above max threshold of cluster. Using max value."
+					+ ", specified=" + amMemory + ", max=" + maxMem);
 			amMemory = maxMem;
 		}
 
 		// set the application name
-		ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
+		ApplicationSubmissionContext appContext = app
+				.getApplicationSubmissionContext();
 		appContext.setApplicationType(Constant.APPLICATION_TYPE);
-		appContext.setApplicationName("run " + workflowPath + " (type: " + workflowType.toString() + ", scheduler: "
+		appContext.setApplicationName("run " + workflowPath + " (type: "
+				+ workflowType.toString() + ", scheduler: "
 				+ scheduler.toString() + ")");
 		ApplicationId appId = appContext.getApplicationId();
 		Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY + "/" + appId);
 
 		// Set up the container launch context for the application master
-		ContainerLaunchContext amContainer = Records.newRecord(ContainerLaunchContext.class);
+		ContainerLaunchContext amContainer = Records
+				.newRecord(ContainerLaunchContext.class);
 
 		// set local resources for the application master
 		Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
@@ -435,24 +478,24 @@ public class Client {
 		log.info("Copy App Master jar from local filesystem and add to local environment");
 		FileSystem fs = FileSystem.get(conf);
 
-//		URI amJar;
-//		try {
-//			amJar = new URI(hiwayConf.get(HiWayConfiguration.HIWAY_AM_URI));
-//		} catch (URISyntaxException e) {
-//			throw new RuntimeException(e);
-//		}
-//		Path amJarPath = new Path(amJar);
-//
-//		LocalResource rsrc = Records.newRecord(LocalResource.class);
-//		rsrc.setType(LocalResourceType.FILE);
-//		rsrc.setVisibility(LocalResourceVisibility.APPLICATION);
-//		rsrc.setResource(ConverterUtils.getYarnUrlFromPath(amJarPath));
-//
-//		FileStatus status = fs.getFileStatus(amJarPath);
-//		rsrc.setTimestamp(status.getModificationTime());
-//		rsrc.setSize(status.getLen());
-//
-//		localResources.put(amJarPath.getName(), rsrc);
+		// URI amJar;
+		// try {
+		// amJar = new URI(hiwayConf.get(HiWayConfiguration.HIWAY_AM_URI));
+		// } catch (URISyntaxException e) {
+		// throw new RuntimeException(e);
+		// }
+		// Path amJarPath = new Path(amJar);
+		//
+		// LocalResource rsrc = Records.newRecord(LocalResource.class);
+		// rsrc.setType(LocalResourceType.FILE);
+		// rsrc.setVisibility(LocalResourceVisibility.APPLICATION);
+		// rsrc.setResource(ConverterUtils.getYarnUrlFromPath(amJarPath));
+		//
+		// FileStatus status = fs.getFileStatus(amJarPath);
+		// rsrc.setTimestamp(status.getModificationTime());
+		// rsrc.setSize(status.getLen());
+		//
+		// localResources.put(amJarPath.getName(), rsrc);
 
 		Data workflow = new Data(workflowPath);
 		workflow.stageOut(fs, "");
@@ -460,19 +503,23 @@ public class Client {
 		// set local resource info into app master container launch context
 		amContainer.setLocalResources(localResources);
 
-		// set the env variables to be setup in the env where the application master will be run
+		// set the env variables to be setup in the env where the application
+		// master will be run
 		log.info("Set the environment for the application master");
 		Map<String, String> env = new HashMap<String, String>();
 
-		StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$()).append(File.pathSeparatorChar)
+		StringBuilder classPathEnv = new StringBuilder(
+				Environment.CLASSPATH.$()).append(File.pathSeparatorChar)
 				.append("./*");
-		for (String c : conf.getStrings(YarnConfiguration.YARN_APPLICATION_CLASSPATH,
+		for (String c : conf.getStrings(
+				YarnConfiguration.YARN_APPLICATION_CLASSPATH,
 				YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
 			classPathEnv.append(':');
 			classPathEnv.append(File.pathSeparatorChar);
 			classPathEnv.append(c.trim());
 		}
-		classPathEnv.append(File.pathSeparatorChar).append("./log4j.properties");
+		classPathEnv.append(File.pathSeparatorChar)
+				.append("./log4j.properties");
 
 		if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
 			classPathEnv.append(':');
@@ -497,7 +544,7 @@ public class Client {
 		} else {
 			vargs.add(HiWayConfiguration.HIWAY_CF_AM_CLASS);
 		}
-		
+
 		// Set params for Application Master
 		vargs.add("--container_memory " + String.valueOf(containerMemory));
 		vargs.add("--container_vcores " + String.valueOf(containerCores));
@@ -514,8 +561,10 @@ public class Client {
 			vargs.add("--debug");
 		}
 
-		vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout");
-		vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stderr");
+		vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+				+ "/AppMaster.stdout");
+		vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+				+ "/AppMaster.stderr");
 
 		// Get final command
 		StringBuilder command = new StringBuilder();
@@ -523,7 +572,8 @@ public class Client {
 			command.append(str).append(" ");
 		}
 
-		log.info("Completed setting up app master command " + command.toString());
+		log.info("Completed setting up app master command "
+				+ command.toString());
 		List<String> commands = new ArrayList<String>();
 		commands.add(command.toString());
 		amContainer.setCommands(commands);
@@ -538,11 +588,13 @@ public class Client {
 			Credentials credentials = new Credentials();
 			String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
 			if (tokenRenewer == null || tokenRenewer.length() == 0) {
-				throw new IOException("Can't get Master Kerberos principal for the RM to use as renewer");
+				throw new IOException(
+						"Can't get Master Kerberos principal for the RM to use as renewer");
 			}
 
 			// For now, only getting tokens for the default file-system.
-			final Token<?> tokens[] = fs.addDelegationTokens(tokenRenewer, credentials);
+			final Token<?> tokens[] = fs.addDelegationTokens(tokenRenewer,
+					credentials);
 			if (tokens != null) {
 				for (Token<?> token : tokens) {
 					log.info("Got dt for " + fs.getUri() + "; " + token);
@@ -550,7 +602,8 @@ public class Client {
 			}
 			DataOutputBuffer dob = new DataOutputBuffer();
 			credentials.writeTokenStorageToStream(dob);
-			ByteBuffer fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+			ByteBuffer fsTokens = ByteBuffer.wrap(dob.getData(), 0,
+					dob.getLength());
 			amContainer.setTokens(fsTokens);
 		}
 

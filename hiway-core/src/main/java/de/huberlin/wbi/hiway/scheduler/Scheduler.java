@@ -48,11 +48,14 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  */
 public interface Scheduler {
 
+	public void addEntryToDB(JsonReportEntry entry);
+
 	public void addTask(TaskInstance task);
-	
+
 	public void addTasks(Collection<TaskInstance> tasks);
 
-	// all schedulers have an internal queue in which they store tasks that are ready to execute
+	// all schedulers have an internal queue in which they store tasks that are
+	// ready to execute
 	public void addTaskToQueue(TaskInstance task);
 
 	public String[] getNextNodeRequest();
@@ -74,12 +77,12 @@ public interface Scheduler {
 	// determines whether container requests are tied to specific worker nodes
 	public boolean relaxLocality();
 
-	public Collection<ContainerId> taskCompleted(TaskInstance task, ContainerStatus containerStatus, long runtimeInMs);
-	
-	public Collection<ContainerId> taskFailed(TaskInstance task, ContainerStatus containerStatus);
-	
-	public void addEntryToDB(JsonReportEntry entry);
-	
-//	public void addTaskToQueue(TaskInstance task);
+	public Collection<ContainerId> taskCompleted(TaskInstance task,
+			ContainerStatus containerStatus, long runtimeInMs);
+
+	public Collection<ContainerId> taskFailed(TaskInstance task,
+			ContainerStatus containerStatus);
+
+	// public void addTaskToQueue(TaskInstance task);
 
 }

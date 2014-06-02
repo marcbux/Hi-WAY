@@ -50,9 +50,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
-import org.apache.hadoop.yarn.api.records.NodeId;
 
-
+import de.huberlin.wbi.hiway.common.InvocStat;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -220,11 +219,6 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  */
 public class C3PO extends AbstractScheduler {
 
-	protected class PlacementAwarenessEstimate extends Estimate {
-		long localData;
-		long totalData;
-	}
-
 	/**
 	 * 
 	 * for each task category, remember two figures: (1) how many task instances
@@ -237,16 +231,21 @@ public class C3PO extends AbstractScheduler {
 	protected class OutlookEstimate extends Estimate {
 		int finishedTasks;
 		int remainingTasks;
-		long timeSpent;
+		double timeSpent;
 	}
 
-	protected class ConservatismEstimate extends Estimate {
-		long lastRuntime;
+	protected class PlacementAwarenessEstimate extends Estimate {
+		long localData;
+		long totalData;
 	}
+
+	// protected class ConservatismEstimate extends Estimate {
+	// long lastRuntime;
+	// }
 
 	private static final Log log = LogFactory.getLog(C3PO.class);
 	private double conservatismWeight = 1d;
-	protected Map<String, PlacementAwarenessEstimate> dataLocalityStatistics;
+	protected Map<Long, PlacementAwarenessEstimate> dataLocalityStatistics;
 	private final DecimalFormat df;
 
 	private final FileSystem fs;
@@ -254,7 +253,7 @@ public class C3PO extends AbstractScheduler {
 	/**
 	 * In order to gauge the
 	 */
-	protected Map<String, OutlookEstimate> jobStatistics;
+	protected Map<Long, OutlookEstimate> jobStatistics;
 
 	private int nClones = 0;
 
@@ -268,16 +267,17 @@ public class C3PO extends AbstractScheduler {
 	 * One queue of ready-to-execute tasks for each job, identified by its
 	 * unique job name.
 	 */
-	protected Map<String, Queue<TaskInstance>> readyTasks;
+	protected Map<Long, Queue<TaskInstance>> readyTasks;
 
-	protected Map<String, Queue<TaskInstance>> runningTasks;
+	protected Map<Long, Queue<TaskInstance>> runningTasks;
 
 	/**
 	 * For each machine, remember the last execution time of each type of task.
 	 * These values are used as runtime estimates for future scheduling
 	 * decisions.
 	 */
-	protected Map<NodeId, Map<String, ConservatismEstimate>> taskStatisticsPerNode;
+	// protected Map<NodeId, Map<String, ConservatismEstimate>>
+	// taskStatisticsPerNode;
 
 	protected Map<TaskInstance, List<Container>> taskToContainers;
 
@@ -288,13 +288,13 @@ public class C3PO extends AbstractScheduler {
 	public C3PO(String workflowName, FileSystem fs) {
 		this(workflowName, fs, System.currentTimeMillis());
 	}
-	
+
 	public C3PO(String workflowName, FileSystem fs, long seed) {
 		super(workflowName);
 		readyTasks = new HashMap<>();
 		runningTasks = new HashMap<>();
 		taskToContainers = new HashMap<>();
-		taskStatisticsPerNode = new HashMap<>();
+		// taskStatisticsPerNode = new HashMap<>();
 		jobStatistics = new HashMap<>();
 		dataLocalityStatistics = new HashMap<>();
 		numGen = new Random(seed);
@@ -309,26 +309,16 @@ public class C3PO extends AbstractScheduler {
 		this(workflowName, null, seed);
 		this.placementAwarenessWeight = 0d;
 	}
-	
-	public void init() {
-		
-	}
 
 	@Override
 	public void addTask(TaskInstance task) {
 		super.addTask(task);
-		String jobName = task.getTaskName();
-		if (!jobStatistics.containsKey(jobName)) {
-			jobStatistics.put(jobName, new OutlookEstimate());
-			dataLocalityStatistics.put(jobName, new PlacementAwarenessEstimate());
-			readyTasks.put(jobName, new LinkedList<TaskInstance>());
-			runningTasks.put(jobName, new LinkedList<TaskInstance>());
-			for (Map<String, ConservatismEstimate> runtimeEstimate : taskStatisticsPerNode
-					.values())
-				runtimeEstimate.put(jobName, new ConservatismEstimate());
+		long taskId = task.getId();
+		if (!getTaskIds().contains(taskId)) {
+			newTask(taskId);
 		}
 
-		jobStatistics.get(jobName).remainingTasks++;
+		jobStatistics.get(taskId).remainingTasks++;
 		if (task.readyToExecute())
 			addTaskToQueue(task);
 	}
@@ -349,20 +339,20 @@ public class C3PO extends AbstractScheduler {
 	// if no such tasks exist, assign higher probabilites to tasks which
 	// contribute stronger to overall runtime
 	private void computeJobStatisticsWeight(boolean replicate) {
-		for (String jobName : jobStatistics.keySet()) {
-			OutlookEstimate jobStatistic = jobStatistics.get(jobName);
+		for (long taskId : getTaskIds()) {
+			OutlookEstimate jobStatistic = jobStatistics.get(taskId);
 			double avgRuntime = (jobStatistic.finishedTasks != 0) ? jobStatistic.timeSpent
-					/ (double) jobStatistic.finishedTasks
+					/ jobStatistic.finishedTasks
 					: 0d;
-			if ((replicate && runningTasks.get(jobName).size() == 0)
-					|| (!replicate && readyTasks.get(jobName).size() == 0)) {
+			if ((replicate && runningTasks.get(taskId).size() == 0)
+					|| (!replicate && readyTasks.get(taskId).size() == 0)) {
 				jobStatistic.weight = 0;
 			} else if (avgRuntime == 0d) {
 				jobStatistic.weight = Long.MAX_VALUE;
 			} else {
 				jobStatistic.weight = jobStatistic.remainingTasks;
 				if (replicate)
-					jobStatistic.weight += runningTasks.get(jobName).size();
+					jobStatistic.weight += runningTasks.get(taskId).size();
 				jobStatistic.weight *= avgRuntime;
 			}
 		}
@@ -372,11 +362,11 @@ public class C3PO extends AbstractScheduler {
 
 	private void computePlacementAwarenessWeights(Container container,
 			boolean replicate) {
-		for (String jobName : new ArrayList<>(jobStatistics.keySet())) {
-			Queue<TaskInstance> queue = replicate ? runningTasks.get(jobName)
-					: readyTasks.get(jobName);
+		for (long taskId : getTaskIds()) {
+			Queue<TaskInstance> queue = replicate ? runningTasks.get(taskId)
+					: readyTasks.get(taskId);
 			PlacementAwarenessEstimate dataLocalityStatistic = dataLocalityStatistics
-					.get(jobName);
+					.get(taskId);
 			if (queue.size() == 0) {
 				dataLocalityStatistic.weight = 0d;
 			} else {
@@ -412,52 +402,52 @@ public class C3PO extends AbstractScheduler {
 	// if no such tasks exist, assign higher probabilities to tasks which this
 	// node is good at
 	private void computeTaskStatisticsWeights() {
-		for (String jobName : jobStatistics.keySet()) {
-			Collection<ConservatismEstimate> taskStatistics = new ArrayList<>();
-			for (NodeId nodeId : taskStatisticsPerNode.keySet()) {
-				ConservatismEstimate taskStatistic = taskStatisticsPerNode.get(nodeId)
-						.get(jobName);
-				taskStatistic.weight = (taskStatistic.lastRuntime != 0) ? 1d / taskStatistic.lastRuntime
+		for (long taskId : getTaskIds()) {
+			Collection<RuntimeEstimate> taskStatistics = new ArrayList<>();
+			for (String nodeId : getNodeIds()) {
+				RuntimeEstimate taskStatistic = runtimeEstimatesPerNode.get(
+						nodeId).get(taskId);
+				taskStatistic.weight = (taskStatistic.finishedTasks != 0) ? 1d / taskStatistic.averageRuntime
 						: Long.MAX_VALUE;
 				taskStatistics.add(taskStatistic);
 			}
 			normalizeWeights(taskStatistics);
 		}
 		printTaskStatisticsWeights();
-		for (NodeId nodeId : taskStatisticsPerNode.keySet())
-			normalizeWeights(taskStatisticsPerNode.get(nodeId).values());
+		for (String nodeId : getNodeIds())
+			normalizeWeights(runtimeEstimatesPerNode.get(nodeId).values());
 	}
 
 	@Override
 	public TaskInstance getNextTask(Container container) {
 		super.getNextTask(container);
+
+		updateRuntimeEstimates();
+
 		boolean replicate = getNumberOfReadyTasks() == 0;
 
-		NodeId nodeId = container.getNodeId();
-		if (!taskStatisticsPerNode.containsKey(nodeId)) {
-			Map<String, ConservatismEstimate> taskStatistics = new HashMap<>();
-			for (String jobName : jobStatistics.keySet())
-				taskStatistics.put(jobName, new ConservatismEstimate());
-			taskStatisticsPerNode.put(nodeId, taskStatistics);
+		String nodeId = container.getNodeId().toString();
+		if (!runtimeEstimatesPerNode.containsKey(nodeId)) {
+			newHost(nodeId);
 		}
 
 		computeJobStatisticsWeight(replicate);
 		computeTaskStatisticsWeights();
 		computePlacementAwarenessWeights(container, replicate);
 
-		Map<String, Estimate> combinedWeights = new HashMap<>();
-		for (String jobName : jobStatistics.keySet())
-			combinedWeights.put(jobName, new Estimate());
-		multiplyWeights(combinedWeights, taskStatisticsPerNode.get(nodeId),
+		Map<Long, Estimate> combinedWeights = new HashMap<>();
+		for (long taskId : getTaskIds())
+			combinedWeights.put(taskId, new Estimate());
+		multiplyWeights(combinedWeights, runtimeEstimatesPerNode.get(nodeId),
 				conservatismWeight);
 		multiplyWeights(combinedWeights, jobStatistics, outlookWeight);
 		multiplyWeights(combinedWeights, dataLocalityStatistics,
 				placementAwarenessWeight);
 		normalizeWeights(combinedWeights.values());
 
-		log.debug("Updated Decision Vector for node " + nodeId.getHost() + ":");
+		log.debug("Updated Decision Vector for node " + nodeId + ":");
 		log.debug("\tConservatism (x" + (int) (conservatismWeight + 0.5d)
-				+ ")\t" + printWeights(taskStatisticsPerNode.get(nodeId)));
+				+ ")\t" + printWeights(runtimeEstimatesPerNode.get(nodeId)));
 		log.debug("\tOutlook (x" + (int) (outlookWeight + 0.5d) + ")\t\t"
 				+ printWeights(jobStatistics));
 		log.debug("\tPlacement (x" + (int) (placementAwarenessWeight + 0.5d)
@@ -466,17 +456,17 @@ public class C3PO extends AbstractScheduler {
 
 		double sample = numGen.nextDouble();
 		double min = 0d;
-		for (String jobName : combinedWeights.keySet()) {
-			double max = min + combinedWeights.get(jobName).weight;
+		for (long taskId : getTaskIds()) {
+			double max = min + combinedWeights.get(taskId).weight;
 			if (sample < max) {
-				Queue<TaskInstance> queue = runningTasks.get(jobName);
+				Queue<TaskInstance> queue = runningTasks.get(taskId);
 				if (!replicate) {
-					jobStatistics.get(jobName).remainingTasks--;
-					queue = readyTasks.get(jobName);
+					jobStatistics.get(taskId).remainingTasks--;
+					queue = readyTasks.get(taskId);
 				}
 
 				TaskInstance task = queue.remove();
-				runningTasks.get(jobName).add(task);
+				runningTasks.get(taskId).add(task);
 				if (!taskToContainers.containsKey(task)) {
 					taskToContainers.put(task, new ArrayList<Container>());
 				}
@@ -530,15 +520,30 @@ public class C3PO extends AbstractScheduler {
 		return totalTasks;
 	}
 
-	private void multiplyWeights(Map<String, Estimate> weights,
-			Map<String, ? extends Estimate> statistics, double factor) {
-		for (String jobName : weights.keySet())
-			weights.get(jobName).weight *= Math.pow(
-					statistics.get(jobName).weight, factor);
+	public void init() {
+
 	}
 
-	private void normalizeWeights(
-			Collection<? extends Estimate> statistics) {
+	private void multiplyWeights(Map<Long, Estimate> weights,
+			Map<Long, ? extends Estimate> statistics, double factor) {
+		for (Long taskId : getTaskIds())
+			weights.get(taskId).weight *= Math.pow(
+					statistics.get(taskId).weight, factor);
+	}
+
+	protected void newTask(long taskId) {
+		super.newTask(taskId);
+		for (Map<Long, RuntimeEstimate> runtimeEstimates : runtimeEstimatesPerNode
+				.values()) {
+			runtimeEstimates.put(taskId, new RuntimeEstimate());
+		}
+		jobStatistics.put(taskId, new OutlookEstimate());
+		dataLocalityStatistics.put(taskId, new PlacementAwarenessEstimate());
+		readyTasks.put(taskId, new LinkedList<TaskInstance>());
+		runningTasks.put(taskId, new LinkedList<TaskInstance>());
+	}
+
+	private void normalizeWeights(Collection<? extends Estimate> statistics) {
 		double sum = 0d;
 		for (Estimate statistic : statistics)
 			sum += statistic.weight;
@@ -560,18 +565,19 @@ public class C3PO extends AbstractScheduler {
 		log.debug("Updated Job Statistics:");
 
 		log.debug("\t\t#finish\tavg\t#remain\t#ready\tshare");
-		for (String jobName : jobStatistics.keySet()) {
+		for (long taskId : getTaskIds()) {
+			String jobName = dbInterface.getTaskName(taskId);
 			String jobName6 = (jobName.length() > 6) ? jobName.substring(0, 6)
 					: jobName;
-			OutlookEstimate jobStatistic = jobStatistics.get(jobName);
+			OutlookEstimate jobStatistic = jobStatistics.get(taskId);
 			double avgRuntime = (jobStatistic.finishedTasks != 0) ? jobStatistic.timeSpent
-					/ (double) jobStatistic.finishedTasks
+					/ jobStatistic.finishedTasks
 					: 0d;
 			log.debug("\t" + jobName6 + "\t"
 					+ df.format(jobStatistic.finishedTasks) + "\t"
 					+ df.format(avgRuntime) + "\t"
 					+ df.format(jobStatistic.remainingTasks) + "\t"
-					+ df.format(readyTasks.get(jobName).size()) + "\t"
+					+ df.format(readyTasks.get(taskId).size()) + "\t"
 					+ df.format(jobStatistic.weight));
 		}
 	}
@@ -581,14 +587,15 @@ public class C3PO extends AbstractScheduler {
 
 		log.info("\t\tlocal\ttotal\tshare");
 
-		for (String jobName : jobStatistics.keySet()) {
-			Queue<TaskInstance> queue = replicate ? runningTasks.get(jobName)
-					: readyTasks.get(jobName);
+		for (long taskId : getTaskIds()) {
+			Queue<TaskInstance> queue = replicate ? runningTasks.get(taskId)
+					: readyTasks.get(taskId);
 			if (queue.size() != 0) {
+				String jobName = dbInterface.getTaskName(taskId);
 				String jobName6 = (jobName.length() > 6) ? jobName.substring(0,
 						6) : jobName;
 				PlacementAwarenessEstimate dataLocalityStatistic = dataLocalityStatistics
-						.get(jobName);
+						.get(taskId);
 				log.info("\t" + jobName6 + "\t"
 						+ dataLocalityStatistic.localData + "\t"
 						+ dataLocalityStatistic.totalData + "\t"
@@ -601,36 +608,37 @@ public class C3PO extends AbstractScheduler {
 		log.debug("Updated Task Statistics:");
 
 		String row = "";
-		for (String jobName : jobStatistics.keySet()) {
+		for (long taskId : getTaskIds()) {
+			String jobName = dbInterface.getTaskName(taskId);
 			String jobName7 = (jobName.length() > 7) ? jobName.substring(0, 7)
 					: jobName;
 			row += "\t\t" + jobName7;
 		}
 		log.debug(row);
 
-		for (NodeId nodeId : taskStatisticsPerNode.keySet()) {
-			String nodeName = nodeId.getHost();
-			String nodeName7 = (nodeName.length() > 7) ? nodeName
-					.substring(nodeName.length() - 7) : nodeName;
+		for (String nodeId : getNodeIds()) {
+			// String nodeName = nodeId.getHost();
+			String nodeName7 = (nodeId.length() > 7) ? nodeId.substring(nodeId
+					.length() - 7) : nodeId;
 
 			row = "";
-			for (String jobName : jobStatistics.keySet()) {
-				ConservatismEstimate taskStatistic = taskStatisticsPerNode.get(nodeId)
-						.get(jobName);
-				row += "\t" + df.format(taskStatistic.lastRuntime) + "\t"
+			for (long taskId : getTaskIds()) {
+				RuntimeEstimate taskStatistic = runtimeEstimatesPerNode.get(
+						nodeId).get(taskId);
+				row += "\t" + df.format(taskStatistic.averageRuntime) + "\t"
 						+ df.format(taskStatistic.weight);
 			}
+
 			log.debug("\t" + nodeName7 + row);
 		}
 	}
 
-	private String printWeights(
-			Map<String, ? extends Estimate> statistics) {
+	private String printWeights(Map<Long, ? extends Estimate> statistics) {
 		String names = "";
 		String weights = "";
-		for (String jobName : jobStatistics.keySet()) {
-			names += ", " + jobName;
-			weights += ", " + df.format(statistics.get(jobName).weight);
+		for (Long taskId : getTaskIds()) {
+			names += ", " + dbInterface.getTaskName(taskId);
+			weights += ", " + df.format(statistics.get(taskId).weight);
 		}
 		return "(" + names.substring(2) + ")" + "\t" + "("
 				+ weights.substring(2) + ")";
@@ -651,7 +659,7 @@ public class C3PO extends AbstractScheduler {
 				unissuedNodeRequests.remove();
 			}
 		}
-		
+
 		this.nClones = nClones > 0 ? 0 : nClones;
 	}
 
@@ -671,17 +679,13 @@ public class C3PO extends AbstractScheduler {
 		Collection<ContainerId> toBeReleasedContainers = new ArrayList<>();
 
 		String jobName = task.getTaskName();
-		OutlookEstimate jobStatistic = jobStatistics.get(jobName);
 
-		// update job statistics
-		jobStatistic.finishedTasks++;
-		jobStatistic.timeSpent += runtimeInMs;
-
-		// update task statistics and kill speculative copies
+		// kill speculative copies
 		for (Container container : taskToContainers.get(task)) {
-			if (container.getId().equals(containerStatus.getContainerId())) {
-				taskStatisticsPerNode.get(container.getNodeId()).get(jobName).lastRuntime = runtimeInMs;
-			} else {
+			if (!container.getId().equals(containerStatus.getContainerId())) {
+				// taskStatisticsPerNode.get(container.getNodeId()).get(jobName).lastRuntime
+				// = runtimeInMs;
+				// } else {
 				toBeReleasedContainers.add(container.getId());
 				unissuedNodeRequests.add(new String[0]);
 			}
@@ -710,6 +714,13 @@ public class C3PO extends AbstractScheduler {
 		}
 
 		return new ArrayList<>();
+	}
+
+	@Override
+	protected void updateRuntimeEstimate(InvocStat stat) {
+		OutlookEstimate jobStatistic = jobStatistics.get(stat.getTaskId());
+		jobStatistic.finishedTasks += 1;
+		jobStatistic.timeSpent += stat.getRealTime();
 	}
 
 }

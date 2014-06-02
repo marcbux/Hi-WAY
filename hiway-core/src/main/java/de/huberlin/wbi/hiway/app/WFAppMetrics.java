@@ -44,20 +44,22 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 @Metrics(about = "Workflow Application Master Metrics", context = "hiway")
 public class WFAppMetrics {
 
-//	@Metric
-//	MutableGaugeInt workflowsSubmitted;
-//	@Metric
-//	MutableCounterInt workflowsCompleted;
-//	@Metric
-//	MutableCounterInt workflowsFailed;
+	// @Metric
+	// MutableGaugeInt workflowsSubmitted;
+	// @Metric
+	// MutableCounterInt workflowsCompleted;
+	// @Metric
+	// MutableCounterInt workflowsFailed;
 
 	public static WFAppMetrics create() {
 		return create(DefaultMetricsSystem.instance());
 	}
+
 	public static WFAppMetrics create(MetricsSystem ms) {
 		JvmMetrics.initSingleton("WFAppMaster", null);
 		return ms.register(new WFAppMetrics());
 	}
+
 	@Metric
 	MutableCounterInt tasksCompleted;
 	@Metric
@@ -73,17 +75,17 @@ public class WFAppMetrics {
 	@Metric
 	MutableGaugeInt tasksWaiting;
 
-//	public void submittedWorkflow(UUID runId) {
-//		workflowsSubmitted.incr();
-//	}
-//
-//	public void completedWorkflow(UUID runId) {
-//		workflowsCompleted.incr();
-//	}
-//
-//	public void failedWorkflow(UUID runId) {
-//		workflowsFailed.incr();
-//	}
+	// public void submittedWorkflow(UUID runId) {
+	// workflowsSubmitted.incr();
+	// }
+	//
+	// public void completedWorkflow(UUID runId) {
+	// workflowsCompleted.incr();
+	// }
+	//
+	// public void failedWorkflow(UUID runId) {
+	// workflowsFailed.incr();
+	// }
 
 	public void completedTask(TaskInstance task) {
 		tasksCompleted.incr();
