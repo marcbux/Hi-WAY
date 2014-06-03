@@ -125,6 +125,7 @@ public class LogParser implements HiwayDBI {
 
 	@Override
 	public void logToDB(JsonReportEntry entry) {
+		System.err.println(entry.toString());
 		Long invocId = entry.getInvocId();
 		String fileName = entry.getFile();
 
