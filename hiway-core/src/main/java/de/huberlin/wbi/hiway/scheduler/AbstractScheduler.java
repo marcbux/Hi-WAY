@@ -90,9 +90,10 @@ public abstract class AbstractScheduler implements Scheduler {
 
 	protected long maxTimestamp;
 
-	private int numberOfFinishedTasks = 0;
-	private int numberOfRemainingTasks = 0;
-	private int numberOfRunningTasks = 0;
+	protected int numberOfPreviousRunTasks = 0;
+	protected int numberOfFinishedTasks = 0;
+	protected int numberOfRemainingTasks = 0;
+	protected int numberOfRunningTasks = 0;
 
 	// private Set<String> nodeIds;
 	protected Set<Long> taskIds;
@@ -174,7 +175,7 @@ public abstract class AbstractScheduler implements Scheduler {
 		int runningTasks = getNumberOfRunningTasks();
 		log.debug("\trunning:   " + runningTasks);
 		log.debug("\tremaining: " + numberOfRemainingTasks);
-		return finishedTasks + runningTasks + numberOfRemainingTasks;
+		return finishedTasks + runningTasks + numberOfRemainingTasks - numberOfPreviousRunTasks;
 	}
 
 	protected Set<Long> getTaskIds() {
@@ -212,17 +213,19 @@ public abstract class AbstractScheduler implements Scheduler {
 		try {
 			for (FileStatus fileStatus : fs.listStatus(dir)) {
 				Path src = fileStatus.getPath();
+				log.info("Parsing log " + src.toString());
 				String srcName = src.getName();
 				if (srcName.startsWith(Constant.LOG_PREFIX)
 						&& srcName.endsWith(Constant.LOG_SUFFIX)) {
 					Path dest = new Path(srcName);
-					fs.copyFromLocalFile(false, true, src, dest);
+					fs.copyToLocalFile(false, src, dest);
 
 					try (BufferedReader reader = new BufferedReader(
 							new FileReader(new File(srcName)))) {
 						String line;
 						while ((line = reader.readLine()) != null) {
 							dbInterface.logToDB(new JsonReportEntry(line));
+//							log.info(line);
 						}
 					}
 				}
@@ -230,6 +233,8 @@ public abstract class AbstractScheduler implements Scheduler {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		updateRuntimeEstimates();
+		numberOfPreviousRunTasks += getNumberOfFinishedTasks();
 	}
 
 	@Override

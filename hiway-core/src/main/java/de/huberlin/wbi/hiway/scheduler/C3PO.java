@@ -303,8 +303,7 @@ public class C3PO extends AbstractScheduler {
 		df.applyPattern("###.##");
 		df.setMaximumIntegerDigits(7);
 		this.fs = fs;
-//		parseLogs(fs);
-//		updateRuntimeEstimates();
+		parseLogs(fs);
 	}
 
 	public C3PO(String workflowName, long seed) {
@@ -423,8 +422,6 @@ public class C3PO extends AbstractScheduler {
 	public TaskInstance getNextTask(Container container) {
 		super.getNextTask(container);
 
-		updateRuntimeEstimates();
-
 		boolean replicate = getNumberOfReadyTasks() == 0;
 
 		String nodeId = container.getNodeId().getHost();
@@ -515,9 +512,10 @@ public class C3PO extends AbstractScheduler {
 
 	@Override
 	public int getNumberOfTotalTasks() {
-		int totalTasks = getNumberOfFinishedTasks() + getNumberOfRunningTasks();
+		int totalTasks = getNumberOfFinishedTasks() + getNumberOfRunningTasks() - numberOfPreviousRunTasks;
 		for (OutlookEstimate jobStatistic : jobStatistics.values())
 			totalTasks += jobStatistic.remainingTasks;
+		
 		return totalTasks;
 	}
 
@@ -677,6 +675,7 @@ public class C3PO extends AbstractScheduler {
 	public Collection<ContainerId> taskCompleted(TaskInstance task,
 			ContainerStatus containerStatus, long runtimeInMs) {
 		super.taskCompleted(task, containerStatus, runtimeInMs);
+		updateRuntimeEstimates();
 		Collection<ContainerId> toBeReleasedContainers = new ArrayList<>();
 
 		// kill speculative copies
