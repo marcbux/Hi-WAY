@@ -159,7 +159,7 @@ public abstract class AbstractScheduler implements Scheduler {
 
 	@Override
 	public int getNumberOfFinishedTasks() {
-		return numberOfFinishedTasks;
+		return numberOfFinishedTasks - numberOfPreviousRunTasks;
 	}
 
 	@Override
@@ -213,10 +213,10 @@ public abstract class AbstractScheduler implements Scheduler {
 		try {
 			for (FileStatus fileStatus : fs.listStatus(dir)) {
 				Path src = fileStatus.getPath();
-				log.info("Parsing log " + src.toString());
 				String srcName = src.getName();
 				if (srcName.startsWith(Constant.LOG_PREFIX)
 						&& srcName.endsWith(Constant.LOG_SUFFIX)) {
+					log.info("Parsing log " + src.toString());
 					Path dest = new Path(srcName);
 					fs.copyToLocalFile(false, src, dest);
 

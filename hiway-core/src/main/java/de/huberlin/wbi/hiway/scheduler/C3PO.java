@@ -494,7 +494,7 @@ public class C3PO extends AbstractScheduler {
 		int finishedTasks = 0;
 		for (OutlookEstimate jobStatistic : jobStatistics.values())
 			finishedTasks += jobStatistic.finishedTasks;
-		return finishedTasks;
+		return finishedTasks - numberOfPreviousRunTasks;
 	}
 
 	@Override
@@ -512,7 +512,7 @@ public class C3PO extends AbstractScheduler {
 
 	@Override
 	public int getNumberOfTotalTasks() {
-		int totalTasks = getNumberOfFinishedTasks() + getNumberOfRunningTasks() - numberOfPreviousRunTasks;
+		int totalTasks = getNumberOfFinishedTasks() + getNumberOfRunningTasks();
 		for (OutlookEstimate jobStatistic : jobStatistics.values())
 			totalTasks += jobStatistic.remainingTasks;
 		
@@ -552,9 +552,15 @@ public class C3PO extends AbstractScheduler {
 
 	@Override
 	public boolean nothingToSchedule() {
-		if (getNumberOfFinishedTasks() == getNumberOfTotalTasks()) {
-			return true;
-		} else if (nClones > 0) {
+		log.info("fin:\t" + getNumberOfFinishedTasks());
+		log.info("run:\t" + getNumberOfRunningTasks());
+		log.info("rdy:\t" + getNumberOfReadyTasks());
+		log.info("cln:\t" + nClones);
+		
+//		if (getNumberOfFinishedTasks() == getNumberOfTotalTasks()) {
+//			return true;
+//		} else 
+			if (nClones > 0) {
 			return false;
 		}
 		return getNumberOfReadyTasks() == 0;
@@ -659,7 +665,7 @@ public class C3PO extends AbstractScheduler {
 			}
 		}
 
-		this.nClones = nClones > 0 ? 0 : nClones;
+		this.nClones = nClones > 0 ? nClones : 0;
 	}
 
 	public void setOutlookWeight(double outlookWeight) {
