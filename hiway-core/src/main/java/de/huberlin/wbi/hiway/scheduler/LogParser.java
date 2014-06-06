@@ -163,7 +163,7 @@ public class LogParser implements HiwayDBI {
 				workflowNameToTaskIds.put(entry.getValueRawString(), taskIds);
 				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
-				invocStat.setRealTime(entry.getValueJsonObj().getLong(
+				invocStat.setRealTime(entry.getValueJsonObj().getDouble(
 						"realTime"));
 				invocStat.setTimestamp(entry.getTimestamp());
 				break;
@@ -182,11 +182,11 @@ public class LogParser implements HiwayDBI {
 				break;
 			case Constant.KEY_FILE_TIME_STAGEIN:
 				invocStat.getInputFile(fileName).setRealTime(
-						(entry.getValueJsonObj().getLong("realTime")));
+						(entry.getValueJsonObj().getDouble("realTime")));
 				break;
 			case Constant.KEY_FILE_TIME_STAGEOUT:
 				invocStat.getOutputFile(fileName).setRealTime(
-						(entry.getValueJsonObj().getLong("realTime")));
+						(entry.getValueJsonObj().getDouble("realTime")));
 				break;
 			}
 		} catch (JSONException e) {
