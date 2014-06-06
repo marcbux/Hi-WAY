@@ -124,8 +124,7 @@ public abstract class AbstractScheduler implements Scheduler {
 		dbInterface.logToDB(entry);
 	}
 
-	@Override
-	public void addTask(TaskInstance task) {
+	protected void addTask(TaskInstance task) {
 		numberOfRemainingTasks++;
 	}
 
@@ -175,7 +174,8 @@ public abstract class AbstractScheduler implements Scheduler {
 		int runningTasks = getNumberOfRunningTasks();
 		log.debug("\trunning:   " + runningTasks);
 		log.debug("\tremaining: " + numberOfRemainingTasks);
-		return finishedTasks + runningTasks + numberOfRemainingTasks - numberOfPreviousRunTasks;
+		return finishedTasks + runningTasks + numberOfRemainingTasks
+				- numberOfPreviousRunTasks;
 	}
 
 	protected Set<Long> getTaskIds() {
@@ -225,7 +225,7 @@ public abstract class AbstractScheduler implements Scheduler {
 						String line;
 						while ((line = reader.readLine()) != null) {
 							dbInterface.logToDB(new JsonReportEntry(line));
-//							log.info(line);
+							// log.info(line);
 						}
 					}
 				}

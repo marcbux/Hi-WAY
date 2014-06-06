@@ -54,6 +54,8 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 				try {
 					return Integer.compare(task1.getDepth(), task2.getDepth());
 				} catch (WorkflowStructureUnknownException e) {
+					e.printStackTrace();
+					System.exit(1);
 					throw new RuntimeException(e);
 				}
 			};
@@ -66,6 +68,8 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 					return -Double.compare(task1.getUpwardRank(),
 							task2.getUpwardRank());
 				} catch (WorkflowStructureUnknownException e) {
+					e.printStackTrace();
+					System.exit(1);
 					throw new RuntimeException(e);
 				}
 			};

@@ -64,6 +64,7 @@ public interface ApplicationMaster {
 	public void taskFailure(TaskInstance task, ContainerId containerId);
 
 	public void evaluateReport(TaskInstance task, ContainerId containerId);
+
 	public void taskSuccess(TaskInstance task, ContainerId containerId);
 
 }

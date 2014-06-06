@@ -312,7 +312,7 @@ public class C3PO extends AbstractScheduler {
 	}
 
 	@Override
-	public void addTask(TaskInstance task) {
+	protected void addTask(TaskInstance task) {
 		super.addTask(task);
 		long taskId = task.getTaskId();
 		if (!getTaskIds().contains(taskId)) {
@@ -515,7 +515,7 @@ public class C3PO extends AbstractScheduler {
 		int totalTasks = getNumberOfFinishedTasks() + getNumberOfRunningTasks();
 		for (OutlookEstimate jobStatistic : jobStatistics.values())
 			totalTasks += jobStatistic.remainingTasks;
-		
+
 		return totalTasks;
 	}
 
@@ -552,15 +552,15 @@ public class C3PO extends AbstractScheduler {
 
 	@Override
 	public boolean nothingToSchedule() {
-//		log.info("fin:\t" + getNumberOfFinishedTasks());
-//		log.info("run:\t" + getNumberOfRunningTasks());
-//		log.info("rdy:\t" + getNumberOfReadyTasks());
-//		log.info("cln:\t" + nClones);
-		
-//		if (getNumberOfFinishedTasks() == getNumberOfTotalTasks()) {
-//			return true;
-//		} else 
-			if (nClones > 0) {
+		// log.info("fin:\t" + getNumberOfFinishedTasks());
+		// log.info("run:\t" + getNumberOfRunningTasks());
+		// log.info("rdy:\t" + getNumberOfReadyTasks());
+		// log.info("cln:\t" + nClones);
+
+		// if (getNumberOfFinishedTasks() == getNumberOfTotalTasks()) {
+		// return true;
+		// } else
+		if (nClones > 0) {
 			return false;
 		}
 		return getNumberOfReadyTasks() == 0;

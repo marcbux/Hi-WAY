@@ -63,7 +63,7 @@ public class StaticRoundRobin extends StaticScheduler {
 	}
 
 	@Override
-	public void addTask(TaskInstance task) {
+	protected void addTask(TaskInstance task) {
 		super.addTask(task);
 		if (!nodeIterator.hasNext()) {
 			nodeIterator = queues.keySet().iterator();

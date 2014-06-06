@@ -60,7 +60,7 @@ public class GreedyQueue extends AbstractScheduler {
 	}
 
 	@Override
-	public void addTask(TaskInstance task) {
+	protected void addTask(TaskInstance task) {
 		super.addTask(task);
 		if (task.readyToExecute())
 			addTaskToQueue(task);

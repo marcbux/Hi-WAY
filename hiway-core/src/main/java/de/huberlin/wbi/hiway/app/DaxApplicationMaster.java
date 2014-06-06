@@ -188,7 +188,8 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 					task.addParentTask(parentTask);
 					parentTask.addChildTask(task);
 				} catch (WorkflowStructureUnknownException e) {
-					throw new RuntimeException(e);
+					e.printStackTrace();
+					System.exit(1);
 				}
 			}
 
@@ -214,7 +215,8 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 					}
 				}
 			} catch (WorkflowStructureUnknownException e) {
-				throw new RuntimeException(e);
+				e.printStackTrace();
+				System.exit(1);
 			}
 		}
 
@@ -267,7 +269,8 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 					scheduler.addTaskToQueue(childTask);
 			}
 		} catch (WorkflowStructureUnknownException e) {
-			throw new RuntimeException(e);
+			e.printStackTrace();
+			System.exit(1);
 		}
 		for (Data data : task.getOutputData()) {
 			Data.hdfsDirectoryMidfixes.put(data, containerId.toString());

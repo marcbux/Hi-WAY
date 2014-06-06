@@ -176,13 +176,13 @@ public class Worker {
 		Set<Path> oldFiles = parseDir(dir);
 		oldFiles.remove(Paths.get("./", Invocation.STDOUT_FILENAME));
 		oldFiles.remove(Paths.get("./", Invocation.STDERR_FILENAME));
-//		System.out.println("Starting execution");
+		// System.out.println("Starting execution");
 		exec();
-//		System.out.println("Starting traversal");
+		// System.out.println("Starting traversal");
 		Set<Path> newFiles = parseDir(dir);
 		newFiles.removeAll(oldFiles);
 		newFiles.removeAll(traverseSymbolicLinks(newFiles));
-//		System.out.println("Starting stageout");
+		// System.out.println("Starting stageout");
 		stageOut(newFiles);
 	}
 

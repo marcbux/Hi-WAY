@@ -87,7 +87,7 @@ public class HEFT extends StaticScheduler {
 	}
 
 	@Override
-	public void addTask(TaskInstance task) {
+	protected void addTask(TaskInstance task) {
 		super.addTask(task);
 		Collection<String> nodes = runtimeEstimatesPerNode.keySet();
 		double readyTime = readyTimePerTask.get(task);
@@ -98,7 +98,7 @@ public class HEFT extends StaticScheduler {
 
 		for (String node : nodes) {
 			double computationCost = runtimeEstimatesPerNode.get(node).get(
-					task.getId()).weight;
+					task.getTaskId()).weight;
 
 			// the readytime of this task will have been set by now, as all
 			// predecessor tasks have a higher upward
@@ -147,7 +147,8 @@ public class HEFT extends StaticScheduler {
 				}
 			}
 		} catch (WorkflowStructureUnknownException e) {
-			throw new RuntimeException(e);
+			e.printStackTrace();
+			System.exit(1);
 		}
 
 		double timeslotStart = freeTimeSlotStartsPerNode.get(bestNode).floor(
@@ -191,13 +192,14 @@ public class HEFT extends StaticScheduler {
 					}
 				}
 			} catch (WorkflowStructureUnknownException e) {
-				throw new RuntimeException(e);
+				e.printStackTrace();
+				System.exit(1);
 			}
 
 			double averageComputationCost = 0;
 			for (String node : nodes) {
 				averageComputationCost += runtimeEstimatesPerNode.get(node)
-						.get(task.getId()).weight;
+						.get(task.getTaskId()).weight;
 			}
 			averageComputationCost /= nodes.size();
 
@@ -206,7 +208,8 @@ public class HEFT extends StaticScheduler {
 			try {
 				task.setUpwardRank(averageComputationCost + maxSuccessorRank);
 			} catch (WorkflowStructureUnknownException e) {
-				throw new RuntimeException(e);
+				e.printStackTrace();
+				System.exit(1);
 			}
 		}
 

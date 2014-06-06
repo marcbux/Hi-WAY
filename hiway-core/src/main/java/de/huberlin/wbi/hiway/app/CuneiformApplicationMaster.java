@@ -37,6 +37,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -174,7 +176,10 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			} catch (NotBoundException | NotDerivableException e) {
 				e.printStackTrace();
 			}
-			scheduler.addTask(task);
+
+			Collection<TaskInstance> tasks = new ArrayList<>();
+			tasks.add(task);
+			scheduler.addTasks(tasks);
 			// scheduler.addTaskToQueue(task);
 		}
 
@@ -195,7 +200,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		public void queryFailedPost(UUID queryId, long ticketId, Exception e,
 				String script, String stdOut, String stdErr) {
 			done = true;
-			
+
 		}
 
 		@Override
@@ -348,7 +353,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		}
 		repl.interpret(buf.toString());
 	}
-	
+
 	@Override
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
 		String line;
@@ -408,9 +413,10 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		log.error("[end]");
 
 		if (!task.retry()) {
-//			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
-//					.getTicket(), script, stdOut, stdErr));
-			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, script, stdOut, stdErr));
+			// ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
+			// .getTicket(), script, stdOut, stdErr));
+			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
+					.getTicket(), null, script, stdOut, stdErr));
 		}
 
 	}

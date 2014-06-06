@@ -106,18 +106,19 @@ public class LogParser implements HiwayDBI {
 		Collection<InvocStat> stats = new LinkedList<>();
 		for (Map<Long, InvocStat> invocStats : runToInvocStats.values()) {
 			for (InvocStat stat : invocStats.values()) {
-			if (taskIds.contains(stat.getTaskId())
-					&& stat.getTimestamp() > sinceTimestamp) {
-				stats.add(stat);
+				if (taskIds.contains(stat.getTaskId())
+						&& stat.getTimestamp() > sinceTimestamp) {
+					stats.add(stat);
+				}
 			}
-		}
 		}
 		return stats;
 	}
 
 	@Override
 	public Set<Long> getTaskIdsForWorkflow(String workflowName) {
-		return workflowNameToTaskIds.containsKey(workflowName) ? workflowNameToTaskIds.get(workflowName) : new HashSet<Long>();
+		return workflowNameToTaskIds.containsKey(workflowName) ? workflowNameToTaskIds
+				.get(workflowName) : new HashSet<Long>();
 	}
 
 	@Override
@@ -135,13 +136,13 @@ public class LogParser implements HiwayDBI {
 			Map<Long, InvocStat> invocStats = new HashMap<>();
 			runToInvocStats.put(runId, invocStats);
 		}
-		
+
 		if (invocId != null && !runToInvocStats.get(runId).containsKey(invocId)) {
 			InvocStat invocStat = new InvocStat();
 			invocStat.setTimestamp(-1l);
 			invocStat.setTaskId(entry.getTaskId());
-			workflowNameToTaskIds.get(runToWorkflowName.get(runId))
-					.add(entry.getTaskId());
+			workflowNameToTaskIds.get(runToWorkflowName.get(runId)).add(
+					entry.getTaskId());
 			taskIdToTaskName.put(entry.getTaskId(), entry.getTaskName());
 			runToInvocStats.get(runId).put(invocId, invocStat);
 		}

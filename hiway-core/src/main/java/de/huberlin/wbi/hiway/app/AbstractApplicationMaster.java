@@ -580,7 +580,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 							numCompletedContainers.incrementAndGet();
 							metrics.completedTask(finishedTask);
 							metrics.endRunningTask(finishedTask);
-							
+
 							taskSuccess(finishedTask, containerId);
 						}
 					}
@@ -1210,7 +1210,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	@SuppressWarnings("unchecked")
 	public boolean run() throws YarnException, IOException {
 		log.info("Starting ApplicationMaster");
-		
+
 		Credentials credentials = UserGroupInformation.getCurrentUser()
 				.getCredentials();
 		DataOutputBuffer dob = new DataOutputBuffer();
@@ -1507,11 +1507,11 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			System.exit(1);
 		}
 	}
-	
+
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	protected void writeEntryToLog(JsonReportEntry entry) {

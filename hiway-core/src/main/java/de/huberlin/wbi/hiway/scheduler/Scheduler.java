@@ -50,7 +50,7 @@ public interface Scheduler {
 
 	public void addEntryToDB(JsonReportEntry entry);
 
-	public void addTask(TaskInstance task);
+	// protected void addTask(TaskInstance task);
 
 	public void addTasks(Collection<TaskInstance> tasks);
 
