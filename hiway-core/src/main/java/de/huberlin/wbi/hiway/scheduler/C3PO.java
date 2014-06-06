@@ -51,7 +51,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
-import de.huberlin.wbi.hiway.common.InvocStat;
+import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -303,6 +303,8 @@ public class C3PO extends AbstractScheduler {
 		df.applyPattern("###.##");
 		df.setMaximumIntegerDigits(7);
 		this.fs = fs;
+//		parseLogs(fs);
+//		updateRuntimeEstimates();
 	}
 
 	public C3PO(String workflowName, long seed) {
@@ -313,7 +315,7 @@ public class C3PO extends AbstractScheduler {
 	@Override
 	public void addTask(TaskInstance task) {
 		super.addTask(task);
-		long taskId = task.getId();
+		long taskId = task.getTaskId();
 		if (!getTaskIds().contains(taskId)) {
 			newTask(taskId);
 		}
@@ -326,9 +328,8 @@ public class C3PO extends AbstractScheduler {
 	@Override
 	public void addTaskToQueue(TaskInstance task) {
 		super.addTaskToQueue(task);
-		String jobName = task.getTaskName();
-		readyTasks.get(jobName).add(task);
-		log.info("Added task " + task + " to queue " + jobName);
+		readyTasks.get(task.getTaskId()).add(task);
+		log.info("Added task " + task + " to queue " + task.getTaskName());
 	}
 
 	// Outlook: Zero probabiliy for tasks which are not currently ready (or - in
@@ -426,7 +427,7 @@ public class C3PO extends AbstractScheduler {
 
 		boolean replicate = getNumberOfReadyTasks() == 0;
 
-		String nodeId = container.getNodeId().toString();
+		String nodeId = container.getNodeId().getHost();
 		if (!runtimeEstimatesPerNode.containsKey(nodeId)) {
 			newHost(nodeId);
 		}
@@ -567,13 +568,13 @@ public class C3PO extends AbstractScheduler {
 		log.info("\t\t#finish\tavg\t#remain\t#ready\tshare");
 		for (long taskId : getTaskIds()) {
 			String jobName = dbInterface.getTaskName(taskId);
-			String jobName6 = (jobName.length() > 6) ? jobName.substring(0, 6)
+			String jobName7 = (jobName.length() > 7) ? jobName.substring(0, 7)
 					: jobName;
 			OutlookEstimate jobStatistic = jobStatistics.get(taskId);
 			double avgRuntime = (jobStatistic.finishedTasks != 0) ? jobStatistic.timeSpent
 					/ jobStatistic.finishedTasks
 					: 0d;
-			log.info("\t" + jobName6 + "\t"
+			log.info("\t" + jobName7 + "\t"
 					+ df.format(jobStatistic.finishedTasks) + "\t"
 					+ df.format(avgRuntime) + "\t"
 					+ df.format(jobStatistic.remainingTasks) + "\t"
@@ -592,11 +593,11 @@ public class C3PO extends AbstractScheduler {
 					: readyTasks.get(taskId);
 			if (queue.size() != 0) {
 				String jobName = dbInterface.getTaskName(taskId);
-				String jobName6 = (jobName.length() > 6) ? jobName.substring(0,
-						6) : jobName;
+				String jobName7 = (jobName.length() > 7) ? jobName.substring(0,
+						7) : jobName;
 				PlacementAwarenessEstimate dataLocalityStatistic = dataLocalityStatistics
 						.get(taskId);
-				log.info("\t" + jobName6 + "\t"
+				log.info("\t" + jobName7 + "\t"
 						+ dataLocalityStatistic.localData + "\t"
 						+ dataLocalityStatistic.totalData + "\t"
 						+ df.format(dataLocalityStatistic.weight));
@@ -678,8 +679,6 @@ public class C3PO extends AbstractScheduler {
 		super.taskCompleted(task, containerStatus, runtimeInMs);
 		Collection<ContainerId> toBeReleasedContainers = new ArrayList<>();
 
-		String jobName = task.getTaskName();
-
 		// kill speculative copies
 		for (Container container : taskToContainers.get(task)) {
 			if (!container.getId().equals(containerStatus.getContainerId())) {
@@ -691,7 +690,7 @@ public class C3PO extends AbstractScheduler {
 			}
 		}
 		taskToContainers.remove(task);
-		runningTasks.get(jobName).remove(task);
+		runningTasks.get(task.getTaskId()).remove(task);
 
 		return toBeReleasedContainers;
 	}
@@ -719,7 +718,7 @@ public class C3PO extends AbstractScheduler {
 	@Override
 	protected void updateRuntimeEstimate(InvocStat stat) {
 		OutlookEstimate jobStatistic = jobStatistics.get(stat.getTaskId());
-		jobStatistic.finishedTasks += 1;
+		jobStatistic.finishedTasks++;
 		jobStatistic.timeSpent += stat.getRealTime();
 	}
 

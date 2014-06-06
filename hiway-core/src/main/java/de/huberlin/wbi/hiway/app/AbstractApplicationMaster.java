@@ -442,7 +442,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 									.getTaskId(), task.getTaskName(), task
 									.getLanguageLabel(), task.getSignature(),
 									null, Constant.KEY_INVOC_HOST,
-									allocatedContainer.getNodeHttpAddress()));
+									allocatedContainer.getNodeId().getHost()));
 				}
 				launchTask(task, allocatedContainer);
 			}
@@ -714,8 +714,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	protected volatile boolean done;
 
 	// the report, in which provenance information is stored
-	protected Data federatedReport;
-	protected BufferedWriter federatedReportWriter;
+	private Data federatedReport;
+	private BufferedWriter federatedReportWriter;
 
 	protected Map<String, Data> files = new HashMap<>();
 	// a handle to the hdfs
@@ -1320,7 +1320,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 		parseWorkflow();
 		federatedReport = new Data(Constant.LOG_PREFIX + getRunId()
-				+ Constant.LOG_PREFIX);
+				+ Constant.LOG_SUFFIX);
 		federatedReportWriter = new BufferedWriter(new FileWriter(
 				federatedReport.getLocalPath()));
 		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
@@ -1486,7 +1486,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 	}
 
-	private void writeEntryToLog(JsonReportEntry entry) {
+	protected void writeEntryToLog(JsonReportEntry entry) {
 		try {
 			federatedReportWriter.write(entry.toString() + "\n");
 		} catch (IOException e) {

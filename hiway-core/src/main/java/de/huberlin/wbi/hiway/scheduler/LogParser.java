@@ -41,11 +41,11 @@ import java.util.UUID;
 
 import org.json.JSONException;
 
+import de.huberlin.hiwaydb.useDB.FileStat;
+import de.huberlin.hiwaydb.useDB.HiwayDBI;
+import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.Constant;
-import de.huberlin.wbi.hiway.common.FileStat;
-import de.huberlin.wbi.hiway.common.HiwayDBI;
-import de.huberlin.wbi.hiway.common.InvocStat;
 
 public class LogParser implements HiwayDBI {
 
@@ -115,7 +115,7 @@ public class LogParser implements HiwayDBI {
 
 	@Override
 	public Set<Long> getTaskIdsForWorkflow(String workflowName) {
-		return workflowNameToTaskIds.get(workflowName);
+		return workflowNameToTaskIds.containsKey(workflowName) ? workflowNameToTaskIds.get(workflowName) : new HashSet<Long>();
 	}
 
 	@Override
@@ -125,13 +125,13 @@ public class LogParser implements HiwayDBI {
 
 	@Override
 	public void logToDB(JsonReportEntry entry) {
-		System.err.println(entry.toString());
 		Long invocId = entry.getInvocId();
 		String fileName = entry.getFile();
 
 		if (invocId != null && !invocStats.containsKey(invocId)) {
-			InvocStat invocStat = new InvocStat(entry.getTimestamp(),
-					entry.getTaskId());
+			InvocStat invocStat = new InvocStat();
+			invocStat.setTimestamp(-1l);
+			invocStat.setTaskId(entry.getTaskId());
 			workflowNameToTaskIds.get(runToWorkflowName.get(entry.getRunId()))
 					.add(entry.getTaskId());
 			taskIdToTaskName.put(entry.getTaskId(), entry.getTaskName());
@@ -158,11 +158,14 @@ public class LogParser implements HiwayDBI {
 		try {
 			switch (entry.getKey()) {
 			case Constant.KEY_WF_NAME:
-				runToWorkflowName.put(entry.getRunId(), entry.getValue());
+				runToWorkflowName.put(entry.getRunId(), entry.getValueRawString());
+				Set<Long> taskIds = new HashSet<>();
+				workflowNameToTaskIds.put(entry.getValueRawString(), taskIds);
 				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
 				invocStat.setRealTime(entry.getValueJsonObj().getLong(
 						"realTime"));
+				invocStat.setTimestamp(entry.getTimestamp());
 				break;
 			case Constant.KEY_INVOC_HOST:
 				String hostName = entry.getValueRawString();

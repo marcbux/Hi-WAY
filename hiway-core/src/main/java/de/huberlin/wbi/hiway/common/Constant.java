@@ -76,6 +76,6 @@ public class Constant {
 
 	// the names of scripts created by Hi-WAY for each invocation
 	public static final String SUPER_SCRIPT_FILENAME = "__super_script__";
-	public static final boolean useHiwayDB = true;
+	public static final boolean useHiwayDB = false;
 
 }

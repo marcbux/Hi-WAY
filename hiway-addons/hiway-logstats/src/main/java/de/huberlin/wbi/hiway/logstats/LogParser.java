@@ -234,8 +234,7 @@ public class LogParser {
 			case Constant.KEY_INVOC_TIME_SCHED:
 				invocation = invocations.get(entry.getInvocId());
 				invocation.setContainer(allocatedContainers.remove());
-				invocation.setSchedTime(Long.parseLong(entry.getValue()
-						.replaceAll("\"", "")));
+				invocation.setSchedTime(Long.parseLong(entry.getValueRawString()));
 				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
 				invocations.get(entry.getInvocId()).setExecOnsetTimestamp(

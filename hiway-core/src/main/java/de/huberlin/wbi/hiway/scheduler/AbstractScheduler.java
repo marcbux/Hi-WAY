@@ -52,10 +52,11 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
+import de.huberlin.hiwaydb.useDB.HiwayDB;
+import de.huberlin.hiwaydb.useDB.HiwayDBI;
+import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.Constant;
-import de.huberlin.wbi.hiway.common.HiwayDBI;
-import de.huberlin.wbi.hiway.common.InvocStat;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 //import de.huberlin.wbi.hiway.scheduler.C3PO.ConservatismEstimate;
 //import de.huberlin.wbi.hiway.scheduler.C3PO.Estimate;
@@ -69,6 +70,7 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 public abstract class AbstractScheduler implements Scheduler {
 
 	protected class Estimate {
+		String taskName;
 		double weight = 1d;
 	}
 
@@ -93,7 +95,7 @@ public abstract class AbstractScheduler implements Scheduler {
 	private int numberOfRunningTasks = 0;
 
 	// private Set<String> nodeIds;
-	// private Set<Long> taskIds;
+	protected Set<Long> taskIds;
 	protected Map<String, Map<Long, RuntimeEstimate>> runtimeEstimatesPerNode;
 
 	// protected Map<String, Map<Long, Long>> totalRuntimes;
@@ -108,9 +110,10 @@ public abstract class AbstractScheduler implements Scheduler {
 		// statistics = new HashMap<Long, Map<String, Set<InvocStat>>>();
 		this.workflowName = workflowName;
 		unissuedNodeRequests = new LinkedList<>();
-		dbInterface = Constant.useHiwayDB ? new LogParser() : new LogParser();
+		dbInterface = Constant.useHiwayDB ? new HiwayDB() : new LogParser();
 		// invocStats = new HashMap<>();
 
+		taskIds = new HashSet<>();
 		runtimeEstimatesPerNode = new HashMap<>();
 		maxTimestamp = 0l;
 	}
@@ -175,8 +178,7 @@ public abstract class AbstractScheduler implements Scheduler {
 	}
 
 	protected Set<Long> getTaskIds() {
-		return new HashSet<>(runtimeEstimatesPerNode.values().iterator().next()
-				.keySet());
+		return new HashSet<>(taskIds);
 	}
 
 	@Override
@@ -193,6 +195,7 @@ public abstract class AbstractScheduler implements Scheduler {
 	}
 
 	protected void newTask(long taskId) {
+		taskIds.add(taskId);
 		for (Map<Long, RuntimeEstimate> runtimeEstimates : runtimeEstimatesPerNode
 				.values()) {
 			runtimeEstimates.put(taskId, new RuntimeEstimate());
@@ -283,6 +286,7 @@ public abstract class AbstractScheduler implements Scheduler {
 		}
 		Collection<Long> newTaskIds = dbInterface
 				.getTaskIdsForWorkflow(workflowName);
+
 		newTaskIds.removeAll(getTaskIds());
 		for (long newTaskId : newTaskIds) {
 			newTask(newTaskId);

@@ -178,12 +178,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 			Ticket ticket = msg.getTicket();
 
-			try {
-				federatedReportWriter.write(ticket.getExecutableLogEntry()
-						.toString() + "\n");
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
+			writeEntryToLog(ticket.getExecutableLogEntry());
 
 			Invocation invoc = Invocation.createInvocation(ticket);
 			TaskInstance task = new CuneiformTaskInstance(invoc);
@@ -224,9 +219,10 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		}
 
 		@Override
-		public void queryFailedPost(UUID queryId, long ticketId, String script,
-				String stdOut, String stdErr) {
+		public void queryFailedPost(UUID queryId, long ticketId, Exception e,
+				String script, String stdOut, String stdErr) {
 			done = true;
+			
 		}
 
 		@Override
@@ -445,8 +441,9 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		log.error("[end]");
 
 		if (!task.retry()) {
-			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
-					.getTicket(), script, stdOut, stdErr));
+//			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
+//					.getTicket(), script, stdOut, stdErr));
+			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, script, stdOut, stdErr));
 		}
 
 	}

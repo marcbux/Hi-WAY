@@ -38,7 +38,7 @@
 		<repository>
 			<id>raps</id>
 			<name>raps-releases</name>
-			<url>http://raps:28082/artifactory/brandjoe</url>
+			<url>https://klette.informatik.hu-berlin.de/jenkins/</url>
 			<releases>
 				<enabled>true</enabled>
 			</releases>
