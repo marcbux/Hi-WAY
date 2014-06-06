@@ -538,6 +538,14 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 						// via speculative replication)
 						if (!finishedTask.isCompleted()) {
 							finishedTask.setCompleted();
+							
+							taskSuccess(finishedTask, containerId);
+
+							for (JsonReportEntry entry : finishedTask
+									.getReport()) {
+								writeEntryToLog(entry);
+							}
+							
 							Collection<ContainerId> toBeReleasedContainers = scheduler
 									.taskCompleted(finishedTask,
 											containerStatus,
@@ -551,12 +559,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 										.releaseAssignedContainer(toBeReleasedContainer);
 								numKilledContainers.incrementAndGet();
 							}
-							taskSuccess(finishedTask, containerId);
-
-							for (JsonReportEntry entry : finishedTask
-									.getReport()) {
-								writeEntryToLog(entry);
-							}
+							
 
 							numCompletedContainers.incrementAndGet();
 							metrics.completedTask(finishedTask);
