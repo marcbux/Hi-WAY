@@ -32,11 +32,9 @@
 package de.huberlin.wbi.hiway.app;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.Set;
@@ -46,15 +44,14 @@ import java.util.concurrent.Executors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import de.huberlin.wbi.cuneiform.core.cre.BaseCreActor;
 import de.huberlin.wbi.cuneiform.core.cre.TicketReadyMsg;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.repl.BaseRepl;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.CompoundExpr;
+import de.huberlin.wbi.cuneiform.core.semanticmodel.NotBoundException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.Ticket;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketFailedMsg;
@@ -66,34 +63,6 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 public class CuneiformApplicationMaster extends AbstractApplicationMaster {
-
-	protected class CuneiformRMCallbackHandler extends RMCallbackHandler {
-
-		@Override
-		protected void launchTask(TaskInstance task,
-				Container allocatedContainer) {
-			File cuneiformScript = new File(allocatedContainer.getId()
-					.toString() + ".sh");
-			try (BufferedWriter cuneiformScriptWriter = new BufferedWriter(
-					new FileWriter(cuneiformScript))) {
-				cuneiformScriptWriter.write(((CuneiformTaskInstance) task)
-						.getInvocation().toScript());
-			} catch (Exception e) {
-				log.info("Error when attempting to write Cuneiform script for task "
-						+ task.toString() + " to file. exiting");
-				e.printStackTrace();
-				System.exit(1);
-			}
-			Data cuneiformScriptData = new Data(cuneiformScript.getPath());
-			try {
-				cuneiformScriptData.stageOut(fs, "");
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			task.addInputData(cuneiformScriptData);
-			super.launchTask(task, allocatedContainer);
-		}
-	}
 
 	public class CuneiformTaskInstance extends AbstractTaskInstance {
 
@@ -200,7 +169,11 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 				e.printStackTrace();
 			}
 
-			task.setCommand("./" + CUNEIFORM_SCRIPT_FILENAME);
+			try {
+				task.setCommand(invoc.toScript());
+			} catch (NotBoundException | NotDerivableException e) {
+				e.printStackTrace();
+			}
 			scheduler.addTask(task);
 			// scheduler.addTaskToQueue(task);
 		}
@@ -375,13 +348,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		}
 		repl.interpret(buf.toString());
 	}
-
-	@Override
-	public boolean run() throws YarnException, IOException {
-		allocListener = new CuneiformRMCallbackHandler();
-		return super.run();
-	}
-
+	
 	@Override
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
 		String line;
@@ -449,8 +416,8 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 	}
 
 	@Override
-	public void taskSuccess(TaskInstance task, ContainerId containerId) {
-		super.taskSuccess(task, containerId);
+	public void evaluateReport(TaskInstance task, ContainerId containerId) {
+		super.evaluateReport(task, containerId);
 
 		try {
 			Invocation invocation = ((CuneiformTaskInstance) task)

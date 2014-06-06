@@ -552,10 +552,10 @@ public class C3PO extends AbstractScheduler {
 
 	@Override
 	public boolean nothingToSchedule() {
-		log.info("fin:\t" + getNumberOfFinishedTasks());
-		log.info("run:\t" + getNumberOfRunningTasks());
-		log.info("rdy:\t" + getNumberOfReadyTasks());
-		log.info("cln:\t" + nClones);
+//		log.info("fin:\t" + getNumberOfFinishedTasks());
+//		log.info("run:\t" + getNumberOfRunningTasks());
+//		log.info("rdy:\t" + getNumberOfReadyTasks());
+//		log.info("cln:\t" + nClones);
 		
 //		if (getNumberOfFinishedTasks() == getNumberOfTotalTasks()) {
 //			return true;

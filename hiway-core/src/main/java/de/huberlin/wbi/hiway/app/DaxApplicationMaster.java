@@ -34,7 +34,6 @@ package de.huberlin.wbi.hiway.app;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -45,7 +44,6 @@ import java.util.UUID;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -221,12 +219,6 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 		}
 
 		scheduler.addTasks(tasks.values());
-	}
-
-	@Override
-	public boolean run() throws YarnException, IOException {
-		allocListener = new RMCallbackHandler();
-		return super.run();
 	}
 
 	@Override

@@ -387,6 +387,23 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 		protected void launchTask(TaskInstance task,
 				Container allocatedContainer) {
+
+			File script = new File(allocatedContainer.getId().toString()
+					+ ".sh");
+			try (BufferedWriter scriptWriter = new BufferedWriter(
+					new FileWriter(script))) {
+				scriptWriter.write(task.getCommand());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			Data scriptData = new Data(script.getPath());
+			try {
+				scriptData.stageOut(fs, "");
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			task.addInputData(scriptData);
+
 			containerIdToInvocation.put(allocatedContainer.getId().getId(),
 					new HiWayInvocation(task));
 			log.info("Launching workflow task on a new container." + ", task="
@@ -538,14 +555,14 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 						// via speculative replication)
 						if (!finishedTask.isCompleted()) {
 							finishedTask.setCompleted();
-							
-							taskSuccess(finishedTask, containerId);
+
+							evaluateReport(finishedTask, containerId);
 
 							for (JsonReportEntry entry : finishedTask
 									.getReport()) {
 								writeEntryToLog(entry);
 							}
-							
+
 							Collection<ContainerId> toBeReleasedContainers = scheduler
 									.taskCompleted(finishedTask,
 											containerStatus,
@@ -559,11 +576,12 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 										.releaseAssignedContainer(toBeReleasedContainer);
 								numKilledContainers.incrementAndGet();
 							}
-							
 
 							numCompletedContainers.incrementAndGet();
 							metrics.completedTask(finishedTask);
 							metrics.endRunningTask(finishedTask);
+							
+							taskSuccess(finishedTask, containerId);
 						}
 					}
 
@@ -1192,7 +1210,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	@SuppressWarnings("unchecked")
 	public boolean run() throws YarnException, IOException {
 		log.info("Starting ApplicationMaster");
-
+		
 		Credentials credentials = UserGroupInformation.getCurrentUser()
 				.getCredentials();
 		DataOutputBuffer dob = new DataOutputBuffer();
@@ -1207,6 +1225,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 		allTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 
+		allocListener = new RMCallbackHandler();
 		amRMClient = AMRMClientAsync.createAMRMClientAsync(1000, allocListener);
 		amRMClient.init(conf);
 		amRMClient.start();
@@ -1420,7 +1439,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	}
 
 	@Override
-	public void taskSuccess(TaskInstance task, ContainerId containerId) {
+	public void evaluateReport(TaskInstance task, ContainerId containerId) {
 		try {
 
 			Data reportFile = new Data(Invocation.REPORT_FILENAME);
@@ -1487,6 +1506,12 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			e.printStackTrace();
 			System.exit(1);
 		}
+	}
+	
+	@Override
+	public void taskSuccess(TaskInstance task, ContainerId containerId) {
+		// TODO Auto-generated method stub
+		
 	}
 
 	protected void writeEntryToLog(JsonReportEntry entry) {
