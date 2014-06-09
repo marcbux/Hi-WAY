@@ -80,9 +80,13 @@ public class LogParser {
 	}
 
 	public static void main(String[] args) {
-		LogParser logParser = new LogParser(args[0]);
-		logParser.parse();
+		for (int i = 0; i < args.length; i++) {
+			LogParser logParser = new LogParser(args[i]);
+			logParser.parse();
+			logParser.printStatistics(i == 0);
+		}
 	}
+
 	private Queue<Container> allocatedContainers;
 	private Map<String, Container> containers;
 	List<JsonReportEntry> entries;
@@ -148,11 +152,19 @@ public class LogParser {
 			shutdown += invoc.getShutdownTime();
 		}
 		String lifecycle = sched + "\t" + startup + "\t" + exec + "\t"
-				+ shutdown;
+				+ shutdown + "\t";
 		long idle = run.getMaxConcurrentNodes()
 				* (run.getRunFinishTimestamp() - run.getRunOnsetTimestamp())
 				- run.getNoTaskReadyTime() - sched - startup - exec - shutdown;
 		return idleTime ? idle + "\t" + lifecycle : lifecycle;
+	}
+
+	private String lifecycleHeaders(String category, boolean idleTime) {
+		String pre = category + " idle\t";
+		String post = category + " scheduling\t" + category
+				+ " startup/stage-in\t" + category + " execution\t" + category
+				+ " shutdown/stage-out\t";
+		return idleTime ? pre + post : post;
 	}
 
 	public void parse() {
@@ -161,15 +173,12 @@ public class LogParser {
 			printToFile(new File("output"));
 			secondPass();
 			thirdPass();
-			printStatistics();
 		} catch (JSONException | IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	private void printStatistics() {
-		System.out.println("overall\t" + lifecycle(invocations.values(), true));
-
+	private void printStatistics(boolean printHeaders) {
 		Map<String, Set<Invocation>> invocationsByTaskname = new HashMap<>();
 		for (Invocation invocation : invocations.values()) {
 			String taskname = invocation.getTaskName();
@@ -180,13 +189,20 @@ public class LogParser {
 			invocationsByTaskname.get(taskname).add(invocation);
 		}
 
-		for (String taskname : invocationsByTaskname.keySet()) {
-			System.out.println(taskname.subSequence(0,
-					Math.min(7, taskname.length()))
-					+ "\t"
-					+ lifecycle(invocationsByTaskname.get(taskname), false));
+		if (printHeaders) {
+			System.out.print(lifecycleHeaders("total", true));
+			for (String taskname : invocationsByTaskname.keySet()) {
+				System.out.print(lifecycleHeaders(taskname, false));
+			}
+			System.out.println();
 		}
 
+		System.out.print(lifecycle(invocations.values(), true));
+		for (String taskname : invocationsByTaskname.keySet()) {
+			System.out.print(lifecycle(invocationsByTaskname.get(taskname),
+					false));
+		}
+		System.out.println();
 	}
 
 	private void printToFile(File output) throws IOException {
@@ -234,7 +250,8 @@ public class LogParser {
 			case Constant.KEY_INVOC_TIME_SCHED:
 				invocation = invocations.get(entry.getInvocId());
 				invocation.setContainer(allocatedContainers.remove());
-				invocation.setSchedTime(Long.parseLong(entry.getValueRawString()));
+				invocation.setSchedTime(Long.parseLong(entry
+						.getValueRawString()));
 				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
 				invocations.get(entry.getInvocId()).setExecOnsetTimestamp(
