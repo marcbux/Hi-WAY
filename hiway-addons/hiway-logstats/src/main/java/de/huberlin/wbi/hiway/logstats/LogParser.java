@@ -37,11 +37,13 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +53,7 @@ import java.util.Set;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.Constant;
 
@@ -71,6 +74,14 @@ import de.huberlin.wbi.hiway.common.Constant;
  */
 public class LogParser {
 
+	public class OnsetTimestampComparator implements Comparator<Invocation> {
+		@Override
+		public int compare(Invocation o1, Invocation o2) {
+			return Long.compare(o1.getExecOnsetTimestamp(),
+					o2.getExecOnsetTimestamp());
+		}
+	}
+
 	public class JsonReportEntryComparatorByTimestamp implements
 			Comparator<JsonReportEntry> {
 		@Override
@@ -83,7 +94,8 @@ public class LogParser {
 		for (int i = 0; i < args.length; i++) {
 			LogParser logParser = new LogParser(args[i]);
 			logParser.parse();
-			logParser.printStatistics(i == 0);
+			logParser.printIncrements("bowtie2-align", "dbis11:8042");
+			// logParser.printStatistics(i == 0);
 		}
 	}
 
@@ -114,7 +126,7 @@ public class LogParser {
 			while ((line = reader.readLine()) != null) {
 				JsonReportEntry entry = new JsonReportEntry(line.replaceAll(
 						"\0", ""));
-				if (entry.getKey().equals(Constant.KEY_HIWAY_EVENT)) {
+				if (entry.getKey().equals(HiwayDBI.KEY_HIWAY_EVENT)) {
 					JSONObject value = entry.getValueJsonObj();
 					if (value.getString("type").equals("container-completed")) {
 						if (value.getInt("exit-code") != 0) {
@@ -127,7 +139,7 @@ public class LogParser {
 			}
 		}
 		for (JsonReportEntry entry : entries) {
-			if (entry.getKey().equals(Constant.KEY_HIWAY_EVENT)) {
+			if (entry.getKey().equals(HiwayDBI.KEY_HIWAY_EVENT)) {
 				JSONObject value = entry.getValueJsonObj();
 				if (value.getString("type").equals("container-allocated")) {
 					if (badContainers.contains(value.getString("container-id"))) {
@@ -170,10 +182,50 @@ public class LogParser {
 	public void parse() {
 		try {
 			firstPass();
-			printToFile(new File("output"));
+//			printToFile(new File("output"));
 			secondPass();
 			thirdPass();
 		} catch (JSONException | IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void printIncrements(String printTask, String printHost) {
+		Map<String, Map<String, List<Invocation>>> invocsByHostAndTask = new HashMap<>();
+		for (Invocation invocation : invocations.values()) {
+			String task = invocation.getTaskName();
+			String host = invocation.getHostName();
+
+			Map<String, List<Invocation>> invocsByHost;
+			if (!invocsByHostAndTask.containsKey(task)) {
+				invocsByHost = new HashMap<>();
+				invocsByHostAndTask.put(task, invocsByHost);
+			}
+			invocsByHost = invocsByHostAndTask.get(task);
+
+			List<Invocation> invocs;
+			if (!invocsByHost.containsKey(host)) {
+				invocs = new ArrayList<>();
+				invocsByHost.put(host, invocs);
+			}
+			invocs = invocsByHost.get(host);
+
+			invocs.add(invocation);
+		}
+
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(
+				new File("output"), true))) {
+			List<Invocation> invocs = invocsByHostAndTask.get(printTask).get(
+					printHost);
+			Collections.sort(invocs, new OnsetTimestampComparator());
+			for (int i = 0; i < invocs.size() - 1; i++) {
+				Invocation invocA = invocs.get(i);
+				Invocation invocB = invocs.get(i + 1);
+				writer.write((invocB.getExecTime() - invocA.getExecTime())
+						+ "\t" + (invocB.getFileSize() - invocA.getFileSize())
+						+ "\n");
+			}
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
@@ -225,7 +277,7 @@ public class LogParser {
 				Invocation invocation = new Invocation(entry.getTaskName());
 				invocations.put(entry.getInvocId(), invocation);
 				break;
-			case Constant.KEY_HIWAY_EVENT:
+			case HiwayDBI.KEY_HIWAY_EVENT:
 
 				// Idee: statt container anuschauen um zu ermitteln wann ein
 				// node fertig ist
@@ -247,11 +299,15 @@ public class LogParser {
 					break;
 				}
 				break;
-			case Constant.KEY_INVOC_TIME_SCHED:
+			case HiwayDBI.KEY_INVOC_TIME_SCHED:
 				invocation = invocations.get(entry.getInvocId());
 				invocation.setContainer(allocatedContainers.remove());
 				invocation.setSchedTime(Long.parseLong(entry
 						.getValueRawString()));
+				break;
+			case HiwayDBI.KEY_INVOC_HOST:
+				invocations.get(entry.getInvocId()).setHostName(
+						entry.getValueRawString());
 				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
 				invocations.get(entry.getInvocId()).setExecOnsetTimestamp(
@@ -267,6 +323,9 @@ public class LogParser {
 			case Constant.KEY_WF_TIME:
 				run.setRunFinishTimestamp(entry.getTimestamp());
 				break;
+			case JsonReportEntry.KEY_FILE_SIZE_STAGEIN:
+				invocations.get(entry.getInvocId()).addFileSize(
+						Long.parseLong(entry.getValueRawString()));
 			}
 		run.setMaxConcurrentNodes(maxContainers);
 	}
@@ -285,7 +344,7 @@ public class LogParser {
 			case JsonReportEntry.KEY_INVOC_EXEC:
 				readyTasks++;
 				break;
-			case Constant.KEY_HIWAY_EVENT:
+			case HiwayDBI.KEY_HIWAY_EVENT:
 				JSONObject value = entry.getValueJsonObj();
 				switch (value.getString("type")) {
 				case "container-completed":

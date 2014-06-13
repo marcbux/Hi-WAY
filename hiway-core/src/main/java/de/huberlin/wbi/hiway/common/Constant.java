@@ -49,15 +49,7 @@ public class Constant {
 	// the amount of memory (in MB) a single instance of the hdfs command
 	// requires
 	public static final int HDFS_MEMORY_REQ = 768;
-	public static final String KEY_FILE_TIME_STAGEIN = "file-time-stagein";
-
-	public static final String KEY_FILE_TIME_STAGEOUT = "file-time-stageout";
-	public static final String KEY_HIWAY_EVENT = "hiway-event";
-	// Keys of entries in the log
-	public static final String KEY_INVOC_HOST = "invoc-host";
-	public static final String KEY_INVOC_TIME_SCHED = "invoc-time-sched";
-	public static final String KEY_INVOC_TIME_STAGEIN = "invoc-time-stagein";
-	public static final String KEY_INVOC_TIME_STAGEOUT = "invoc-time-stageout";
+	
 	public static final String KEY_WF_NAME = "wf-name";
 	public static final String KEY_WF_TIME = "wf-time";
 	public static final String LOG_PREFIX = "log_";

@@ -197,7 +197,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		}
 
 		@Override
-		public void queryFailedPost(UUID queryId, long ticketId, Exception e,
+		public void queryFailedPost(UUID queryId, Long ticketId, Exception e,
 				String script, String stdOut, String stdErr) {
 			done = true;
 

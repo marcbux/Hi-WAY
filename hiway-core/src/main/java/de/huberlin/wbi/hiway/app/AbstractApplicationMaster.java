@@ -100,6 +100,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.Constant;
@@ -452,13 +453,13 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 							new JsonReportEntry(task.getWorkflowId(), task
 									.getTaskId(), task.getTaskName(), task
 									.getLanguageLabel(), task.getSignature(),
-									null, Constant.KEY_INVOC_TIME_SCHED, Long
+									null, HiwayDBI.KEY_INVOC_TIME_SCHED, Long
 											.toString(schedulingTime)));
 					task.getReport().add(
 							new JsonReportEntry(task.getWorkflowId(), task
 									.getTaskId(), task.getTaskName(), task
 									.getLanguageLabel(), task.getSignature(),
-									null, Constant.KEY_INVOC_HOST,
+									null, HiwayDBI.KEY_INVOC_HOST,
 									allocatedContainer.getNodeId().getHost()));
 				}
 				launchTask(task, allocatedContainer);
@@ -489,7 +490,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 				writeEntryToLog(new JsonReportEntry(
 						UUID.fromString(getRunId()), null, null, null, null,
-						null, Constant.KEY_HIWAY_EVENT, value));
+						null, HiwayDBI.KEY_HIWAY_EVENT, value));
 				ContainerRequest request = findFirstMatchingRequest(container);
 
 				if (request != null) {
@@ -529,7 +530,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 						+ containerStatus.getDiagnostics());
 				writeEntryToLog(new JsonReportEntry(
 						UUID.fromString(getRunId()), null, null, null, null,
-						null, Constant.KEY_HIWAY_EVENT, value));
+						null, HiwayDBI.KEY_HIWAY_EVENT, value));
 
 				// non complete containers should not be here
 				assert (containerStatus.getState() == ContainerState.COMPLETE);
@@ -1434,7 +1435,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		log.info("Requested container ask: " + request.toString() + " Nodes"
 				+ Arrays.toString(nodes));
 		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
-				null, null, null, null, Constant.KEY_HIWAY_EVENT, value));
+				null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 		return request;
 	}
 

@@ -139,7 +139,6 @@ public class LogParser implements HiwayDBI {
 
 		if (invocId != null && !runToInvocStats.get(runId).containsKey(invocId)) {
 			InvocStat invocStat = new InvocStat();
-			invocStat.setTimestamp(-1l);
 			invocStat.setTaskId(entry.getTaskId());
 			workflowNameToTaskIds.get(runToWorkflowName.get(runId)).add(
 					entry.getTaskId());
@@ -150,14 +149,14 @@ public class LogParser implements HiwayDBI {
 
 		switch (entry.getKey()) {
 		case JsonReportEntry.KEY_FILE_SIZE_STAGEIN:
-		case Constant.KEY_FILE_TIME_STAGEIN:
+		case HiwayDBI.KEY_FILE_TIME_STAGEIN:
 			if (!invocStat.containsInputFile(fileName)) {
 				FileStat fileStat = new FileStat(fileName);
 				invocStat.addInputFile(fileStat);
 			}
 			break;
 		case JsonReportEntry.KEY_FILE_SIZE_STAGEOUT:
-		case Constant.KEY_FILE_TIME_STAGEOUT:
+		case HiwayDBI.KEY_FILE_TIME_STAGEOUT:
 			if (!invocStat.containsOutputFile(fileName)) {
 				FileStat fileStat = new FileStat(fileName);
 				invocStat.addOutputFile(fileStat);
@@ -173,10 +172,9 @@ public class LogParser implements HiwayDBI {
 				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
 				invocStat.setRealTime(entry.getValueJsonObj().getDouble(
-						"realTime"));
-				invocStat.setTimestamp(entry.getTimestamp());
+						"realTime"), entry.getTimestamp());
 				break;
-			case Constant.KEY_INVOC_HOST:
+			case HiwayDBI.KEY_INVOC_HOST:
 				String hostName = entry.getValueRawString();
 				invocStat.setHostName(hostName);
 				hostNames.add(hostName);
@@ -189,11 +187,11 @@ public class LogParser implements HiwayDBI {
 				invocStat.getOutputFile(fileName).setSize(
 						Long.parseLong(entry.getValueRawString()));
 				break;
-			case Constant.KEY_FILE_TIME_STAGEIN:
+			case HiwayDBI.KEY_FILE_TIME_STAGEIN:
 				invocStat.getInputFile(fileName).setRealTime(
 						(entry.getValueJsonObj().getDouble("realTime")));
 				break;
-			case Constant.KEY_FILE_TIME_STAGEOUT:
+			case HiwayDBI.KEY_FILE_TIME_STAGEOUT:
 				invocStat.getOutputFile(fileName).setRealTime(
 						(entry.getValueJsonObj().getDouble("realTime")));
 				break;

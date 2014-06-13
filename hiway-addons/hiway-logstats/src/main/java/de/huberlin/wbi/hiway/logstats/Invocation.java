@@ -31,15 +31,22 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.logstats;
 
+import java.util.Comparator;
+
 public class Invocation {
 
 	// information obtained from container-allocated
 	private Container container;
+	private String hostName;
 
 	private long execFinishTimestamp;
 
 	private long execOnsetTimestamp;
+	
 	private long schedTime;
+	
+	private double fileSize = 1d;
+	
 	// information obtained from invoc-exec
 	private String taskName;
 
@@ -83,4 +90,25 @@ public class Invocation {
 	public void setSchedTime(long schedTime) {
 		this.schedTime = schedTime;
 	}
+	
+	public String getHostName() {
+		return hostName;
+	}
+	
+	public void setHostName(String hostName) {
+		this.hostName = hostName;
+	}
+	
+	public long getExecOnsetTimestamp() {
+		return execOnsetTimestamp;
+	}
+	
+	public double getFileSize() {
+		return fileSize;
+	}
+	
+	public void addFileSize(long fileSize) {
+		this.fileSize *= fileSize;
+	}
+	
 }
