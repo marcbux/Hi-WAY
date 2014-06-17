@@ -720,6 +720,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	protected String appMasterTrackingUrl = "";
 	// the configuration of the Hadoop installation
 	protected Configuration conf;
+	protected HiWayConfiguration hiWayConf;
 
 	protected int containerCores = 1;
 	// a data structure storing the invocation launched by each container
@@ -896,6 +897,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	public AbstractApplicationMaster() {
 		conf = new YarnConfiguration();
 		conf.addResource("core-site.xml");
+		hiWayConf = new HiWayConfiguration();
 		// conf.addResource(new Path(System.getenv("HADOOP_CONF_DIR") +
 		// "/core-site.xml"));
 		try {
@@ -1300,13 +1302,13 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 			scheduler = schedulerName
 					.equals(Constant.SchedulingPolicy.staticRoundRobin) ? new StaticRoundRobin(
-					getWorkflowName(), fs) : new HEFT(getWorkflowName(), fs);
+					getWorkflowName(), fs, hiWayConf) : new HEFT(getWorkflowName(), fs, hiWayConf);
 			break;
 		case greedyQueue:
-			scheduler = new GreedyQueue(getWorkflowName());
+			scheduler = new GreedyQueue(getWorkflowName(), hiWayConf);
 			break;
 		default:
-			C3PO c3po = new C3PO(getWorkflowName(), fs);
+			C3PO c3po = new C3PO(getWorkflowName(), fs, hiWayConf);
 			switch (schedulerName) {
 			case conservative:
 				c3po.setConservatismWeight(12d);

@@ -205,6 +205,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 		@Override
 		public void queryFinishedPost(UUID queryId, CompoundExpr result) {
+			log.info("Query finished.");
 			done = true;
 			try {
 				for (String output : result.normalize()) {
@@ -431,6 +432,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			invocation.evalReport(task.getReport());
 			ticketSrc.sendMsg(new TicketFinishedMsg(creActor, invocation
 					.getTicket(), task.getReport()));
+			log.info("Message sent.");
 
 			// (b) set output files
 			for (String outputName : invocation.getStageOutList()) {

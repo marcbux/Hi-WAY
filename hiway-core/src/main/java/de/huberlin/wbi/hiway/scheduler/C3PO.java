@@ -46,6 +46,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -270,6 +271,8 @@ public class C3PO extends AbstractScheduler {
 	protected Map<Long, Queue<TaskInstance>> readyTasks;
 
 	protected Map<Long, Queue<TaskInstance>> runningTasks;
+	
+	protected Map<Long, String> taskIdToName;
 
 	/**
 	 * For each machine, remember the last execution time of each type of task.
@@ -281,18 +284,19 @@ public class C3PO extends AbstractScheduler {
 
 	protected Map<TaskInstance, List<Container>> taskToContainers;
 
-	public C3PO(String workflowName) {
-		this(workflowName, System.currentTimeMillis());
+	public C3PO(String workflowName, Configuration conf) {
+		this(workflowName, System.currentTimeMillis(), conf);
 	}
 
-	public C3PO(String workflowName, FileSystem fs) {
-		this(workflowName, fs, System.currentTimeMillis());
+	public C3PO(String workflowName, FileSystem fs, Configuration conf) {
+		this(workflowName, fs, System.currentTimeMillis(), conf);
 	}
 
-	public C3PO(String workflowName, FileSystem fs, long seed) {
-		super(workflowName);
+	public C3PO(String workflowName, FileSystem fs, long seed, Configuration conf) {
+		super(workflowName, conf);
 		readyTasks = new HashMap<>();
 		runningTasks = new HashMap<>();
+		taskIdToName = new HashMap<>();
 		taskToContainers = new HashMap<>();
 		// taskStatisticsPerNode = new HashMap<>();
 		jobStatistics = new HashMap<>();
@@ -306,8 +310,8 @@ public class C3PO extends AbstractScheduler {
 		parseLogs(fs);
 	}
 
-	public C3PO(String workflowName, long seed) {
-		this(workflowName, null, seed);
+	public C3PO(String workflowName, long seed, Configuration conf) {
+		this(workflowName, null, seed, conf);
 		this.placementAwarenessWeight = 0d;
 	}
 
@@ -317,6 +321,7 @@ public class C3PO extends AbstractScheduler {
 		long taskId = task.getTaskId();
 		if (!getTaskIds().contains(taskId)) {
 			newTask(taskId);
+			taskIdToName.put(taskId, task.getTaskName());
 		}
 
 		jobStatistics.get(taskId).remainingTasks++;
@@ -571,7 +576,7 @@ public class C3PO extends AbstractScheduler {
 
 		log.info("\t\t#finish\tavg\t#remain\t#ready\tshare");
 		for (long taskId : getTaskIds()) {
-			String jobName = dbInterface.getTaskName(taskId);
+			String jobName = taskIdToName.get(taskId);
 			String jobName7 = (jobName.length() > 7) ? jobName.substring(0, 7)
 					: jobName;
 			OutlookEstimate jobStatistic = jobStatistics.get(taskId);
@@ -596,7 +601,7 @@ public class C3PO extends AbstractScheduler {
 			Queue<TaskInstance> queue = replicate ? runningTasks.get(taskId)
 					: readyTasks.get(taskId);
 			if (queue.size() != 0) {
-				String jobName = dbInterface.getTaskName(taskId);
+				String jobName = taskIdToName.get(taskId);
 				String jobName7 = (jobName.length() > 7) ? jobName.substring(0,
 						7) : jobName;
 				PlacementAwarenessEstimate dataLocalityStatistic = dataLocalityStatistics
@@ -614,7 +619,7 @@ public class C3PO extends AbstractScheduler {
 
 		String row = "";
 		for (long taskId : getTaskIds()) {
-			String jobName = dbInterface.getTaskName(taskId);
+			String jobName = taskIdToName.get(taskId);
 			String jobName7 = (jobName.length() > 7) ? jobName.substring(0, 7)
 					: jobName;
 			row += "\t\t" + jobName7;
@@ -642,7 +647,7 @@ public class C3PO extends AbstractScheduler {
 		String names = "";
 		String weights = "";
 		for (Long taskId : getTaskIds()) {
-			names += ", " + dbInterface.getTaskName(taskId);
+			names += ", " + taskIdToName.get(taskId);
 			weights += ", " + df.format(statistics.get(taskId).weight);
 		}
 		return "(" + names.substring(2) + ")" + "\t" + "("

@@ -45,6 +45,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -56,6 +57,7 @@ import de.huberlin.hiwaydb.useDB.HiwayDB;
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
+import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.Constant;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 //import de.huberlin.wbi.hiway.scheduler.C3PO.ConservatismEstimate;
@@ -88,7 +90,7 @@ public abstract class AbstractScheduler implements Scheduler {
 	// protected Map<String, Map<String, Set<InvocStat>>> invocStats;
 	protected HiwayDBI dbInterface;
 
-	protected long maxTimestamp;
+	protected Map<String, Long> maxTimestampPerHost;
 
 	protected int numberOfPreviousRunTasks = 0;
 	protected int numberOfFinishedTasks = 0;
@@ -105,22 +107,35 @@ public abstract class AbstractScheduler implements Scheduler {
 
 	// a queue of nodes on which containers are to be requested
 	protected Queue<String[]> unissuedNodeRequests;
-	String workflowName;
+	protected String workflowName;
+	protected Configuration conf;
 
-	public AbstractScheduler(String workflowName) {
+	public AbstractScheduler(String workflowName, Configuration conf) {
 		// statistics = new HashMap<Long, Map<String, Set<InvocStat>>>();
 		this.workflowName = workflowName;
+		this.conf = conf;
 		unissuedNodeRequests = new LinkedList<>();
-		dbInterface = Constant.useHiwayDB ? new HiwayDB() : new LogParser();
-		// invocStats = new HashMap<>();
+
+		String dbType = conf.get(HiWayConfiguration.HIWAY_DB_TYPE);
+		switch (dbType) {
+		case HiWayConfiguration.HIWAY_DB_TYPE_SQL:
+			String username = conf.get(HiWayConfiguration.HIWAY_DB_USER);
+			String password = conf.get(HiWayConfiguration.HIWAY_DB_PASSWORD);
+			String dbURL = conf.get(HiWayConfiguration.HIWAY_DB_URL);
+			dbInterface = new HiwayDB(username, password, dbURL);
+			break;
+		default:
+			dbInterface = new LogParser();
+		}
 
 		taskIds = new HashSet<>();
 		runtimeEstimatesPerNode = new HashMap<>();
-		maxTimestamp = 0l;
+		maxTimestampPerHost = new HashMap<>();
 	}
 
 	@Override
 	public void addEntryToDB(JsonReportEntry entry) {
+		log.info("HiwayDB: Adding entry " + entry + " to database.");
 		dbInterface.logToDB(entry);
 	}
 
@@ -193,6 +208,7 @@ public abstract class AbstractScheduler implements Scheduler {
 			runtimeEstimates.put(taskId, new RuntimeEstimate());
 		}
 		runtimeEstimatesPerNode.put(nodeId, runtimeEstimates);
+		maxTimestampPerHost.put(nodeId, 0l);
 	}
 
 	protected void newTask(long taskId) {
@@ -224,7 +240,9 @@ public abstract class AbstractScheduler implements Scheduler {
 							new FileReader(new File(srcName)))) {
 						String line;
 						while ((line = reader.readLine()) != null) {
-							dbInterface.logToDB(new JsonReportEntry(line));
+							JsonReportEntry entry = new JsonReportEntry(line);
+							log.info("HiwayDB: Adding entry " + entry + " to database.");
+							dbInterface.logToDB(entry);
 							// log.info(line);
 						}
 					}
@@ -296,11 +314,19 @@ public abstract class AbstractScheduler implements Scheduler {
 		for (long newTaskId : newTaskIds) {
 			newTask(newTaskId);
 		}
-		for (InvocStat stat : dbInterface.getLogEntriesSinceForTasks(
-				getTaskIds(), maxTimestamp)) {
-			maxTimestamp = Math.max(maxTimestamp, stat.getTimestamp());
-			updateRuntimeEstimate(stat);
+
+		for (long taskId : getTaskIds()) {
+			for (String hostName : getNodeIds()) {
+				long maxTimestamp = maxTimestampPerHost.get(hostName);
+				for (InvocStat stat : dbInterface
+						.getLogEntriesForTaskOnHostSince(taskId, hostName,
+								maxTimestamp)) {
+					log.info("HiwayDB: Retrieved InvocStat " + stat.toString() + " from database.");
+					maxTimestampPerHost.put(hostName,
+							Math.max(maxTimestamp, stat.getTimestamp()));
+					updateRuntimeEstimate(stat);
+				}
+			}
 		}
 	}
-
 }

@@ -68,52 +68,95 @@ public class LogParser implements HiwayDBI {
 		return hostNames;
 	}
 
-	@Override
-	public Collection<InvocStat> getLogEntries() {
-		return getLogEntriesSince(0l);
-	}
+	// @Override
+	// public Collection<InvocStat> getLogEntries() {
+	// return null;
+	// }
 
 	@Override
 	public Collection<InvocStat> getLogEntriesForTask(long taskId) {
-		return getLogEntriesSinceForTask(taskId, 0l);
-	}
-
-	@Override
-	public Collection<InvocStat> getLogEntriesForTasks(Set<Long> taskId) {
-		return getLogEntriesSinceForTasks(taskId, 0l);
-	}
-
-	@Override
-	public Collection<InvocStat> getLogEntriesSince(long sinceTimestamp) {
-		Set<Long> taskIds = new HashSet<>();
-		for (Set<Long> newTaskIds : workflowNameToTaskIds.values()) {
-			taskIds.addAll(newTaskIds);
+		Collection<InvocStat> stats = new LinkedList<>();
+		for (String hostName : getHostNames()) {
+			stats.addAll(getLogEntriesForTaskOnHostSince(taskId, hostName, 0l));
 		}
-		return getLogEntriesSinceForTasks(taskIds, 0l);
+		return stats;
 	}
 
 	@Override
-	public Collection<InvocStat> getLogEntriesSinceForTask(long taskId,
-			long sinceTimestamp) {
-		Set<Long> taskIds = new HashSet<>();
-		taskIds.add(taskId);
-		return getLogEntriesSinceForTasks(taskIds, sinceTimestamp);
+	public Collection<InvocStat> getLogEntriesForTasks(Set<Long> taskIds) {
+		Collection<InvocStat> stats = new LinkedList<>();
+		for (long taskId : taskIds) {
+			stats.addAll(getLogEntriesForTask(taskId));
+		}
+		return stats;
+	}
+
+	// @Override
+	// public Collection<InvocStat> getLogEntriesForHost(String hostName) {
+	// return null;
+	// }
+
+	// @Override
+	// public Collection<InvocStat> getLogEntriesForHostSince(String hostName,
+	// long timestamp) {
+	// return null;
+	// }
+
+	@Override
+	public Collection<InvocStat> getLogEntriesForTaskOnHost(Long taskId,
+			String hostName) {
+		return getLogEntriesForTaskOnHostSince(taskId, hostName, 0l);
 	}
 
 	@Override
-	public Collection<InvocStat> getLogEntriesSinceForTasks(Set<Long> taskIds,
-			long sinceTimestamp) {
+	public Collection<InvocStat> getLogEntriesForTaskOnHostSince(Long taskId,
+			String hostName, long timestamp) {
 		Collection<InvocStat> stats = new LinkedList<>();
 		for (Map<Long, InvocStat> invocStats : runToInvocStats.values()) {
 			for (InvocStat stat : invocStats.values()) {
-				if (taskIds.contains(stat.getTaskId())
-						&& stat.getTimestamp() > sinceTimestamp) {
+				if (stat.getHostName() != null
+						&& stat.getTaskId() == taskId.longValue()
+						&& stat.getHostName().equals(hostName)
+						&& stat.getTimestamp() > timestamp) {
 					stats.add(stat);
 				}
 			}
 		}
 		return stats;
 	}
+
+	// @Override
+	// public Collection<InvocStat> getLogEntriesSince(long sinceTimestamp) {
+	// Set<Long> taskIds = new HashSet<>();
+	// for (Set<Long> newTaskIds : workflowNameToTaskIds.values()) {
+	// taskIds.addAll(newTaskIds);
+	// }
+	// return getLogEntriesSinceForTasks(taskIds, 0l);
+	// }
+	//
+	// @Override
+	// public Collection<InvocStat> getLogEntriesSinceForTask(long taskId,
+	// long sinceTimestamp) {
+	// Set<Long> taskIds = new HashSet<>();
+	// taskIds.add(taskId);
+	// return getLogEntriesSinceForTasks(taskIds, sinceTimestamp);
+	// }
+	//
+	// @Override
+	// public Collection<InvocStat> getLogEntriesSinceForTasks(Set<Long>
+	// taskIds,
+	// long sinceTimestamp) {
+	// Collection<InvocStat> stats = new LinkedList<>();
+	// for (Map<Long, InvocStat> invocStats : runToInvocStats.values()) {
+	// for (InvocStat stat : invocStats.values()) {
+	// if (taskIds.contains(stat.getTaskId())
+	// && stat.getTimestamp() > sinceTimestamp) {
+	// stats.add(stat);
+	// }
+	// }
+	// }
+	// return stats;
+	// }
 
 	@Override
 	public Set<Long> getTaskIdsForWorkflow(String workflowName) {
@@ -171,8 +214,9 @@ public class LogParser implements HiwayDBI {
 				workflowNameToTaskIds.put(entry.getValueRawString(), taskIds);
 				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
-				invocStat.setRealTime(entry.getValueJsonObj().getDouble(
-						"realTime"), entry.getTimestamp());
+				invocStat.setRealTime(
+						entry.getValueJsonObj().getDouble("realTime"),
+						entry.getTimestamp());
 				break;
 			case HiwayDBI.KEY_INVOC_HOST:
 				String hostName = entry.getValueRawString();

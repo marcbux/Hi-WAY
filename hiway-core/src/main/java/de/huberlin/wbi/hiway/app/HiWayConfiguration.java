@@ -39,12 +39,22 @@ public class HiWayConfiguration extends Configuration {
 
 	// public static final String HIWAY_AM_URI = HIWAY_AM_PREFIX + "uri";
 	public static final String HIWAY_DAX_AM_CLASS = "de.huberlin.wbi.hiway.app.DaxApplicationMaster";
-	public static final String HIWAY_PREFIX = "hiway.";
-	public static final String HIWAY_AM_PREFIX = HIWAY_PREFIX + "am.";
+//	public static final String HIWAY_PREFIX = "hiway.";
+//	public static final String HIWAY_AM_PREFIX = HIWAY_PREFIX + "am.";
+	
+	// allowed types: local, SQL, NoSQL
+	public final static String HIWAY_DB_TYPE = "hiway.db.type";
+	public final static String HIWAY_DB_TYPE_LOCAL = "local";
+	public final static String HIWAY_DB_TYPE_SQL = "SQL";
+	public final static String HIWAY_DB_TYPE_DEFAULT = HIWAY_DB_TYPE_LOCAL;
+	public final static String HIWAY_DB_URL = "hiway.db.url";
+	public final static String HIWAY_DB_USER = "hiway.db.user";
+	public final static String HIWAY_DB_PASSWORD = "hiway.db.password";
 
 	public final static String HIWAY_SITE_XML = "hiway-site.xml";
 
 	public static final String HIWAY_WORKER_CLASS = "de.huberlin.wbi.hiway.app.Worker";
+	
 	static {
 		addDefaultResource(HIWAY_SITE_XML);
 	}

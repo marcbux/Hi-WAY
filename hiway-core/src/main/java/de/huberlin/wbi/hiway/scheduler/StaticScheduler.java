@@ -38,6 +38,7 @@ import java.util.Queue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 
@@ -61,8 +62,8 @@ public abstract class StaticScheduler extends AbstractScheduler {
 	// the static schedule
 	protected Map<TaskInstance, String> schedule;
 
-	public StaticScheduler(String workflowName, FileSystem fs) {
-		super(workflowName);
+	public StaticScheduler(String workflowName, FileSystem fs, Configuration conf) {
+		super(workflowName, conf);
 		schedule = new HashMap<>();
 		queues = new HashMap<>();
 
