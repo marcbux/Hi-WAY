@@ -42,9 +42,9 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
+import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.AbstractTaskInstance;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
@@ -72,7 +72,7 @@ public class HEFT extends StaticScheduler {
 
 	Map<TaskInstance, Double> readyTimePerTask;
 
-	public HEFT(String workflowName, FileSystem fs, Configuration conf) {
+	public HEFT(String workflowName, FileSystem fs, HiWayConfiguration conf) {
 		super(workflowName, fs, conf);
 		readyTimePerTask = new HashMap<>();
 		freeTimeSlotStartsPerNode = new HashMap<>();

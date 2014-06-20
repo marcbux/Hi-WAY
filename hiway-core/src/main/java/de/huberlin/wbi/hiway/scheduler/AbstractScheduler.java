@@ -45,7 +45,6 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -108,9 +107,9 @@ public abstract class AbstractScheduler implements Scheduler {
 	// a queue of nodes on which containers are to be requested
 	protected Queue<String[]> unissuedNodeRequests;
 	protected String workflowName;
-	protected Configuration conf;
+	protected HiWayConfiguration conf;
 
-	public AbstractScheduler(String workflowName, Configuration conf) {
+	public AbstractScheduler(String workflowName, HiWayConfiguration conf) {
 		// statistics = new HashMap<Long, Map<String, Set<InvocStat>>>();
 		this.workflowName = workflowName;
 		this.conf = conf;
@@ -225,25 +224,29 @@ public abstract class AbstractScheduler implements Scheduler {
 	}
 
 	protected void parseLogs(FileSystem fs) {
-		Path dir = new Path(fs.getHomeDirectory(), Constant.SANDBOX_DIRECTORY);
+		Path hiwayDir = new Path(fs.getHomeDirectory(), Constant.SANDBOX_DIRECTORY);
 		try {
-			for (FileStatus fileStatus : fs.listStatus(dir)) {
-				Path src = fileStatus.getPath();
-				String srcName = src.getName();
-				if (srcName.startsWith(Constant.LOG_PREFIX)
-						&& srcName.endsWith(Constant.LOG_SUFFIX)) {
-					log.info("Parsing log " + src.toString());
-					Path dest = new Path(srcName);
-					fs.copyToLocalFile(false, src, dest);
+			for (FileStatus appDirStatus : fs.listStatus(hiwayDir)) {
+				if (appDirStatus.isDirectory()) {
+					Path appDir = appDirStatus.getPath();
+					for (FileStatus srcStatus : fs.listStatus(appDir)) {
+						Path src = srcStatus.getPath();
+						String srcName = src.getName();
+						if (srcName.equals(conf.get(HiWayConfiguration.HIWAY_STAT_LOG, HiWayConfiguration.HIWAY_STAT_LOG_DEFAULT))) {
+							log.info("Parsing log " + src.toString());
+							Path dest = new Path(srcName);
+							fs.copyToLocalFile(false, src, dest);
 
-					try (BufferedReader reader = new BufferedReader(
-							new FileReader(new File(srcName)))) {
-						String line;
-						while ((line = reader.readLine()) != null) {
-							JsonReportEntry entry = new JsonReportEntry(line);
-							log.info("HiwayDB: Adding entry " + entry + " to database.");
-							dbInterface.logToDB(entry);
-							// log.info(line);
+							try (BufferedReader reader = new BufferedReader(
+									new FileReader(new File(srcName)))) {
+								String line;
+								while ((line = reader.readLine()) != null) {
+									JsonReportEntry entry = new JsonReportEntry(line);
+									log.info("HiwayDB: Adding entry " + entry + " to database.");
+									dbInterface.logToDB(entry);
+									// log.info(line);
+								}
+							}
 						}
 					}
 				}

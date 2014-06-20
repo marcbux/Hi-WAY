@@ -46,13 +46,13 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
 import de.huberlin.hiwaydb.useDB.InvocStat;
+import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -284,15 +284,15 @@ public class C3PO extends AbstractScheduler {
 
 	protected Map<TaskInstance, List<Container>> taskToContainers;
 
-	public C3PO(String workflowName, Configuration conf) {
+	public C3PO(String workflowName, HiWayConfiguration conf) {
 		this(workflowName, System.currentTimeMillis(), conf);
 	}
 
-	public C3PO(String workflowName, FileSystem fs, Configuration conf) {
+	public C3PO(String workflowName, FileSystem fs, HiWayConfiguration conf) {
 		this(workflowName, fs, System.currentTimeMillis(), conf);
 	}
 
-	public C3PO(String workflowName, FileSystem fs, long seed, Configuration conf) {
+	public C3PO(String workflowName, FileSystem fs, long seed, HiWayConfiguration conf) {
 		super(workflowName, conf);
 		readyTasks = new HashMap<>();
 		runningTasks = new HashMap<>();
@@ -310,11 +310,19 @@ public class C3PO extends AbstractScheduler {
 		parseLogs(fs);
 	}
 
-	public C3PO(String workflowName, long seed, Configuration conf) {
+	public C3PO(String workflowName, long seed, HiWayConfiguration conf) {
 		this(workflowName, null, seed, conf);
 		this.placementAwarenessWeight = 0d;
 	}
 
+	@Override
+	protected void parseLogs(FileSystem fs) {
+		super.parseLogs(fs);
+		for (long taskId : dbInterface.getTaskIdsForWorkflow(workflowName)) {
+			taskIdToName.put(taskId, dbInterface.getTaskName(taskId));
+		}
+	}
+	
 	@Override
 	protected void addTask(TaskInstance task) {
 		super.addTask(task);
