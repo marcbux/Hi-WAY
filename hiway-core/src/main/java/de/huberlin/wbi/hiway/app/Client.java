@@ -518,8 +518,8 @@ public class Client {
 			classPathEnv.append(File.pathSeparatorChar);
 			classPathEnv.append(c.trim());
 		}
-		classPathEnv.append(File.pathSeparatorChar)
-				.append("./log4j.properties");
+//		classPathEnv.append(File.pathSeparatorChar)
+//				.append("./log4j.properties");
 
 		if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
 			classPathEnv.append(':');
@@ -538,6 +538,7 @@ public class Client {
 		vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
 		// Set Xmx based on am memory size
 		vargs.add("-Xmx" + amMemory + "m");
+//		vargs.add("-Dlog4j.configuration=$HIWAY_HOME/conf/log4j.properties");
 		// Set class name
 		if (workflowType.equals(Constant.WorkflowFormat.dax)) {
 			vargs.add(HiWayConfiguration.HIWAY_DAX_AM_CLASS);

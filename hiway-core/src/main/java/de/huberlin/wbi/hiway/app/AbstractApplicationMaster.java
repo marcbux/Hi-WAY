@@ -666,6 +666,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	// a handle to the log, in which any events are recorded
 	private static final Log log = LogFactory
 			.getLog(AbstractApplicationMaster.class);
+	
+	private static final Log statLog = LogFactory.getLog("statLogger");
 
 	/**
 	 * The main routine.
@@ -738,7 +740,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 	// the report, in which provenance information is stored
 	private Data federatedReport;
-	private BufferedWriter federatedReportWriter;
+//	private BufferedWriter federatedReportWriter;
 
 	protected Map<String, Data> files = new HashMap<>();
 	// a handle to the hdfs
@@ -970,8 +972,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 						- amRMClient.getStartTime())));
 
 		try {
-			federatedReportWriter.close();
-			Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY);
+//			federatedReportWriter.close();
+//			Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY);
 			federatedReport.stageOut(fs, "");
 		} catch (IOException e) {
 			log.info("Error when attempting to stage out federated output log.");
@@ -1344,10 +1346,11 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 
 		parseWorkflow();
-		federatedReport = new Data(Constant.LOG_PREFIX + getRunId()
-				+ Constant.LOG_SUFFIX);
-		federatedReportWriter = new BufferedWriter(new FileWriter(
-				federatedReport.getLocalPath()));
+//		federatedReport = new Data(Constant.LOG_PREFIX + getRunId()
+//				+ Constant.LOG_SUFFIX);
+		federatedReport = new Data(hiWayConf.get(HiWayConfiguration.HIWAY_STAT_LOG, HiWayConfiguration.HIWAY_STAT_LOG_DEFAULT));
+//		federatedReportWriter = new BufferedWriter(new FileWriter(
+//				federatedReport.getLocalPath()));
 		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
 				null, null, null, null, Constant.KEY_WF_NAME, getWorkflowName()));
 
@@ -1518,11 +1521,15 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	}
 
 	protected void writeEntryToLog(JsonReportEntry entry) {
-		try {
-			federatedReportWriter.write(entry.toString() + "\n");
-		} catch (IOException e) {
-			e.printStackTrace();
+		if (statLog.isDebugEnabled()) {
+			statLog.debug(entry.toString());
 		}
+		
+//		try {
+//			federatedReportWriter.write(entry.toString() + "\n");
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
 		scheduler.addEntryToDB(entry);
 	}
 

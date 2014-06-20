@@ -41,4 +41,10 @@
 		</dependencySet>
 
 	</dependencySets>
+	<!--fileSets>
+		<fileSet>
+			<directory>src/main/resources</directory>
+			<outputDirectory>hiway-${project.version}/conf</outputDirectory>
+		</fileSet>
+	</fileSets-->
 </assembly>

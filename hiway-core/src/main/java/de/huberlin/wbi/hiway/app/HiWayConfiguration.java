@@ -50,6 +50,8 @@ public class HiWayConfiguration extends Configuration {
 	public final static String HIWAY_DB_URL = "hiway.db.url";
 	public final static String HIWAY_DB_USER = "hiway.db.user";
 	public final static String HIWAY_DB_PASSWORD = "hiway.db.password";
+	public final static String HIWAY_STAT_LOG = "hiway.stat.log";
+	public final static String HIWAY_STAT_LOG_DEFAULT = "stat.log";
 
 	public final static String HIWAY_SITE_XML = "hiway-site.xml";
 

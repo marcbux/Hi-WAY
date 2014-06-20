@@ -116,7 +116,7 @@ public abstract class AbstractScheduler implements Scheduler {
 		this.conf = conf;
 		unissuedNodeRequests = new LinkedList<>();
 
-		String dbType = conf.get(HiWayConfiguration.HIWAY_DB_TYPE);
+		String dbType = conf.get(HiWayConfiguration.HIWAY_DB_TYPE, HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT);
 		switch (dbType) {
 		case HiWayConfiguration.HIWAY_DB_TYPE_SQL:
 			String username = conf.get(HiWayConfiguration.HIWAY_DB_USER);
