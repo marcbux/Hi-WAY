@@ -56,9 +56,9 @@ public class Constant {
 
 	public static final String LOG_SUFFIX = ".csv";
 
-	public static final String POST_SCRIPT_FILENAME = "__post_script__";
+//	public static final String POST_SCRIPT_FILENAME = "__post_script__";
 
-	public static final String PRE_SCRIPT_FILENAME = "__pre_script__";
+//	public static final String PRE_SCRIPT_FILENAME = "__pre_script__";
 
 	// how often a task is to be retried before the workflow fails
 	public static final int retries = 1;
@@ -67,6 +67,6 @@ public class Constant {
 	public static final String SANDBOX_DIRECTORY = "hiway";
 
 	// the names of scripts created by Hi-WAY for each invocation
-	public static final String SUPER_SCRIPT_FILENAME = "__super_script__";
+//	public static final String SUPER_SCRIPT_FILENAME = "__super_script__";
 
 }

@@ -209,8 +209,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				classPathEnv.append(File.pathSeparatorChar);
 				classPathEnv.append(c.trim());
 			}
-			classPathEnv.append(File.pathSeparatorChar).append(
-					"./log4j.properties");
+			// classPathEnv.append(File.pathSeparatorChar).append(
+			// "./log4j.properties");
 
 			if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
 				classPathEnv.append(':');
@@ -225,17 +225,22 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			// Set the local resources
 			Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
 			try {
-				// for (Data script : task.getScripts()) {
-				// script.addToLocalResourceMap(localResources, fs, container
-				// .getId().toString());
-				// }
-				for (Data data : task.getInputData()) {
-					String hdfsDirectoryMidfix = Data.hdfsDirectoryMidfixes
-							.containsKey(data) ? Data.hdfsDirectoryMidfixes
-							.get(data) : "";
-					data.addToLocalResourceMap(localResources, fs,
-							hdfsDirectoryMidfix);
+				String containerId = container.getId().toString();
+				File script = new File(containerId + ".sh");
+				try (BufferedWriter scriptWriter = new BufferedWriter(
+						new FileWriter(script))) {
+					scriptWriter.write(task.getCommand());
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
+				Data scriptData = new Data(script.getPath());
+				try {
+					scriptData.stageOut(fs, containerId);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				scriptData.addToLocalResourceMap(localResources, fs,
+						containerId);
 			} catch (IOException e1) {
 				log.info("Error during Container startup. exiting");
 				e1.printStackTrace();
@@ -261,6 +266,14 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			vargs.add("--taskName " + task.getTaskName());
 			vargs.add("--langLabel " + task.getLanguageLabel());
 			vargs.add("--signature " + task.getSignature());
+			for (Data inputData : task.getInputData()) {
+				vargs.add("--input " + inputData.getLocalPath() + ","
+						+ inputData.isInput() + ","
+						+ Data.hdfsDirectoryMidfixes.get(inputData));
+			}
+			for (Data outputData : task.getOutputData()) {
+				vargs.add("--output " + outputData.getLocalPath());
+			}
 
 			// Add log redirect params
 			vargs.add("1>" + Invocation.STDOUT_FILENAME);
@@ -388,23 +401,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 		protected void launchTask(TaskInstance task,
 				Container allocatedContainer) {
-
-			File script = new File(allocatedContainer.getId().toString()
-					+ ".sh");
-			try (BufferedWriter scriptWriter = new BufferedWriter(
-					new FileWriter(script))) {
-				scriptWriter.write(task.getCommand());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			Data scriptData = new Data(script.getPath());
-			try {
-				scriptData.stageOut(fs, "");
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			task.addInputData(scriptData);
-
 			containerIdToInvocation.put(allocatedContainer.getId().getId(),
 					new HiWayInvocation(task));
 			log.info("Launching workflow task on a new container." + ", task="
@@ -449,12 +445,17 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				schedulingTime = System.currentTimeMillis() - schedulingTime;
 
 				if (task.getTries() == 1) {
+					JSONObject obj = new JSONObject();
+					try {
+						obj.put(JsonReportEntry.LABEL_REALTIME, schedulingTime);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
 					task.getReport().add(
 							new JsonReportEntry(task.getWorkflowId(), task
 									.getTaskId(), task.getTaskName(), task
 									.getLanguageLabel(), task.getSignature(),
-									null, HiwayDBI.KEY_INVOC_TIME_SCHED, Long
-											.toString(schedulingTime)));
+									null, HiwayDBI.KEY_INVOC_TIME_SCHED, obj));
 					task.getReport().add(
 							new JsonReportEntry(task.getWorkflowId(), task
 									.getTaskId(), task.getTaskName(), task
@@ -666,7 +667,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	// a handle to the log, in which any events are recorded
 	private static final Log log = LogFactory
 			.getLog(AbstractApplicationMaster.class);
-	
+
 	private static final Log statLog = LogFactory.getLog("statLogger");
 
 	/**
@@ -740,7 +741,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 	// the report, in which provenance information is stored
 	private Data federatedReport;
-//	private BufferedWriter federatedReportWriter;
+	// private BufferedWriter federatedReportWriter;
 
 	protected Map<String, Data> files = new HashMap<>();
 	// a handle to the hdfs
@@ -972,8 +973,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 						- amRMClient.getStartTime())));
 
 		try {
-//			federatedReportWriter.close();
-//			Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY);
+			// federatedReportWriter.close();
+			// Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY);
 			federatedReport.stageOut(fs, "");
 		} catch (IOException e) {
 			log.info("Error when attempting to stage out federated output log.");
@@ -1304,7 +1305,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 			scheduler = schedulerName
 					.equals(Constant.SchedulingPolicy.staticRoundRobin) ? new StaticRoundRobin(
-					getWorkflowName(), fs, hiWayConf) : new HEFT(getWorkflowName(), fs, hiWayConf);
+					getWorkflowName(), fs, hiWayConf) : new HEFT(
+					getWorkflowName(), fs, hiWayConf);
 			break;
 		case greedyQueue:
 			scheduler = new GreedyQueue(getWorkflowName(), hiWayConf);
@@ -1346,11 +1348,13 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 
 		parseWorkflow();
-//		federatedReport = new Data(Constant.LOG_PREFIX + getRunId()
-//				+ Constant.LOG_SUFFIX);
-		federatedReport = new Data(hiWayConf.get(HiWayConfiguration.HIWAY_STAT_LOG, HiWayConfiguration.HIWAY_STAT_LOG_DEFAULT));
-//		federatedReportWriter = new BufferedWriter(new FileWriter(
-//				federatedReport.getLocalPath()));
+		// federatedReport = new Data(Constant.LOG_PREFIX + getRunId()
+		// + Constant.LOG_SUFFIX);
+		federatedReport = new Data(hiWayConf.get(
+				HiWayConfiguration.HIWAY_STAT_LOG,
+				HiWayConfiguration.HIWAY_STAT_LOG_DEFAULT));
+		// federatedReportWriter = new BufferedWriter(new FileWriter(
+		// federatedReport.getLocalPath()));
 		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
 				null, null, null, null, Constant.KEY_WF_NAME, getWorkflowName()));
 
@@ -1524,12 +1528,12 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		if (statLog.isDebugEnabled()) {
 			statLog.debug(entry.toString());
 		}
-		
-//		try {
-//			federatedReportWriter.write(entry.toString() + "\n");
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
+
+		// try {
+		// federatedReportWriter.write(entry.toString() + "\n");
+		// } catch (IOException e) {
+		// e.printStackTrace();
+		// }
 		scheduler.addEntryToDB(entry);
 	}
 

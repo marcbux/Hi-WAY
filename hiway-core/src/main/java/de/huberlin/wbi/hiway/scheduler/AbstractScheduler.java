@@ -233,8 +233,8 @@ public abstract class AbstractScheduler implements Scheduler {
 						Path src = srcStatus.getPath();
 						String srcName = src.getName();
 						if (srcName.equals(conf.get(HiWayConfiguration.HIWAY_STAT_LOG, HiWayConfiguration.HIWAY_STAT_LOG_DEFAULT))) {
-							log.info("Parsing log " + src.toString());
-							Path dest = new Path(srcName);
+							Path dest = new Path(appDir.getName());
+							log.info("Parsing log " + dest.toString());
 							fs.copyToLocalFile(false, src, dest);
 
 							try (BufferedReader reader = new BufferedReader(
