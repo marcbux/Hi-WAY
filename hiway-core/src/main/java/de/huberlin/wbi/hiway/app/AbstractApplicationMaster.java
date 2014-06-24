@@ -440,14 +440,14 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			while (!containerQueue.isEmpty() && !scheduler.nothingToSchedule()) {
 				Container allocatedContainer = containerQueue.remove();
 
-				long schedulingTime = System.currentTimeMillis();
+				long tic = System.currentTimeMillis();
 				TaskInstance task = scheduler.getNextTask(allocatedContainer);
-				schedulingTime = System.currentTimeMillis() - schedulingTime;
+				long toc = System.currentTimeMillis();
 
 				if (task.getTries() == 1) {
 					JSONObject obj = new JSONObject();
 					try {
-						obj.put(JsonReportEntry.LABEL_REALTIME, schedulingTime);
+						obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 					} catch (JSONException e) {
 						e.printStackTrace();
 					}
@@ -896,6 +896,9 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	// // task.setSuperScript(script);
 	// task.addScript(script);
 	// }
+	
+	protected Map<Long, JsonReportEntry> taskIdContainerRequestedEvent = new HashMap<>();
+	protected Map<Long, JsonReportEntry> taskIdContainerAllocatedEvent = new HashMap<>();
 
 	public AbstractApplicationMaster() {
 		conf = new YarnConfiguration();

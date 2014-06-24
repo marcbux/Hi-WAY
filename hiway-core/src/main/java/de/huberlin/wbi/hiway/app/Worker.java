@@ -225,7 +225,7 @@ public class Worker {
 		stageIn();
 		long toc = System.currentTimeMillis();
 		JSONObject obj = new JSONObject();
-		obj.put(JsonReportEntry.LABEL_REALTIME, toc - tic);
+		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName,
 				langLabel, signature, null, HiwayDBI.KEY_INVOC_TIME_STAGEIN,
 				obj));
@@ -234,7 +234,7 @@ public class Worker {
 		exec();
 		toc = System.currentTimeMillis();
 		obj = new JSONObject();
-		obj.put(JsonReportEntry.LABEL_REALTIME, toc - tic);
+		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName,
 				langLabel, signature, null, JsonReportEntry.KEY_INVOC_TIME, obj));
 
@@ -242,7 +242,7 @@ public class Worker {
 		stageOut();
 		toc = System.currentTimeMillis();
 		obj = new JSONObject();
-		obj.put(JsonReportEntry.LABEL_REALTIME, toc - tic);
+		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName,
 				langLabel, signature, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT,
 				obj));
@@ -261,7 +261,7 @@ public class Worker {
 			input.stageIn(fs, Data.hdfsDirectoryMidfixes.get(input));
 			long toc = System.currentTimeMillis();
 			JSONObject obj = new JSONObject();
-			obj.put(JsonReportEntry.LABEL_REALTIME, toc - tic);
+			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId,
 					taskName, langLabel, signature, input.getLocalPath(),
 					HiwayDBI.KEY_FILE_TIME_STAGEIN, obj));
@@ -287,7 +287,7 @@ public class Worker {
 			output.stageOut(fs, containerId);
 			long toc = System.currentTimeMillis();
 			JSONObject obj = new JSONObject();
-			obj.put(JsonReportEntry.LABEL_REALTIME, toc - tic);
+			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId,
 						taskName, langLabel, signature, output.getLocalPath(),
 						HiwayDBI.KEY_FILE_TIME_STAGEIN, obj));
