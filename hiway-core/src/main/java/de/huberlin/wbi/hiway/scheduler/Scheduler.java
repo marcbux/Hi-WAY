@@ -47,6 +47,8 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * 
  */
 public interface Scheduler {
+	
+	public void initialize();
 
 	public void addEntryToDB(JsonReportEntry entry);
 

@@ -246,6 +246,10 @@ public class Worker {
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName,
 				langLabel, signature, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT,
 				obj));
+		
+		new Data(Invocation.REPORT_FILENAME).stageOut(fs, containerId);
+		new Data(Invocation.STDOUT_FILENAME).stageOut(fs, containerId);
+		new Data(Invocation.STDERR_FILENAME).stageOut(fs, containerId);
 
 		// System.out.println("Starting traversal");
 		// Set<Path> newFiles = parseDir(dir);
@@ -290,11 +294,8 @@ public class Worker {
 			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId,
 						taskName, langLabel, signature, output.getLocalPath(),
-						HiwayDBI.KEY_FILE_TIME_STAGEIN, obj));
+						HiwayDBI.KEY_FILE_TIME_STAGEOUT, obj));
 		}
-		new Data(Invocation.REPORT_FILENAME).stageOut(fs, containerId);
-		new Data(Invocation.STDOUT_FILENAME).stageOut(fs, containerId);
-		new Data(Invocation.STDERR_FILENAME).stageOut(fs, containerId);
 	}
 
 	// private void stageOut(Set<Path> files) {

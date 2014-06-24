@@ -423,9 +423,9 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 	}
 
 	@Override
-	public void evaluateReport(TaskInstance task, ContainerId containerId) {
-		super.evaluateReport(task, containerId);
-
+	public void taskSuccess(TaskInstance task, ContainerId containerId) {
+		super.taskSuccess(task, containerId);
+		
 		try {
 			Invocation invocation = ((CuneiformTaskInstance) task)
 					.getInvocation();
@@ -457,6 +457,11 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			e.printStackTrace();
 			System.exit(1);
 		}
+	}
+	
+	@Override
+	public void evaluateReport(TaskInstance task, ContainerId containerId) {
+		super.evaluateReport(task, containerId);
 	}
 
 }

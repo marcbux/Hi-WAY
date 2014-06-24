@@ -171,7 +171,7 @@ public class TestScheduler {
 
 	@Test
 	public void shakeRattelRollGreedyQueue() {
-		shakeRattelRoll(new GreedyQueue("shakeRattleRoll", null));
+		shakeRattelRoll(new GreedyQueue("shakeRattleRoll", null, null));
 	}
 
 }

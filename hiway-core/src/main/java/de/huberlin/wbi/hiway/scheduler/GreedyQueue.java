@@ -36,6 +36,7 @@ import java.util.Queue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 
 import de.huberlin.wbi.hiway.app.HiWayConfiguration;
@@ -55,8 +56,8 @@ public class GreedyQueue extends AbstractScheduler {
 
 	private Queue<TaskInstance> queue;
 
-	public GreedyQueue(String workflowName, HiWayConfiguration conf) {
-		super(workflowName, conf);
+	public GreedyQueue(String workflowName, HiWayConfiguration conf, FileSystem fs) {
+		super(workflowName, conf, fs);
 		queue = new LinkedList<>();
 	}
 

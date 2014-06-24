@@ -1007,6 +1007,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		String appMessage = null;
 		success = true;
 		int numTotalContainers = scheduler.getNumberOfTotalTasks();
+		
 		if (numFailedContainers.get() == 0
 				&& numCompletedContainers.get() == numTotalContainers) {
 			appStatus = FinalApplicationStatus.SUCCEEDED;
@@ -1312,7 +1313,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 					getWorkflowName(), fs, hiWayConf);
 			break;
 		case greedyQueue:
-			scheduler = new GreedyQueue(getWorkflowName(), hiWayConf);
+			scheduler = new GreedyQueue(getWorkflowName(), hiWayConf, fs);
 			break;
 		default:
 			C3PO c3po = new C3PO(getWorkflowName(), fs, hiWayConf);
@@ -1349,6 +1350,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			}
 			scheduler = c3po;
 		}
+		scheduler.initialize();
 
 		parseWorkflow();
 		// federatedReport = new Data(Constant.LOG_PREFIX + getRunId()

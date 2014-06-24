@@ -63,11 +63,9 @@ public abstract class StaticScheduler extends AbstractScheduler {
 	protected Map<TaskInstance, String> schedule;
 
 	public StaticScheduler(String workflowName, FileSystem fs, HiWayConfiguration conf) {
-		super(workflowName, conf);
+		super(workflowName, conf, fs);
 		schedule = new HashMap<>();
 		queues = new HashMap<>();
-
-		parseLogs(fs);
 
 		for (String node : runtimeEstimatesPerNode.keySet()) {
 			Queue<TaskInstance> queue = new LinkedList<>();

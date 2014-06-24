@@ -95,6 +95,8 @@ public abstract class AbstractScheduler implements Scheduler {
 	protected int numberOfFinishedTasks = 0;
 	protected int numberOfRemainingTasks = 0;
 	protected int numberOfRunningTasks = 0;
+	
+	protected final FileSystem fs;
 
 	// private Set<String> nodeIds;
 	protected Set<Long> taskIds;
@@ -109,12 +111,20 @@ public abstract class AbstractScheduler implements Scheduler {
 	protected String workflowName;
 	protected HiWayConfiguration conf;
 
-	public AbstractScheduler(String workflowName, HiWayConfiguration conf) {
+	public AbstractScheduler(String workflowName, HiWayConfiguration conf, FileSystem fs) {
 		// statistics = new HashMap<Long, Map<String, Set<InvocStat>>>();
 		this.workflowName = workflowName;
 		this.conf = conf;
+		this.fs = fs;
 		unissuedNodeRequests = new LinkedList<>();
 
+		taskIds = new HashSet<>();
+		runtimeEstimatesPerNode = new HashMap<>();
+		maxTimestampPerHost = new HashMap<>();
+	}
+
+	@Override
+	public void initialize() {
 		String dbType = conf.get(HiWayConfiguration.HIWAY_DB_TYPE, HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT);
 		switch (dbType) {
 		case HiWayConfiguration.HIWAY_DB_TYPE_SQL:
@@ -125,13 +135,10 @@ public abstract class AbstractScheduler implements Scheduler {
 			break;
 		default:
 			dbInterface = new LogParser();
+			parseLogs(fs);
 		}
-
-		taskIds = new HashSet<>();
-		runtimeEstimatesPerNode = new HashMap<>();
-		maxTimestampPerHost = new HashMap<>();
 	}
-
+	
 	@Override
 	public void addEntryToDB(JsonReportEntry entry) {
 		log.info("HiwayDB: Adding entry " + entry + " to database.");

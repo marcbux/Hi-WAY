@@ -249,8 +249,6 @@ public class C3PO extends AbstractScheduler {
 	protected Map<Long, PlacementAwarenessEstimate> dataLocalityStatistics;
 	private final DecimalFormat df;
 
-	private final FileSystem fs;
-
 	/**
 	 * In order to gauge the
 	 */
@@ -293,7 +291,7 @@ public class C3PO extends AbstractScheduler {
 	}
 
 	public C3PO(String workflowName, FileSystem fs, long seed, HiWayConfiguration conf) {
-		super(workflowName, conf);
+		super(workflowName, conf, fs);
 		readyTasks = new HashMap<>();
 		runningTasks = new HashMap<>();
 		taskIdToName = new HashMap<>();
@@ -306,8 +304,6 @@ public class C3PO extends AbstractScheduler {
 		df = (DecimalFormat) NumberFormat.getNumberInstance(loc);
 		df.applyPattern("###.##");
 		df.setMaximumIntegerDigits(7);
-		this.fs = fs;
-		parseLogs(fs);
 	}
 
 	public C3PO(String workflowName, long seed, HiWayConfiguration conf) {
@@ -526,9 +522,9 @@ public class C3PO extends AbstractScheduler {
 	@Override
 	public int getNumberOfTotalTasks() {
 		int totalTasks = getNumberOfFinishedTasks() + getNumberOfRunningTasks();
-		for (OutlookEstimate jobStatistic : jobStatistics.values())
+		for (OutlookEstimate jobStatistic : jobStatistics.values()){
 			totalTasks += jobStatistic.remainingTasks;
-
+	}
 		return totalTasks;
 	}
 
