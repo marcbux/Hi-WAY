@@ -139,12 +139,17 @@ public class Worker {
 			// processBuilder.inheritIO();
 			process = processBuilder.start();
 			exitValue = process.waitFor();
+			
+			new Data(Invocation.REPORT_FILENAME).stageOut(fs, containerId);
+			new Data(Invocation.STDOUT_FILENAME).stageOut(fs, containerId);
+			new Data(Invocation.STDERR_FILENAME).stageOut(fs, containerId);
 
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
+		
 		if (exitValue != 0) {
 			System.exit(exitValue);
 		}
@@ -246,10 +251,6 @@ public class Worker {
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName,
 				langLabel, signature, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT,
 				obj));
-		
-		new Data(Invocation.REPORT_FILENAME).stageOut(fs, containerId);
-		new Data(Invocation.STDOUT_FILENAME).stageOut(fs, containerId);
-		new Data(Invocation.STDERR_FILENAME).stageOut(fs, containerId);
 
 		// System.out.println("Starting traversal");
 		// Set<Path> newFiles = parseDir(dir);

@@ -276,8 +276,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			}
 
 			// Add log redirect params
-			vargs.add("1>" + Invocation.STDOUT_FILENAME);
-			vargs.add("2>" + Invocation.STDERR_FILENAME);
+//			vargs.add("1>" + Invocation.STDOUT_FILENAME);
+//			vargs.add("2>" + Invocation.STDERR_FILENAME);
 
 			// Get final commmand
 			StringBuilder command = new StringBuilder();

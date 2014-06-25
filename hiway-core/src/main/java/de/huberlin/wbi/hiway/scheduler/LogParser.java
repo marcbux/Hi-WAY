@@ -109,7 +109,7 @@ public class LogParser implements HiwayDBI {
 	}
 
 	@Override
-	public Collection<InvocStat> getLogEntriesForTaskOnHostSince(Long taskId,
+	public synchronized Collection<InvocStat> getLogEntriesForTaskOnHostSince(Long taskId,
 			String hostName, long timestamp) {
 		Collection<InvocStat> stats = new LinkedList<>();
 		for (Map<Long, InvocStat> invocStats : runToInvocStats.values()) {
@@ -170,7 +170,7 @@ public class LogParser implements HiwayDBI {
 	}
 
 	@Override
-	public void logToDB(JsonReportEntry entry) {
+	public synchronized void logToDB(JsonReportEntry entry) {
 		Long invocId = entry.getInvocId();
 		UUID runId = entry.getRunId();
 		String fileName = entry.getFile();
