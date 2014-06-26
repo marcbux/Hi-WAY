@@ -269,7 +269,7 @@ public class C3PO extends AbstractScheduler {
 	protected Map<Long, Queue<TaskInstance>> readyTasks;
 
 	protected Map<Long, Queue<TaskInstance>> runningTasks;
-	
+
 	protected Map<Long, String> taskIdToName;
 
 	/**
@@ -290,7 +290,8 @@ public class C3PO extends AbstractScheduler {
 		this(workflowName, fs, System.currentTimeMillis(), conf);
 	}
 
-	public C3PO(String workflowName, FileSystem fs, long seed, HiWayConfiguration conf) {
+	public C3PO(String workflowName, FileSystem fs, long seed,
+			HiWayConfiguration conf) {
 		super(workflowName, conf, fs);
 		readyTasks = new HashMap<>();
 		runningTasks = new HashMap<>();
@@ -310,22 +311,36 @@ public class C3PO extends AbstractScheduler {
 		this(workflowName, null, seed, conf);
 		this.placementAwarenessWeight = 0d;
 	}
-
-	@Override
-	protected void parseLogs(FileSystem fs) {
-		super.parseLogs(fs);
-		for (long taskId : dbInterface.getTaskIdsForWorkflow(workflowName)) {
-			taskIdToName.put(taskId, dbInterface.getTaskName(taskId));
-		}
-	}
 	
 	@Override
+	public void initialize() {
+		super.initialize();
+		
+		Collection<Long> taskIds = dbInterface
+				.getTaskIdsForWorkflow(workflowName);
+		log.info("HiwayDB: Retrieved Task Ids " + taskIds.toString()
+				+ " from database.");
+		for (long taskId : taskIds) {
+			String taskName = dbInterface.getTaskName(taskId);
+			taskIdToName.put(taskId, taskName);
+			log.info("HiwayDB: Retrieved Task Name " + taskName
+					+ " for Task Id " + taskId + " from database.");
+		}
+	}
+
+	@Override
 	protected void addTask(TaskInstance task) {
+
+		log.info("Adding task of id " + task.getTaskId() + " and name "
+				+ task.getTaskName());
+
 		super.addTask(task);
 		long taskId = task.getTaskId();
 		if (!getTaskIds().contains(taskId)) {
 			newTask(taskId);
 			taskIdToName.put(taskId, task.getTaskName());
+			log.info("TaskId " + taskId + " (" + task.getTaskName()
+					+ ") to map.");
 		}
 
 		jobStatistics.get(taskId).remainingTasks++;
@@ -521,11 +536,18 @@ public class C3PO extends AbstractScheduler {
 
 	@Override
 	public int getNumberOfTotalTasks() {
-		int totalTasks = getNumberOfFinishedTasks() + getNumberOfRunningTasks();
-		for (OutlookEstimate jobStatistic : jobStatistics.values()){
-			totalTasks += jobStatistic.remainingTasks;
-	}
-		return totalTasks;
+
+		int fin = getNumberOfFinishedTasks();
+		int run = getNumberOfRunningTasks();
+		int rem = 0;
+		for (OutlookEstimate jobStatistic : jobStatistics.values()) {
+			rem += jobStatistic.remainingTasks;
+		}
+		log.info("Scheduled Containers Finished: " + fin);
+		log.info("Scheduled Containers Running: " + run);
+		log.info("Scheduled Containers Remaining: " + rem);
+
+		return fin + run + rem;
 	}
 
 	public void init() {
@@ -731,6 +753,7 @@ public class C3PO extends AbstractScheduler {
 
 	@Override
 	protected void updateRuntimeEstimate(InvocStat stat) {
+		super.updateRuntimeEstimate(stat);
 		OutlookEstimate jobStatistic = jobStatistics.get(stat.getTaskId());
 		jobStatistic.finishedTasks++;
 		jobStatistic.timeSpent += stat.getRealTime();

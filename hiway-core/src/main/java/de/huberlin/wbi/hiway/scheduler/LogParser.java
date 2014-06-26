@@ -39,6 +39,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 
 import de.huberlin.hiwaydb.useDB.FileStat;
@@ -54,6 +56,9 @@ public class LogParser implements HiwayDBI {
 	private Map<UUID, String> runToWorkflowName;
 	private Map<Long, String> taskIdToTaskName;
 	private Map<String, Set<Long>> workflowNameToTaskIds;
+	
+	private static final Log log = LogFactory
+			.getLog(LogParser.class); 
 
 	public LogParser() {
 		runToWorkflowName = new HashMap<>();
@@ -111,9 +116,21 @@ public class LogParser implements HiwayDBI {
 	@Override
 	public synchronized Collection<InvocStat> getLogEntriesForTaskOnHostSince(Long taskId,
 			String hostName, long timestamp) {
-		Collection<InvocStat> stats = new LinkedList<>();
-		for (Map<Long, InvocStat> invocStats : runToInvocStats.values()) {
-			for (InvocStat stat : invocStats.values()) {
+		
+		log.debug("Retrieving InvocStats for task " + taskId + " on host " + hostName + " since time " + timestamp);
+		
+		Collection<InvocStat> stats = new LinkedList<>();		
+		for (UUID runKey : runToInvocStats.keySet()) {
+			Map<Long, InvocStat> invocStats = runToInvocStats.get(runKey);
+			for (Long statKey : invocStats.keySet()) {
+				InvocStat stat = invocStats.get(statKey);
+				
+				log.debug("Iterate over logStats: " + runKey.toString() + " | " + Long.toString(statKey) + " | " + stat.toString());
+//				log.info(stat.getHostName() != null);
+//				log.info(stat.getTaskId() == taskId.longValue());
+//				log.info(stat.getHostName().equals(hostName));
+//				log.info(stat.getTimestamp() > timestamp);
+				
 				if (stat.getHostName() != null
 						&& stat.getTaskId() == taskId.longValue()
 						&& stat.getHostName().equals(hostName)

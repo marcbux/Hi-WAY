@@ -1006,7 +1006,13 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		FinalApplicationStatus appStatus;
 		String appMessage = null;
 		success = true;
+		
+		log.info("Failed Containers: " + numFailedContainers.get());
+		log.info("Completed Containers: " + numCompletedContainers.get());
+		
 		int numTotalContainers = scheduler.getNumberOfTotalTasks();
+		
+		log.info("Total Scheduled Containers: " + numTotalContainers);
 		
 		if (numFailedContainers.get() == 0
 				&& numCompletedContainers.get() == numTotalContainers) {

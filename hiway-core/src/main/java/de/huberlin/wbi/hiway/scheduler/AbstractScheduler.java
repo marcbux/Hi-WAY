@@ -137,6 +137,8 @@ public abstract class AbstractScheduler implements Scheduler {
 			dbInterface = new LogParser();
 			parseLogs(fs);
 		}
+		updateRuntimeEstimates();
+		numberOfPreviousRunTasks += getNumberOfFinishedTasks();
 	}
 	
 	@Override
@@ -189,14 +191,15 @@ public abstract class AbstractScheduler implements Scheduler {
 
 	@Override
 	public int getNumberOfTotalTasks() {
-		log.debug("Update on total tasks:");
-		int finishedTasks = getNumberOfFinishedTasks();
-		log.debug("\tfinished:  " + finishedTasks);
-		int runningTasks = getNumberOfRunningTasks();
-		log.debug("\trunning:   " + runningTasks);
-		log.debug("\tremaining: " + numberOfRemainingTasks);
-		return finishedTasks + runningTasks + numberOfRemainingTasks
-				- numberOfPreviousRunTasks;
+		int fin = getNumberOfFinishedTasks();
+		int run = getNumberOfRunningTasks();
+		int rem = numberOfRemainingTasks;
+		
+		log.info("Scheduled Containers Finished: " + fin);
+		log.info("Scheduled Containers Running: " + run);
+		log.info("Scheduled Containers Remaining: " + rem);
+
+		return fin + run + rem;
 	}
 
 	protected Set<Long> getTaskIds() {
@@ -245,13 +248,11 @@ public abstract class AbstractScheduler implements Scheduler {
 							fs.copyToLocalFile(false, src, dest);
 
 							try (BufferedReader reader = new BufferedReader(
-									new FileReader(new File(srcName)))) {
+									new FileReader(new File(dest.toString())))) {
 								String line;
 								while ((line = reader.readLine()) != null) {
 									JsonReportEntry entry = new JsonReportEntry(line);
-									log.info("HiwayDB: Adding entry " + entry + " to database.");
-									dbInterface.logToDB(entry);
-									// log.info(line);
+									addEntryToDB(entry);
 								}
 							}
 						}
@@ -261,8 +262,6 @@ public abstract class AbstractScheduler implements Scheduler {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		updateRuntimeEstimates();
-		numberOfPreviousRunTasks += getNumberOfFinishedTasks();
 	}
 
 	@Override
@@ -304,6 +303,7 @@ public abstract class AbstractScheduler implements Scheduler {
 	}
 
 	protected void updateRuntimeEstimate(InvocStat stat) {
+		log.debug("Updating Runtime Estimate for stat " + stat.toString());
 		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostName())
 				.get(stat.getTaskId());
 		re.finishedTasks += 1;
@@ -312,31 +312,37 @@ public abstract class AbstractScheduler implements Scheduler {
 	}
 
 	protected void updateRuntimeEstimates() {
+		log.info("Updating Runtime Estimates.");
+		
 		Collection<String> newHostIds = dbInterface.getHostNames();
+		log.info("HiwayDB: Retrieved Host Names " + newHostIds.toString() + " from database.");
 		newHostIds.removeAll(getNodeIds());
 		for (String newHostId : newHostIds) {
 			newHost(newHostId);
 		}
 		Collection<Long> newTaskIds = dbInterface
 				.getTaskIdsForWorkflow(workflowName);
+		log.info("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
 
 		newTaskIds.removeAll(getTaskIds());
 		for (long newTaskId : newTaskIds) {
 			newTask(newTaskId);
 		}
-
-		for (long taskId : getTaskIds()) {
-			for (String hostName : getNodeIds()) {
-				long maxTimestamp = maxTimestampPerHost.get(hostName);
+		
+		for (String hostName : getNodeIds()) {
+			long oldMaxTimestamp = maxTimestampPerHost.get(hostName);
+			long newMaxTimestamp = oldMaxTimestamp;
+			for (long taskId : getTaskIds()) {
+				log.info("HiwayDB: Querying InvocStats for task id " + taskId + " on host " + hostName + " since timestamp " + oldMaxTimestamp + " from database.");
 				for (InvocStat stat : dbInterface
 						.getLogEntriesForTaskOnHostSince(taskId, hostName,
-								maxTimestamp)) {
+								oldMaxTimestamp)) {
 					log.info("HiwayDB: Retrieved InvocStat " + stat.toString() + " from database.");
-					maxTimestampPerHost.put(hostName,
-							Math.max(maxTimestamp, stat.getTimestamp()));
+					newMaxTimestamp = Math.max(newMaxTimestamp, stat.getTimestamp());
 					updateRuntimeEstimate(stat);
 				}
 			}
+			maxTimestampPerHost.put(hostName, newMaxTimestamp);
 		}
 	}
 }
