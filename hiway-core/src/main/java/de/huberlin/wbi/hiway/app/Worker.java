@@ -95,7 +95,7 @@ public class Worker {
 		outputFiles = new HashSet<>();
 	}
 
-	private void exec() {
+	private int exec() {
 		// List<String> commands = new LinkedList<>();
 		// commands.add("/usr/bin/time");
 		// commands.add("-a");
@@ -140,9 +140,7 @@ public class Worker {
 			process = processBuilder.start();
 			exitValue = process.waitFor();
 			
-			new Data(Invocation.REPORT_FILENAME).stageOut(fs, containerId);
-			new Data(Invocation.STDOUT_FILENAME).stageOut(fs, containerId);
-			new Data(Invocation.STDERR_FILENAME).stageOut(fs, containerId);
+			
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -150,9 +148,9 @@ public class Worker {
 			e.printStackTrace();
 		}
 		
-		if (exitValue != 0) {
-			System.exit(exitValue);
-		}
+		return exitValue;
+		
+		
 	}
 
 	public void init(String[] args) throws ParseException {
@@ -236,14 +234,19 @@ public class Worker {
 				obj));
 
 		tic = System.currentTimeMillis();
-		exec();
+		int exitValue = exec();
 		toc = System.currentTimeMillis();
 		obj = new JSONObject();
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName,
 				langLabel, signature, null, JsonReportEntry.KEY_INVOC_TIME, obj));
-
+		
 		tic = System.currentTimeMillis();
+		new Data(Invocation.STDOUT_FILENAME).stageOut(fs, containerId);
+		new Data(Invocation.STDERR_FILENAME).stageOut(fs, containerId);
+		if (exitValue != 0) {
+			System.exit(exitValue);
+		}
 		stageOut();
 		toc = System.currentTimeMillis();
 		obj = new JSONObject();
@@ -251,6 +254,8 @@ public class Worker {
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName,
 				langLabel, signature, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT,
 				obj));
+		
+		new Data(Invocation.REPORT_FILENAME).stageOut(fs, containerId);
 
 		// System.out.println("Starting traversal");
 		// Set<Path> newFiles = parseDir(dir);
