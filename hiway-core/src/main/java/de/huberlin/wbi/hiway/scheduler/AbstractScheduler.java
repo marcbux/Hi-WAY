@@ -76,11 +76,11 @@ public abstract class AbstractScheduler implements Scheduler {
 	}
 
 	protected class RuntimeEstimate extends Estimate {
-		double averageRuntime;
+		long averageRuntime;
 		int finishedTasks;
 		// int remainingTasks;
 		// int runningTasks;
-		double timeSpent;
+		long timeSpent;
 	}
 
 	private static final Log log = LogFactory.getLog(AbstractScheduler.class);
@@ -307,7 +307,7 @@ public abstract class AbstractScheduler implements Scheduler {
 		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostName())
 				.get(stat.getTaskId());
 		re.finishedTasks += 1;
-		re.timeSpent += stat.getRealTime();
+		re.timeSpent += stat.getRealTime().longValue();
 		re.weight = re.averageRuntime = re.timeSpent / re.finishedTasks;
 	}
 

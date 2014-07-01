@@ -43,7 +43,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -118,7 +117,7 @@ public class LogParser {
 	}
 
 	private void firstPass() throws IOException, JSONException {
-		entries = new LinkedList<>();
+		Set<JsonReportEntry> entrySet = new HashSet<>();
 		Set<String> badContainers = new HashSet<>();
 		List<JsonReportEntry> badEntries = new LinkedList<>();
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -135,10 +134,10 @@ public class LogParser {
 						}
 					}
 				}
-				entries.add(entry);
+				entrySet.add(entry);
 			}
 		}
-		for (JsonReportEntry entry : entries) {
+		for (JsonReportEntry entry : entrySet) {
 			if (entry.getKey().equals(HiwayDBI.KEY_HIWAY_EVENT)) {
 				JSONObject value = entry.getValueJsonObj();
 				if (value.getString("type").equals("container-allocated")) {
@@ -148,7 +147,8 @@ public class LogParser {
 				}
 			}
 		}
-		entries.removeAll(badEntries);
+		entrySet.removeAll(badEntries);
+		entries = new LinkedList<>(entrySet);
 		Collections.sort(entries, new JsonReportEntryComparatorByTimestamp());
 	}
 
@@ -182,7 +182,7 @@ public class LogParser {
 	public void parse() {
 		try {
 			firstPass();
-//			printToFile(new File("output"));
+			printToFile(new File("output"));
 			secondPass();
 			thirdPass();
 		} catch (JSONException | IOException e) {
@@ -270,7 +270,9 @@ public class LogParser {
 		int maxContainers = 0;
 		int currentContainers = 0;
 
-		for (JsonReportEntry entry : entries)
+		for (JsonReportEntry entry : entries) {
+
+			System.out.println(entry);
 
 			switch (entry.getKey()) {
 			case JsonReportEntry.KEY_INVOC_EXEC:
@@ -302,8 +304,7 @@ public class LogParser {
 			case HiwayDBI.KEY_INVOC_TIME_SCHED:
 				invocation = invocations.get(entry.getInvocId());
 				invocation.setContainer(allocatedContainers.remove());
-				invocation.setSchedTime(Long.parseLong(entry
-						.getValueRawString()));
+				invocation.setSchedTime(entry.getValueJsonObj().getLong("realTime"));
 				break;
 			case HiwayDBI.KEY_INVOC_HOST:
 				invocations.get(entry.getInvocId()).setHostName(
@@ -327,6 +328,7 @@ public class LogParser {
 				invocations.get(entry.getInvocId()).addFileSize(
 						Long.parseLong(entry.getValueRawString()));
 			}
+		}
 		run.setMaxConcurrentNodes(maxContainers);
 	}
 

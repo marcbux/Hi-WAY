@@ -198,8 +198,7 @@ public class LogParser implements HiwayDBI {
 		}
 
 		if (invocId != null && !runToInvocStats.get(runId).containsKey(invocId)) {
-			InvocStat invocStat = new InvocStat();
-			invocStat.setTaskId(entry.getTaskId());
+			InvocStat invocStat = new InvocStat(entry.getTaskId());
 			workflowNameToTaskIds.get(runToWorkflowName.get(runId)).add(
 					entry.getTaskId());
 			taskIdToTaskName.put(entry.getTaskId(), entry.getTaskName());
@@ -232,7 +231,7 @@ public class LogParser implements HiwayDBI {
 				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
 				invocStat.setRealTime(
-						entry.getValueJsonObj().getDouble("realTime"),
+						entry.getValueJsonObj().getLong("realTime"),
 						entry.getTimestamp());
 				break;
 			case HiwayDBI.KEY_INVOC_HOST:
@@ -250,11 +249,11 @@ public class LogParser implements HiwayDBI {
 				break;
 			case HiwayDBI.KEY_FILE_TIME_STAGEIN:
 				invocStat.getInputFile(fileName).setRealTime(
-						(entry.getValueJsonObj().getDouble("realTime")));
+						(entry.getValueJsonObj().getLong("realTime")));
 				break;
 			case HiwayDBI.KEY_FILE_TIME_STAGEOUT:
 				invocStat.getOutputFile(fileName).setRealTime(
-						(entry.getValueJsonObj().getDouble("realTime")));
+						(entry.getValueJsonObj().getLong("realTime")));
 				break;
 			}
 		} catch (JSONException e) {

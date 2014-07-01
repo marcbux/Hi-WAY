@@ -31,8 +31,6 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.logstats;
 
-import java.util.Comparator;
-
 public class Invocation {
 
 	// information obtained from container-allocated

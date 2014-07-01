@@ -53,6 +53,7 @@ import de.huberlin.wbi.cuneiform.core.cre.TicketReadyMsg;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.repl.BaseRepl;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.CompoundExpr;
+import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotBoundException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.Ticket;
@@ -192,6 +193,9 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 	// Repl - Read evaluation print loop
 	public class HiWayRepl extends BaseRepl {
 
+		@Override
+		protected void flushStatLog(Set<JsonReportEntry> reportEntrySet) {}
+		
 		public HiWayRepl(TicketSrcActor ticketSrc) {
 			super(ticketSrc);
 		}
@@ -424,8 +428,6 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
-		super.taskSuccess(task, containerId);
-		
 		try {
 			Invocation invocation = ((CuneiformTaskInstance) task)
 					.getInvocation();
@@ -458,10 +460,4 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			System.exit(1);
 		}
 	}
-	
-	@Override
-	public void evaluateReport(TaskInstance task, ContainerId containerId) {
-		super.evaluateReport(task, containerId);
-	}
-
 }

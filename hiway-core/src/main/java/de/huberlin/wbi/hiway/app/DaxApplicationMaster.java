@@ -262,7 +262,6 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
-		super.taskSuccess(task, containerId);
 		try {
 			for (TaskInstance childTask : task.getChildTasks()) {
 				if (childTask.readyToExecute())

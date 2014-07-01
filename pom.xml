@@ -36,16 +36,27 @@
 
 	<repositories>
 		<repository>
-			<id>raps</id>
-			<name>raps-releases</name>
-			<url>https://klette.informatik.hu-berlin.de/jenkins/</url>
+			<id>BiobankCloud-releases</id>
+			<name>BiobankCloud-releases</name>
+			<url>https://klette.informatik.hu-berlin.de/artifactory/BiobankCloud-releases</url>
 			<releases>
 				<enabled>true</enabled>
 			</releases>
 			<snapshots>
-				<enabled>true</enabled>
+				<enabled>false</enabled>
 			</snapshots>
 		</repository>
+		<repository>
+			<id>BiobankCloud-snapshot</id>
+			<name>BiobankCloud-snapshot</name>
+			<url>https://klette.informatik.hu-berlin.de/artifactory/BiobankCloud-snapshot</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>		
 	</repositories>
 
 </project>

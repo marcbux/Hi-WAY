@@ -232,7 +232,7 @@ public class C3PO extends AbstractScheduler {
 	protected class OutlookEstimate extends Estimate {
 		int finishedTasks;
 		int remainingTasks;
-		double timeSpent;
+		long timeSpent;
 	}
 
 	protected class PlacementAwarenessEstimate extends Estimate {
@@ -756,7 +756,7 @@ public class C3PO extends AbstractScheduler {
 		super.updateRuntimeEstimate(stat);
 		OutlookEstimate jobStatistic = jobStatistics.get(stat.getTaskId());
 		jobStatistic.finishedTasks++;
-		jobStatistic.timeSpent += stat.getRealTime();
+		jobStatistic.timeSpent += stat.getRealTime().longValue();
 	}
 
 }

@@ -559,9 +559,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 							finishedTask.setCompleted();
 
 							evaluateReport(finishedTask, containerId);
-
-							for (JsonReportEntry entry : finishedTask
-									.getReport()) {
+							
+							for (JsonReportEntry entry : finishedTask.getReport()) {
 								writeEntryToLog(entry);
 							}
 
@@ -668,7 +667,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	private static final Log log = LogFactory
 			.getLog(AbstractApplicationMaster.class);
 
-	private static final Log statLog = LogFactory.getLog("statLogger");
+	protected static final Log statLog = LogFactory.getLog("statLogger");
 
 	/**
 	 * The main routine.
@@ -1528,23 +1527,11 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			System.exit(1);
 		}
 	}
-
-	@Override
-	public void taskSuccess(TaskInstance task, ContainerId containerId) {
-		// TODO Auto-generated method stub
-
-	}
-
-	protected void writeEntryToLog(JsonReportEntry entry) {
+	
+	public void writeEntryToLog(JsonReportEntry entry) {
 		if (statLog.isDebugEnabled()) {
 			statLog.debug(entry.toString());
 		}
-
-		// try {
-		// federatedReportWriter.write(entry.toString() + "\n");
-		// } catch (IOException e) {
-		// e.printStackTrace();
-		// }
 		scheduler.addEntryToDB(entry);
 	}
 
