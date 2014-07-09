@@ -33,76 +33,103 @@ package de.huberlin.wbi.hiway.logstats;
 
 public class Invocation {
 
-	// information obtained from container-allocated
-	private Container container;
 	private String hostName;
-
-	private long execFinishTimestamp;
-
-	private long execOnsetTimestamp;
+	private String taskName;
 	
+	private long startupTimestamp;
 	private long schedTime;
+	private long stageinTimestamp;
+	private long stageinTime;
+	private long execTimestamp;
+	private long execTime;
+	private long stageoutTimestamp;
+	private long stageoutTime;
+	private long shutdownTimestamp;
 	
 	private double fileSize = 1d;
 	
-	// information obtained from invoc-exec
-	private String taskName;
-
 	public Invocation(String taskName) {
 		this.taskName = taskName;
-	}
-
-	public long getExecTime() {
-		return execFinishTimestamp - execOnsetTimestamp;
-	}
-
-	public long getSchedTime() {
-		return schedTime;
-	}
-
-	public long getShutdownTime() {
-		return container.getCompletedTimestamp() - execFinishTimestamp;
-	}
-
-	public long getStartupTime() {
-		return execOnsetTimestamp - container.getAllocatedTimestamp()
-				- schedTime;
-	}
-
-	public String getTaskName() {
-		return taskName;
-	}
-
-	public void setContainer(Container container) {
-		this.container = container;
-	}
-
-	public void setExecFinishTimestamp(long execFinishTimestamp) {
-		this.execFinishTimestamp = execFinishTimestamp;
-	}
-
-	public void setExecOnsetTimestamp(long execOnsetTimestamp) {
-		this.execOnsetTimestamp = execOnsetTimestamp;
-	}
-
-	public void setSchedTime(long schedTime) {
-		this.schedTime = schedTime;
 	}
 	
 	public String getHostName() {
 		return hostName;
 	}
 	
-	public void setHostName(String hostName) {
-		this.hostName = hostName;
+	public String getTaskName() {
+		return taskName;
+	}
+
+	public long getStartupTime() {
+		return stageinTimestamp - startupTimestamp - schedTime;
 	}
 	
-	public long getExecOnsetTimestamp() {
-		return execOnsetTimestamp;
+	public long getSchedTime() {
+		return schedTime;
+	}
+	
+	public long getStageinTime() {
+		return stageinTime;
+	}
+	
+	public long getExecTimestamp() {
+		return execTimestamp;
+	}
+	
+	public long getExecTime() {
+		return execTime;
+	}
+	
+	public long getStageoutTime() {
+		return stageoutTime;
+	}
+	
+	public long getShutdownTime() {
+		return shutdownTimestamp - stageoutTimestamp - stageoutTime;
 	}
 	
 	public double getFileSize() {
 		return fileSize;
+	}
+	
+	public void setHostName(String hostName) {
+		this.hostName = hostName;
+	}
+	
+	public void setStartupTimestamp(long startupTimestamp) {
+		this.startupTimestamp = startupTimestamp;
+	}
+	
+	public void setSchedTime(long schedTime) {
+		this.schedTime = schedTime;
+	}
+	
+	public void setStageinTimestamp(long stageinTimestamp) {
+		this.stageinTimestamp = stageinTimestamp;
+	}
+	
+	public void setStageinTime(long stageinTime) {
+		this.stageinTime = stageinTime;
+	}
+	
+	public void setExecTimestamp(long execTimestamp) {
+		this.execTimestamp = execTimestamp;
+	}
+	
+	public void setExecTime(long execTime) {
+		this.execTime = execTime;
+	}
+	
+	public void setStageoutTimestamp(long stageoutTimestamp) {
+		this.stageoutTimestamp = stageoutTimestamp;
+	}
+	
+	public void setStageoutTime(long stageoutTime) {
+		this.stageoutTime = stageoutTime;
+	}
+	
+	public void setShutdownTimestamp(long shutdownTimestamp) {
+		this.shutdownTimestamp = shutdownTimestamp;
 	}
 	
 	public void addFileSize(long fileSize) {

@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -76,8 +77,7 @@ public class LogParser {
 	public class OnsetTimestampComparator implements Comparator<Invocation> {
 		@Override
 		public int compare(Invocation o1, Invocation o2) {
-			return Long.compare(o1.getExecOnsetTimestamp(),
-					o2.getExecOnsetTimestamp());
+			return Long.compare(o1.getExecTimestamp(), o2.getExecTimestamp());
 		}
 	}
 
@@ -92,14 +92,18 @@ public class LogParser {
 	public static void main(String[] args) {
 		for (int i = 0; i < args.length; i++) {
 			LogParser logParser = new LogParser(args[i]);
-			logParser.parse();
-			logParser.printIncrements("bowtie2-align", "dbis11:8042");
-			// logParser.printStatistics(i == 0);
+			try {
+				logParser.firstPass();
+				logParser.secondPass();
+				logParser.thirdPass();
+			} catch (JSONException | IOException e) {
+				e.printStackTrace();
+			}
+			// logParser.printIncrements("bowtie2-align", "dbis11:8042");
+			logParser.printStatistics(i == 0);
 		}
 	}
 
-	private Queue<Container> allocatedContainers;
-	private Map<String, Container> containers;
 	List<JsonReportEntry> entries;
 
 	private File file;
@@ -110,34 +114,31 @@ public class LogParser {
 	public LogParser(String fileName) {
 		file = new File(fileName);
 		invocations = new HashMap<>();
-		allocatedContainers = new LinkedList<>();
-		containers = new HashMap<>();
 		run = new WorkfowRun();
 		// invocationsByContainer = new HashMap<>();
 	}
 
-	private void firstPass() throws IOException, JSONException {
-		Set<JsonReportEntry> entrySet = new HashSet<>();
+	private void removeDuplicates() {
+		entries = new LinkedList<>(new LinkedHashSet<>(entries));
+	}
+
+	private void removeBadContainers() throws JSONException {
 		Set<String> badContainers = new HashSet<>();
 		List<JsonReportEntry> badEntries = new LinkedList<>();
-		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-			String line;
-			while ((line = reader.readLine()) != null) {
-				JsonReportEntry entry = new JsonReportEntry(line.replaceAll(
-						"\0", ""));
-				if (entry.getKey().equals(HiwayDBI.KEY_HIWAY_EVENT)) {
-					JSONObject value = entry.getValueJsonObj();
-					if (value.getString("type").equals("container-completed")) {
-						if (value.getInt("exit-code") != 0) {
-							badContainers.add(value.getString("container-id"));
-							badEntries.add(entry);
-						}
+
+		for (JsonReportEntry entry : entries) {
+			if (entry.getKey().equals(HiwayDBI.KEY_HIWAY_EVENT)) {
+				JSONObject value = entry.getValueJsonObj();
+				if (value.getString("type").equals("container-completed")) {
+					if (value.getInt("exit-code") != 0) {
+						badContainers.add(value.getString("container-id"));
+						badEntries.add(entry);
 					}
 				}
-				entrySet.add(entry);
 			}
 		}
-		for (JsonReportEntry entry : entrySet) {
+
+		for (JsonReportEntry entry : entries) {
 			if (entry.getKey().equals(HiwayDBI.KEY_HIWAY_EVENT)) {
 				JSONObject value = entry.getValueJsonObj();
 				if (value.getString("type").equals("container-allocated")) {
@@ -147,47 +148,106 @@ public class LogParser {
 				}
 			}
 		}
-		entrySet.removeAll(badEntries);
-		entries = new LinkedList<>(entrySet);
+
+		entries.removeAll(badEntries);
+	}
+
+	private void expandEntry(JsonReportEntry incomplete,
+			JsonReportEntry complete) {
+		incomplete.setInvocId(complete.getInvocId());
+		incomplete.setLang(complete.getLang());
+		incomplete.setTaskId(complete.getTaskId());
+		incomplete.setTaskname(complete.getTaskName());
+	}
+
+	private void expandHiwayEvents() throws JSONException {
+		Queue<JsonReportEntry> execQ = new LinkedList<>();
+		Map<String, JsonReportEntry> allocatedMap = new HashMap<>();
+		Queue<JsonReportEntry> completedQ = new LinkedList<>();
+
+		for (JsonReportEntry entry : entries) {
+			switch (entry.getKey()) {
+			case JsonReportEntry.KEY_INVOC_EXEC:
+				execQ.add(entry);
+				break;
+
+			case JsonReportEntry.KEY_INVOC_TIME:
+				JsonReportEntry completed = completedQ.remove();
+				JSONObject value = completed.getValueJsonObj();
+				JsonReportEntry allocated = allocatedMap.get(value
+						.getString("container-id"));
+				expandEntry(completed, entry);
+				expandEntry(allocated, entry);
+				break;
+
+			case HiwayDBI.KEY_HIWAY_EVENT:
+				value = entry.getValueJsonObj();
+				switch (value.getString("type")) {
+				case "container-requested":
+					expandEntry(entry, execQ.remove());
+					break;
+
+				case "container-allocated":
+					allocatedMap.put(value.getString("container-id"), entry);
+					break;
+
+				case "container-completed":
+					completedQ.add(entry);
+					break;
+				}
+				break;
+			}
+		}
+	}
+
+	private void firstPass() throws IOException, JSONException {
+		entries = new LinkedList<>();
+		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+			String line;
+			while ((line = reader.readLine()) != null) {
+				JsonReportEntry entry = new JsonReportEntry(line);
+				entries.add(entry);
+			}
+		}
+
+		removeDuplicates();
+		removeBadContainers();
+		expandHiwayEvents();
 		Collections.sort(entries, new JsonReportEntryComparatorByTimestamp());
+
+		printToFile(new File("output"));
 	}
 
 	private String lifecycle(Collection<Invocation> invocs, boolean idleTime) {
 		long sched = 0;
 		long startup = 0;
+		long stagein = 0;
 		long exec = 0;
+		long stageout = 0;
 		long shutdown = 0;
 		for (Invocation invoc : invocs) {
 			sched += invoc.getSchedTime();
 			startup += invoc.getStartupTime();
+			stagein += invoc.getStageinTime();
 			exec += invoc.getExecTime();
+			stageout += invoc.getStageoutTime();
 			shutdown += invoc.getShutdownTime();
 		}
-		String lifecycle = sched + "\t" + startup + "\t" + exec + "\t"
-				+ shutdown + "\t";
+		String lifecycle = sched + "\t" + startup + "\t" + stagein + "\t"
+				+ exec + "\t" + stageout + "\t" + shutdown + "\t";
 		long idle = run.getMaxConcurrentNodes()
 				* (run.getRunFinishTimestamp() - run.getRunOnsetTimestamp())
-				- run.getNoTaskReadyTime() - sched - startup - exec - shutdown;
+				- run.getNoTaskReadyTime() - sched - startup - stagein - exec
+				- stageout - shutdown;
 		return idleTime ? idle + "\t" + lifecycle : lifecycle;
 	}
 
 	private String lifecycleHeaders(String category, boolean idleTime) {
 		String pre = category + " idle\t";
-		String post = category + " scheduling\t" + category
-				+ " startup/stage-in\t" + category + " execution\t" + category
-				+ " shutdown/stage-out\t";
+		String post = category + " scheduling\t" + category + " startup\t"
+				+ category + " stage-in\t" + category + " execution\t"
+				+ category + " stage-out\t" + category + " shutdown\t";
 		return idleTime ? pre + post : post;
-	}
-
-	public void parse() {
-		try {
-			firstPass();
-			printToFile(new File("output"));
-			secondPass();
-			thirdPass();
-		} catch (JSONException | IOException e) {
-			e.printStackTrace();
-		}
 	}
 
 	private void printIncrements(String printTask, String printHost) {
@@ -266,69 +326,73 @@ public class LogParser {
 	}
 
 	private void secondPass() throws JSONException {
-
 		int maxContainers = 0;
 		int currentContainers = 0;
-
 		for (JsonReportEntry entry : entries) {
-
-			System.out.println(entry);
-
+			Invocation invocation = invocations.get(entry.getInvocId());
 			switch (entry.getKey()) {
 			case JsonReportEntry.KEY_INVOC_EXEC:
-				Invocation invocation = new Invocation(entry.getTaskName());
-				invocations.put(entry.getInvocId(), invocation);
+				invocations.put(entry.getInvocId(),
+						new Invocation(entry.getTaskName()));
 				break;
-			case HiwayDBI.KEY_HIWAY_EVENT:
 
-				// Idee: statt container anuschauen um zu ermitteln wann ein
-				// node fertig ist
-				// kann man auch einfach invoc.stdout angucken
+			case HiwayDBI.KEY_HIWAY_EVENT:
 				JSONObject value = entry.getValueJsonObj();
 				switch (value.getString("type")) {
 				case "container-allocated":
-					String containerId = value.getString("container-id");
-					Container container = new Container(entry.getTimestamp());
-					containers.put(containerId, container);
-					allocatedContainers.add(container);
+					invocation.setStartupTimestamp(entry.getTimestamp());
 					currentContainers++;
 					maxContainers = Math.max(currentContainers, maxContainers);
 					break;
+
 				case "container-completed":
-					containers.get(value.getString("container-id"))
-							.setCompletedTimestamp(entry.getTimestamp());
+					invocation.setShutdownTimestamp(entry.getTimestamp());
 					currentContainers--;
 					break;
 				}
 				break;
+
 			case HiwayDBI.KEY_INVOC_TIME_SCHED:
-				invocation = invocations.get(entry.getInvocId());
-				invocation.setContainer(allocatedContainers.remove());
-				invocation.setSchedTime(entry.getValueJsonObj().getLong("realTime"));
+				invocation.setSchedTime(entry.getValueJsonObj().getLong(
+						"realTime"));
 				break;
+
 			case HiwayDBI.KEY_INVOC_HOST:
-				invocations.get(entry.getInvocId()).setHostName(
-						entry.getValueRawString());
+				invocation.setHostName(entry.getValueRawString());
 				break;
+
 			case JsonReportEntry.KEY_INVOC_TIME:
-				invocations.get(entry.getInvocId()).setExecOnsetTimestamp(
-						entry.getTimestamp());
+				invocation.setExecTime(entry.getValueJsonObj().getLong(
+						"realTime"));
+				invocation.setExecTimestamp(entry.getTimestamp());
 				break;
-			case JsonReportEntry.KEY_INVOC_OUTPUT:
-				invocations.get(entry.getInvocId()).setExecFinishTimestamp(
-						entry.getTimestamp());
+
+			case HiwayDBI.KEY_INVOC_TIME_STAGEIN:
+				invocation.setStageinTime(entry.getValueJsonObj().getLong(
+						"realTime"));
+				invocation.setStageinTimestamp(entry.getTimestamp());
 				break;
+
+			case HiwayDBI.KEY_INVOC_TIME_STAGEOUT:
+				invocation.setStageoutTime(entry.getValueJsonObj().getLong(
+						"realTime"));
+				invocation.setStageoutTimestamp(entry.getTimestamp());
+				break;
+
 			case Constant.KEY_WF_NAME:
 				run.setRunOnsetTimestamp(entry.getTimestamp());
 				break;
+
 			case Constant.KEY_WF_TIME:
 				run.setRunFinishTimestamp(entry.getTimestamp());
 				break;
+
 			case JsonReportEntry.KEY_FILE_SIZE_STAGEIN:
 				invocations.get(entry.getInvocId()).addFileSize(
 						Long.parseLong(entry.getValueRawString()));
 			}
 		}
+
 		run.setMaxConcurrentNodes(maxContainers);
 	}
 
