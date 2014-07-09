@@ -34,11 +34,13 @@ package de.huberlin.wbi.hiway.scheduler;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
@@ -54,6 +56,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
 import de.huberlin.hiwaydb.useDB.HiwayDB;
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
+import de.huberlin.hiwaydb.useDB.HiwayDBNoSQL;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.app.HiWayConfiguration;
@@ -128,10 +131,20 @@ public abstract class AbstractScheduler implements Scheduler {
 		String dbType = conf.get(HiWayConfiguration.HIWAY_DB_TYPE, HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT);
 		switch (dbType) {
 		case HiWayConfiguration.HIWAY_DB_TYPE_SQL:
-			String username = conf.get(HiWayConfiguration.HIWAY_DB_USER);
-			String password = conf.get(HiWayConfiguration.HIWAY_DB_PASSWORD);
-			String dbURL = conf.get(HiWayConfiguration.HIWAY_DB_URL);
+			String username = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			String password = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			String dbURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
 			dbInterface = new HiwayDB(username, password, dbURL);
+			break;
+		case HiWayConfiguration.HIWAY_DB_TYPE_NOSQL:
+			String bucket = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
+			password = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
+			String uris = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
+			List<URI> uriList = new ArrayList<>();
+			for (String uri : uris.split(",")) {
+				uriList.add(URI.create(uri));
+			}
+			dbInterface = new HiwayDBNoSQL(bucket, password, uriList);
 			break;
 		default:
 			dbInterface = new LogParser();

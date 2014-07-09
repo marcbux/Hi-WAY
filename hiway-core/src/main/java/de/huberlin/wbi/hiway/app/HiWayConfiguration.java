@@ -46,10 +46,14 @@ public class HiWayConfiguration extends Configuration {
 	public final static String HIWAY_DB_TYPE = "hiway.db.type";
 	public final static String HIWAY_DB_TYPE_LOCAL = "local";
 	public final static String HIWAY_DB_TYPE_SQL = "SQL";
+	public final static String HIWAY_DB_TYPE_NOSQL = "NoSQL";
 	public final static String HIWAY_DB_TYPE_DEFAULT = HIWAY_DB_TYPE_LOCAL;
-	public final static String HIWAY_DB_URL = "hiway.db.url";
-	public final static String HIWAY_DB_USER = "hiway.db.user";
-	public final static String HIWAY_DB_PASSWORD = "hiway.db.password";
+	public final static String HIWAY_DB_SQL_URL = "hiway.db.sql.url";
+	public final static String HIWAY_DB_SQL_USER = "hiway.db.sql.user";
+	public final static String HIWAY_DB_SQL_PASSWORD = "hiway.db.sql.password";
+	public final static String HIWAY_DB_NOSQL_URLS = "hiway.db.nosql.urls";
+	public final static String HIWAY_DB_NOSQL_BUCKET = "hiway.db.nosql.bucket";
+	public final static String HIWAY_DB_NOSQL_PASSWORD = "hiway.db.nosql.password";
 	public final static String HIWAY_STAT_LOG = "hiway.stat.log";
 	public final static String HIWAY_STAT_LOG_DEFAULT = "stat.log";
 
