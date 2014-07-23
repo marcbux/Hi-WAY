@@ -200,7 +200,7 @@ public class LogParser {
 		}
 	}
 
-	private void firstPass() throws IOException, JSONException {
+	public void firstPass() throws IOException, JSONException {
 		entries = new LinkedList<>();
 		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
 			String line;
@@ -236,7 +236,7 @@ public class LogParser {
 		String lifecycle = sched + "\t" + startup + "\t" + stagein + "\t"
 				+ exec + "\t" + stageout + "\t" + shutdown + "\t";
 		long idle = run.getMaxConcurrentNodes()
-				* (run.getRunFinishTimestamp() - run.getRunOnsetTimestamp())
+				* (run.getRuntime())
 				- run.getNoTaskReadyTime() - sched - startup - stagein - exec
 				- stageout - shutdown;
 		return idleTime ? idle + "\t" + lifecycle : lifecycle;
@@ -250,7 +250,7 @@ public class LogParser {
 		return idleTime ? pre + post : post;
 	}
 
-	private void printIncrements(String printTask, String printHost) {
+	public void printIncrements(String printTask, String printHost) {
 		Map<String, Map<String, List<Invocation>>> invocsByHostAndTask = new HashMap<>();
 		for (Invocation invocation : invocations.values()) {
 			String task = invocation.getTaskName();
@@ -290,7 +290,7 @@ public class LogParser {
 		}
 	}
 
-	private void printStatistics(boolean printHeaders) {
+	public void printStatistics(boolean printHeaders) {
 		Map<String, Set<Invocation>> invocationsByTaskname = new HashMap<>();
 		for (Invocation invocation : invocations.values()) {
 			String taskname = invocation.getTaskName();
@@ -300,17 +300,22 @@ public class LogParser {
 			}
 			invocationsByTaskname.get(taskname).add(invocation);
 		}
+		
+		List<String> taskNames = new LinkedList<>(invocationsByTaskname.keySet());
+		Collections.sort(taskNames);
 
 		if (printHeaders) {
+			System.out.print("runtime\t");
 			System.out.print(lifecycleHeaders("total", true));
-			for (String taskname : invocationsByTaskname.keySet()) {
+			for (String taskname : taskNames) {
 				System.out.print(lifecycleHeaders(taskname, false));
 			}
 			System.out.println();
 		}
 
+		System.out.print(run.getRuntime() + "\t");
 		System.out.print(lifecycle(invocations.values(), true));
-		for (String taskname : invocationsByTaskname.keySet()) {
+		for (String taskname : taskNames) {
 			System.out.print(lifecycle(invocationsByTaskname.get(taskname),
 					false));
 		}
@@ -325,17 +330,17 @@ public class LogParser {
 		}
 	}
 
-	private void secondPass() throws JSONException {
+	public void secondPass() throws JSONException {
 		int maxContainers = 0;
 		int currentContainers = 0;
 		for (JsonReportEntry entry : entries) {
-			Invocation invocation = invocations.get(entry.getInvocId());
-			switch (entry.getKey()) {
-			case JsonReportEntry.KEY_INVOC_EXEC:
+			if (entry.getInvocId() != null
+					&& !invocations.containsKey(entry.getInvocId())) {
 				invocations.put(entry.getInvocId(),
 						new Invocation(entry.getTaskName()));
-				break;
-
+			}
+			Invocation invocation = invocations.get(entry.getInvocId());
+			switch (entry.getKey()) {
 			case HiwayDBI.KEY_HIWAY_EVENT:
 				JSONObject value = entry.getValueJsonObj();
 				switch (value.getString("type")) {
@@ -384,7 +389,7 @@ public class LogParser {
 				break;
 
 			case Constant.KEY_WF_TIME:
-				run.setRunFinishTimestamp(entry.getTimestamp());
+				run.setRuntime(Long.parseLong(entry.getValueRawString()));
 				break;
 
 			case JsonReportEntry.KEY_FILE_SIZE_STAGEIN:
@@ -396,7 +401,7 @@ public class LogParser {
 		run.setMaxConcurrentNodes(maxContainers);
 	}
 
-	private void thirdPass() throws JSONException {
+	public void thirdPass() throws JSONException {
 
 		// time in which a container has got no work to do, as there is
 		// currently no task ready to execute

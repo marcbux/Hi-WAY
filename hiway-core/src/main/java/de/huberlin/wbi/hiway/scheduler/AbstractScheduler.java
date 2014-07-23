@@ -139,7 +139,7 @@ public abstract class AbstractScheduler implements Scheduler {
 		case HiWayConfiguration.HIWAY_DB_TYPE_NOSQL:
 			String bucket = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
 			password = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
-			String uris = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
+			String uris = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
 			List<URI> uriList = new ArrayList<>();
 			for (String uri : uris.split(",")) {
 				uriList.add(URI.create(uri));
