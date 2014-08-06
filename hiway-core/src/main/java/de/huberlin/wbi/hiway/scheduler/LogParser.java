@@ -47,7 +47,6 @@ import de.huberlin.hiwaydb.useDB.FileStat;
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.common.Constant;
 
 public class LogParser implements HiwayDBI {
 
@@ -108,13 +107,13 @@ public class LogParser implements HiwayDBI {
 	// }
 
 	@Override
-	public Collection<InvocStat> getLogEntriesForTaskOnHost(Long taskId,
+	public Collection<InvocStat> getLogEntriesForTaskOnHost(long taskId,
 			String hostName) {
 		return getLogEntriesForTaskOnHostSince(taskId, hostName, 0l);
 	}
 
 	@Override
-	public synchronized Collection<InvocStat> getLogEntriesForTaskOnHostSince(Long taskId,
+	public synchronized Collection<InvocStat> getLogEntriesForTaskOnHostSince(long taskId,
 			String hostName, long timestamp) {
 		
 		log.debug("Retrieving InvocStats for task " + taskId + " on host " + hostName + " since time " + timestamp);
@@ -132,7 +131,7 @@ public class LogParser implements HiwayDBI {
 //				log.info(stat.getTimestamp() > timestamp);
 				
 				if (stat.getHostName() != null
-						&& stat.getTaskId() == taskId.longValue()
+						&& stat.getTaskId() == taskId
 						&& stat.getHostName().equals(hostName)
 						&& stat.getTimestamp() > timestamp) {
 					stats.add(stat);
@@ -193,12 +192,15 @@ public class LogParser implements HiwayDBI {
 		String fileName = entry.getFile();
 
 		if (!runToInvocStats.containsKey(runId)) {
+			runToWorkflowName.put(runId, entry.getValueRawString());
+			Set<Long> taskIds = new HashSet<>();
+			workflowNameToTaskIds.put(entry.getValueRawString(), taskIds);
 			Map<Long, InvocStat> invocStats = new HashMap<>();
 			runToInvocStats.put(runId, invocStats);
 		}
 
 		if (invocId != null && !runToInvocStats.get(runId).containsKey(invocId)) {
-			InvocStat invocStat = new InvocStat(entry.getTaskId());
+			InvocStat invocStat = new InvocStat(entry.getRunId().toString(), entry.getTaskId());
 			workflowNameToTaskIds.get(runToWorkflowName.get(runId)).add(
 					entry.getTaskId());
 			taskIdToTaskName.put(entry.getTaskId(), entry.getTaskName());
@@ -224,11 +226,6 @@ public class LogParser implements HiwayDBI {
 
 		try {
 			switch (entry.getKey()) {
-			case Constant.KEY_WF_NAME:
-				runToWorkflowName.put(runId, entry.getValueRawString());
-				Set<Long> taskIds = new HashSet<>();
-				workflowNameToTaskIds.put(entry.getValueRawString(), taskIds);
-				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
 				invocStat.setRealTime(
 						entry.getValueJsonObj().getLong("realTime"),

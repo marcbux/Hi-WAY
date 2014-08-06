@@ -117,6 +117,7 @@ public abstract class AbstractScheduler implements Scheduler {
 	public AbstractScheduler(String workflowName, HiWayConfiguration conf, FileSystem fs) {
 		// statistics = new HashMap<Long, Map<String, Set<InvocStat>>>();
 		this.workflowName = workflowName;
+		
 		this.conf = conf;
 		this.fs = fs;
 		unissuedNodeRequests = new LinkedList<>();
@@ -150,8 +151,6 @@ public abstract class AbstractScheduler implements Scheduler {
 			dbInterface = new LogParser();
 			parseLogs(fs);
 		}
-		updateRuntimeEstimates();
-		numberOfPreviousRunTasks += getNumberOfFinishedTasks();
 	}
 	
 	@Override
@@ -324,7 +323,8 @@ public abstract class AbstractScheduler implements Scheduler {
 		re.weight = re.averageRuntime = re.timeSpent / re.finishedTasks;
 	}
 
-	protected void updateRuntimeEstimates() {
+	@Override
+	public void updateRuntimeEstimates(String runId) {
 		log.info("Updating Runtime Estimates.");
 		
 		Collection<String> newHostIds = dbInterface.getHostNames();
@@ -353,6 +353,9 @@ public abstract class AbstractScheduler implements Scheduler {
 					log.info("HiwayDB: Retrieved InvocStat " + stat.toString() + " from database.");
 					newMaxTimestamp = Math.max(newMaxTimestamp, stat.getTimestamp());
 					updateRuntimeEstimate(stat);
+					if (!runId.equals(stat.getRunId())) {
+						numberOfPreviousRunTasks++;
+					}
 				}
 			}
 			maxTimestampPerHost.put(hostName, newMaxTimestamp);

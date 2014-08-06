@@ -591,7 +591,7 @@ public class C3PO extends AbstractScheduler {
 		// if (getNumberOfFinishedTasks() == getNumberOfTotalTasks()) {
 		// return true;
 		// } else
-		if (nClones > 0) {
+		if (nClones > 0 && getNumberOfRunningTasks() > 0) {
 			return false;
 		}
 		return getNumberOfReadyTasks() == 0;
@@ -712,7 +712,7 @@ public class C3PO extends AbstractScheduler {
 	public Collection<ContainerId> taskCompleted(TaskInstance task,
 			ContainerStatus containerStatus, long runtimeInMs) {
 		super.taskCompleted(task, containerStatus, runtimeInMs);
-		updateRuntimeEstimates();
+		updateRuntimeEstimates(task.getWorkflowId().toString());
 		Collection<ContainerId> toBeReleasedContainers = new ArrayList<>();
 
 		// kill speculative copies

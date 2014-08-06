@@ -203,8 +203,8 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		@Override
 		public void queryFailedPost(UUID queryId, Long ticketId, Exception e,
 				String script, String stdOut, String stdErr) {
+			log.info("Query failed.");
 			done = true;
-
 		}
 
 		@Override
@@ -239,10 +239,18 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 	private BaseCreActor creActor;
 
-	private TicketSrcActor ticketSrc;
+	private final TicketSrcActor ticketSrc;
 
 	public CuneiformApplicationMaster() {
 		super();
+		ExecutorService executor = Executors.newCachedThreadPool();
+
+		creActor = new HiWayCreActor();
+		executor.submit(creActor);
+
+		ticketSrc = new TicketSrcActor(creActor);
+		executor.submit(ticketSrc);
+		executor.shutdown();
 		// taskToInvocation = new HashMap<>();
 		// fileToProducer = new HashMap<>();
 	}
@@ -330,15 +338,6 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 	@Override
 	public void parseWorkflow() {
-		ExecutorService executor = Executors.newCachedThreadPool();
-
-		creActor = new HiWayCreActor();
-		executor.submit(creActor);
-
-		ticketSrc = new TicketSrcActor(creActor);
-		executor.submit(ticketSrc);
-		executor.shutdown();
-
 		BaseRepl repl = new HiWayRepl(ticketSrc);
 
 		StringBuffer buf = new StringBuffer();

@@ -276,8 +276,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			}
 
 			// Add log redirect params
-//			vargs.add("1>" + Invocation.STDOUT_FILENAME);
-//			vargs.add("2>" + Invocation.STDERR_FILENAME);
+			// vargs.add("1>" + Invocation.STDOUT_FILENAME);
+			// vargs.add("2>" + Invocation.STDERR_FILENAME);
 
 			// Get final commmand
 			StringBuilder command = new StringBuilder();
@@ -447,7 +447,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				if (task.getTries() == 1) {
 					JSONObject obj = new JSONObject();
 					try {
-						obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
+						obj.put(JsonReportEntry.LABEL_REALTIME,
+								Long.toString(toc - tic));
 					} catch (JSONException e) {
 						e.printStackTrace();
 					}
@@ -559,8 +560,9 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 							finishedTask.setCompleted();
 
 							evaluateReport(finishedTask, containerId);
-							
-							for (JsonReportEntry entry : finishedTask.getReport()) {
+
+							for (JsonReportEntry entry : finishedTask
+									.getReport()) {
 								writeEntryToLog(entry);
 							}
 
@@ -645,7 +647,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 		@Override
 		public void onError(Throwable e) {
-
+			log.info("Error.");
 			e.printStackTrace();
 			done = true;
 			amRMClient.stop();
@@ -657,6 +659,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 		@Override
 		public void onShutdownRequest() {
+			log.info("Shutdown Request.");
 			done = true;
 		}
 	}
@@ -895,7 +898,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	// // task.setSuperScript(script);
 	// task.addScript(script);
 	// }
-	
+
 	protected Map<Long, JsonReportEntry> taskIdContainerRequestedEvent = new HashMap<>();
 	protected Map<Long, JsonReportEntry> taskIdContainerAllocatedEvent = new HashMap<>();
 
@@ -1005,14 +1008,14 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		FinalApplicationStatus appStatus;
 		String appMessage = null;
 		success = true;
-		
+
 		log.info("Failed Containers: " + numFailedContainers.get());
 		log.info("Completed Containers: " + numCompletedContainers.get());
-		
+
 		int numTotalContainers = scheduler.getNumberOfTotalTasks();
-		
+
 		log.info("Total Scheduled Containers: " + numTotalContainers);
-		
+
 		if (numFailedContainers.get() == 0
 				&& numCompletedContainers.get() == numTotalContainers) {
 			appStatus = FinalApplicationStatus.SUCCEEDED;
@@ -1355,9 +1358,10 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			}
 			scheduler = c3po;
 		}
-		scheduler.initialize();
 
+		scheduler.initialize();
 		parseWorkflow();
+		scheduler.updateRuntimeEstimates(getRunId());
 		// federatedReport = new Data(Constant.LOG_PREFIX + getRunId()
 		// + Constant.LOG_SUFFIX);
 		federatedReport = new Data(hiWayConf.get(
@@ -1397,7 +1401,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		while (!done) {
 			try {
 				while (scheduler.hasNextNodeRequest()) {
-					numRequestedContainers.incrementAndGet();
 					ContainerRequest containerAsk = setupContainerAskForRM(scheduler
 							.getNextNodeRequest());
 					amRMClient.addContainerRequest(containerAsk);
@@ -1527,7 +1530,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			System.exit(1);
 		}
 	}
-	
+
 	public void writeEntryToLog(JsonReportEntry entry) {
 		if (statLog.isDebugEnabled()) {
 			statLog.debug(entry.toString());
