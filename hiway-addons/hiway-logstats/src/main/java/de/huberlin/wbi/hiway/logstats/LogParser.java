@@ -384,11 +384,11 @@ public class LogParser {
 				invocation.setStageoutTimestamp(entry.getTimestamp());
 				break;
 
-			case Constant.KEY_WF_NAME:
+			case HiwayDBI.KEY_WF_NAME:
 				run.setRunOnsetTimestamp(entry.getTimestamp());
 				break;
 
-			case Constant.KEY_WF_TIME:
+			case HiwayDBI.KEY_WF_TIME:
 				run.setRuntime(Long.parseLong(entry.getValueRawString()));
 				break;
 

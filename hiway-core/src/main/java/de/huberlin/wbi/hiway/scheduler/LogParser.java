@@ -192,9 +192,6 @@ public class LogParser implements HiwayDBI {
 		String fileName = entry.getFile();
 
 		if (!runToInvocStats.containsKey(runId)) {
-			runToWorkflowName.put(runId, entry.getValueRawString());
-			Set<Long> taskIds = new HashSet<>();
-			workflowNameToTaskIds.put(entry.getValueRawString(), taskIds);
 			Map<Long, InvocStat> invocStats = new HashMap<>();
 			runToInvocStats.put(runId, invocStats);
 		}
@@ -226,6 +223,11 @@ public class LogParser implements HiwayDBI {
 
 		try {
 			switch (entry.getKey()) {
+			case HiwayDBI.KEY_WF_NAME:
+				runToWorkflowName.put(runId, entry.getValueRawString());
+				Set<Long> taskIds = new HashSet<>();
+				workflowNameToTaskIds.put(entry.getValueRawString(), taskIds);
+				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
 				invocStat.setRealTime(
 						entry.getValueJsonObj().getLong("realTime"),

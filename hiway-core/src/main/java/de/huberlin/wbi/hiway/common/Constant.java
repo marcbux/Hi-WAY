@@ -50,8 +50,6 @@ public class Constant {
 	// requires
 	public static final int HDFS_MEMORY_REQ = 768;
 	
-	public static final String KEY_WF_NAME = "wf-name";
-	public static final String KEY_WF_TIME = "wf-time";
 	public static final String LOG_PREFIX = "log_";
 
 	public static final String LOG_SUFFIX = ".csv";

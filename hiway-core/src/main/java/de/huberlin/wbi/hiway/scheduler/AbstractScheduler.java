@@ -132,20 +132,23 @@ public abstract class AbstractScheduler implements Scheduler {
 		String dbType = conf.get(HiWayConfiguration.HIWAY_DB_TYPE, HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT);
 		switch (dbType) {
 		case HiWayConfiguration.HIWAY_DB_TYPE_SQL:
-			String username = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
-			String password = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
-			String dbURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
-			dbInterface = new HiwayDB(username, password, dbURL);
+			String sqlUser = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			String sqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			String sqlURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+			dbInterface = new HiwayDB(sqlUser, sqlPassword, sqlURL);
 			break;
 		case HiWayConfiguration.HIWAY_DB_TYPE_NOSQL:
-			String bucket = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
-			password = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
-			String uris = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
-			List<URI> uriList = new ArrayList<>();
-			for (String uri : uris.split(",")) {
-				uriList.add(URI.create(uri));
+			sqlUser = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			sqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			sqlURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+			String noSqlBucket = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
+			String noSqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
+			String noSqlURIs = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
+			List<URI> noSqlURIList = new ArrayList<>();
+			for (String uri : noSqlURIs.split(",")) {
+				noSqlURIList.add(URI.create(uri));
 			}
-			dbInterface = new HiwayDBNoSQL(bucket, password, uriList);
+			dbInterface = new HiwayDBNoSQL(noSqlBucket, noSqlPassword, noSqlURIList, sqlUser, sqlPassword, sqlURL);
 			break;
 		default:
 			dbInterface = new LogParser();
@@ -355,6 +358,7 @@ public abstract class AbstractScheduler implements Scheduler {
 					updateRuntimeEstimate(stat);
 					if (!runId.equals(stat.getRunId())) {
 						numberOfPreviousRunTasks++;
+						numberOfFinishedTasks++;
 					}
 				}
 			}

@@ -973,7 +973,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 	private void finish() {
 		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
-				null, null, null, null, Constant.KEY_WF_TIME,
+				null, null, null, null, HiwayDBI.KEY_WF_TIME,
 				Long.toString(System.currentTimeMillis()
 						- amRMClient.getStartTime())));
 
@@ -981,6 +981,18 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			// federatedReportWriter.close();
 			// Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY);
 			federatedReport.stageOut(fs, "");
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(
+					"output"))) {
+				for (Data output : getOutputFiles()) {
+					// log.info("Workflow output located at: "
+					// +
+					// output.getHdfsPath(Data.hdfsDirectoryMidfixes.get(output)));
+					writer.write(output.getHdfsPath(Data.hdfsDirectoryMidfixes
+							.get(output)));
+					writer.newLine();
+				}
+			}
+			new Data("output").stageOut(fs, "");
 		} catch (IOException e) {
 			log.info("Error when attempting to stage out federated output log.");
 			e.printStackTrace();
@@ -1040,12 +1052,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 
 		amRMClient.stop();
-
-		for (Data output : getOutputFiles()) {
-			log.info("Workflow output located at: "
-					+ output.getHdfsPath(Data.hdfsDirectoryMidfixes.get(output)));
-		}
-
 	}
 
 	@Override
@@ -1370,7 +1376,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		// federatedReportWriter = new BufferedWriter(new FileWriter(
 		// federatedReport.getLocalPath()));
 		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
-				null, null, null, null, Constant.KEY_WF_NAME, getWorkflowName()));
+				null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
 
 		// Dump out information about cluster capability as seen by the resource
 		// manager

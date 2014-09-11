@@ -513,13 +513,13 @@ public class C3PO extends AbstractScheduler {
 		return null;
 	}
 
-	@Override
-	public int getNumberOfFinishedTasks() {
-		int finishedTasks = 0;
-		for (OutlookEstimate jobStatistic : jobStatistics.values())
-			finishedTasks += jobStatistic.finishedTasks;
-		return finishedTasks - numberOfPreviousRunTasks;
-	}
+//	@Override
+//	public int getNumberOfFinishedTasks() {
+//		int finishedTasks = 0;
+//		for (OutlookEstimate jobStatistic : jobStatistics.values())
+//			finishedTasks += jobStatistic.finishedTasks;
+//		return finishedTasks - numberOfPreviousRunTasks;
+//	}
 
 	@Override
 	public int getNumberOfReadyTasks() {

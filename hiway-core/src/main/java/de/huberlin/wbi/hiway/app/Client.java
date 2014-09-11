@@ -31,7 +31,9 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.app;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -358,7 +360,7 @@ public class Client {
 
 			// Get application report for the appId we are interested in
 			ApplicationReport report = yarnClient.getApplicationReport(appId);
-
+			
 			YarnApplicationState state = report.getYarnApplicationState();
 			FinalApplicationStatus dsStatus = report
 					.getFinalApplicationStatus();
@@ -624,7 +626,24 @@ public class Client {
 
 		// Monitor the application
 		boolean success = monitorApplication(appId);
-
+		
+		ApplicationReport report = yarnClient.getApplicationReport(appId);
+		String host = report.getHost().substring(0, report.getHost().indexOf("/"));
+		String port = conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).substring(conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).indexOf(":") + 1);
+		String id = appId.toString().substring(12);
+		int attemptId = report.getCurrentApplicationAttemptId().getAttemptId();
+		
+		log.info("output.stdout: http://" + host + ":" + port + "/node/containerlogs/container_" + id + "_0" + attemptId + "_000001/" + Constant.SANDBOX_DIRECTORY + "/AppMaster.stdout/?start=0");
+		log.info("output.stderr: http://" + host + ":" + port + "/node/containerlogs/container_" + id + "_0" + attemptId + "_000001/" + Constant.SANDBOX_DIRECTORY + "/AppMaster.stderr/?start=0");
+		log.info("output.log: hdfs://" + Constant.SANDBOX_DIRECTORY + "/" + appId + "/" + "stat.log");
+		new Data("output").stageIn(fs, "");
+		try(BufferedReader reader = new BufferedReader(new FileReader("output"))) {
+			String line = "";
+			while ((line = reader.readLine()) != null) {
+				log.info("output.file: hdfs://" + line);
+			}
+		}
+		
 		return success;
 
 	}
