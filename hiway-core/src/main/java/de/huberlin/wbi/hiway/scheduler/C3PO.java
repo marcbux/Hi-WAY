@@ -737,7 +737,7 @@ public class C3PO extends AbstractScheduler {
 		super.taskFailed(task, containerStatus);
 
 		Collection<ContainerId> toBeReleasedContainers = new ArrayList<>();
-		if (!task.retry()) {
+		if (!task.retry(maxRetries)) {
 			for (Container container : taskToContainers.get(task)) {
 				if (!container.getId().equals(containerStatus.getContainerId())) {
 					toBeReleasedContainers.add(container.getId());

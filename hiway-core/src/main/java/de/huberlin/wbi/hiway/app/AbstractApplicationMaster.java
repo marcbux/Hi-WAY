@@ -103,7 +103,6 @@ import org.json.JSONObject;
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.common.Constant;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.C3PO;
@@ -664,7 +663,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 	}
 
-	public static int hdfsInstancesPerContainer;
+	// public static int hdfsInstancesPerContainer;
 
 	// a handle to the log, in which any events are recorded
 	private static final Log log = LogFactory
@@ -776,7 +775,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	// the workflow scheduler, as defined at workflow launch time
 	protected Scheduler scheduler;
 
-	protected Constant.SchedulingPolicy schedulerName;
+	protected HiWayConfiguration.HIWAY_SCHEDULER_OPTS schedulerName;
 
 	// environment variables to be passed to any launched containers
 	protected Map<String, String> shellEnv = new HashMap<String, String>();
@@ -788,6 +787,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	// the workflow to be executed along with its format and path in the file
 	// system
 	protected String workflowPath;
+
+	private String sandboxDir;
 
 	// protected void buildPostScript(TaskInstance task, Container container)
 	// throws IOException {
@@ -978,21 +979,65 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 						- amRMClient.getStartTime())));
 
 		try {
-			// federatedReportWriter.close();
-			// Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY);
 			federatedReport.stageOut(fs, "");
-			try (BufferedWriter writer = new BufferedWriter(new FileWriter(
-					"output"))) {
-				for (Data output : getOutputFiles()) {
-					// log.info("Workflow output located at: "
-					// +
-					// output.getHdfsPath(Data.hdfsDirectoryMidfixes.get(output)));
-					writer.write(output.getHdfsPath(Data.hdfsDirectoryMidfixes
-							.get(output)));
-					writer.newLine();
+			if (Boolean
+					.parseBoolean(hiWayConf.get(
+							HiWayConfiguration.HIWAY_CLIENT_OUTPUT,
+							Boolean.toString(HiWayConfiguration.HIWAY_CLIENT_OUTPUT_DEFAULT)))) {
+
+				String outputFileJson = hiWayConf.get(
+						HiWayConfiguration.HIWAY_CLIENT_OUTPUT_JSON,
+						HiWayConfiguration.HIWAY_CLIENT_OUTPUT_JSON_DEFAULT);
+
+				String host = appMasterHostname.substring(0,
+						appMasterHostname.indexOf("/"));
+				String port = conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS)
+						.substring(
+								conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS)
+										.indexOf(":") + 1);
+				String id = appId.toString().substring(12);
+				int attemptId = appAttemptID.getAttemptId();
+
+				String amout = "http://" + host + ":" + port
+						+ "/node/containerlogs/container_" + id + "_0"
+						+ attemptId + "_000001/" + sandboxDir
+						+ "/AppMaster.stdout/?start=0";
+				String amerr = "http://" + host + ":" + port
+						+ "/node/containerlogs/container_" + id + "_0"
+						+ attemptId + "_000001/" + sandboxDir
+						+ "/AppMaster.stderr/?start=0";
+				String statlog = fs.getHomeDirectory().toString()
+						+ "/"
+						+ sandboxDir
+						+ "/"
+						+ appId
+						+ "/"
+						+ hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG,
+								HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT);
+
+				try (BufferedWriter writer = new BufferedWriter(new FileWriter(
+						outputFileJson))) {
+					Collection<String> output = new ArrayList<>();
+					for (Data outputFile : getOutputFiles()) {
+						output.add(fs.getHomeDirectory().toString()
+								+ "/"
+								+ outputFile
+										.getHdfsPath(Data.hdfsDirectoryMidfixes
+												.get(outputFile)));
+					}
+					JSONObject obj = new JSONObject();
+					try {
+						obj.put("output", output);
+						obj.put("amout", amout);
+						obj.put("amerr", amerr);
+						obj.put("statlog", statlog);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+					writer.write(obj.toString());
 				}
+				new Data(outputFileJson).stageOut(fs, "");
 			}
-			new Data("output").stageOut(fs, "");
 		} catch (IOException e) {
 			log.info("Error when attempting to stage out federated output log.");
 			e.printStackTrace();
@@ -1095,18 +1140,19 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				"App Attempt ID. Not to be used unless for testing purposes");
 		opts.addOption("workflow", true,
 				"The workflow file to be executed by the Application Master");
-		opts.addOption("type", true, "The input file format. Valid arguments: "
-				+ Constant.WorkflowFormat.values());
-		opts.addOption("scheduler", true,
-				"The workflow scheduling policy. Valid arguments: "
-						+ Constant.SchedulingPolicy.values());
-		opts.addOption("shell_env", true,
-				"Environment for shell script. Specified as env_key=env_val pairs");
-		opts.addOption("container_memory", true,
-				"Amount of memory in MB to be requested to run the shell command");
-		opts.addOption("container_vcores", true,
-				"Number of virtual cores to be requested to run the shell command");
-		opts.addOption("priority", true, "Application Priority. Default 0");
+		// opts.addOption("type", true,
+		// "The input file format. Valid arguments: "
+		// + Constant.WorkflowFormat.values());
+		// opts.addOption("scheduler", true,
+		// "The workflow scheduling policy. Valid arguments: "
+		// + Constant.SchedulingPolicy.values());
+		// opts.addOption("shell_env", true,
+		// "Environment for shell script. Specified as env_key=env_val pairs");
+		// opts.addOption("container_memory", true,
+		// "Amount of memory in MB to be requested to run the shell command");
+		// opts.addOption("container_vcores", true,
+		// "Number of virtual cores to be requested to run the shell command");
+		// opts.addOption("priority", true, "Application Priority. Default 0");
 		opts.addOption("debug", false, "Dump out debug information");
 		opts.addOption("appid", true, "Id of this Application Master.");
 
@@ -1135,7 +1181,10 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			dumpOutDebugInfo();
 		}
 
-		Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY + "/" + appId);
+		sandboxDir = hiWayConf.get(
+				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY,
+				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT);
+		Data.setHdfsDirectoryPrefix(sandboxDir + "/" + appId);
 
 		Map<String, String> envs = System.getenv();
 
@@ -1177,23 +1226,26 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				+ appAttemptID.getApplicationId().getClusterTimestamp()
 				+ ", attemptId=" + appAttemptID.getAttemptId());
 
-		if (cliParser.hasOption("shell_env")) {
-			String shellEnvs[] = cliParser.getOptionValues("shell_env");
-			for (String env : shellEnvs) {
-				env = env.trim();
-				int index = env.indexOf('=');
-				if (index == -1) {
-					shellEnv.put(env, "");
-					continue;
-				}
-				String key = env.substring(0, index);
-				String val = "";
-				if (index < (env.length() - 1)) {
-					val = env.substring(index + 1);
-				}
-				shellEnv.put(key, val);
+		// if (cliParser.hasOption("shell_env")) {
+		// String shellEnvs[] = cliParser.getOptionValues("shell_env");
+		String shellEnvs[] = hiWayConf.getStrings(
+				HiWayConfiguration.HIWAY_WORKER_SHELL_ENV,
+				HiWayConfiguration.HIWAY_WORKER_SHELL_ENV_DEFAULT);
+		for (String env : shellEnvs) {
+			env = env.trim();
+			int index = env.indexOf('=');
+			if (index == -1) {
+				shellEnv.put(env, "");
+				continue;
 			}
+			String key = env.substring(0, index);
+			String val = "";
+			if (index < (env.length() - 1)) {
+				val = env.substring(index + 1);
+			}
+			shellEnv.put(key, val);
 		}
+		// }
 
 		if (!cliParser.hasOption("workflow")) {
 			throw new IllegalArgumentException(
@@ -1202,16 +1254,19 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 		workflowPath = cliParser.getOptionValue("workflow");
 		workflowFile = new Data(workflowPath);
-		schedulerName = Constant.SchedulingPolicy.valueOf(cliParser
-				.getOptionValue("scheduler",
-						Constant.SchedulingPolicy.c3po.toString()));
+		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS
+				.valueOf(hiWayConf.get(HiWayConfiguration.HIWAY_SCHEDULER,
+						HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
 
-		containerMemory = Integer.parseInt(cliParser.getOptionValue(
-				"container_memory", "4096"));
-		containerCores = Integer.parseInt(cliParser.getOptionValue(
-				"container_vcores", "1"));
-		requestPriority = Integer.parseInt(cliParser.getOptionValue("priority",
-				"0"));
+		containerMemory = hiWayConf.getInt(
+				HiWayConfiguration.HIWAY_WORKER_MEMORY,
+				HiWayConfiguration.HIWAY_WORKER_MEMORY_DEFAULT);
+		containerCores = hiWayConf.getInt(
+				HiWayConfiguration.HIWAY_WORKER_VCORES,
+				HiWayConfiguration.HIWAY_WORKER_VCORES_DEFAULT);
+		requestPriority = hiWayConf.getInt(
+				HiWayConfiguration.HIWAY_WORKER_PRIORITY,
+				HiWayConfiguration.HIWAY_WORKER_PRIORITY_DEFAULT);
 		return true;
 	}
 
@@ -1322,7 +1377,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			// }
 
 			scheduler = schedulerName
-					.equals(Constant.SchedulingPolicy.staticRoundRobin) ? new StaticRoundRobin(
+					.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new StaticRoundRobin(
 					getWorkflowName(), fs, hiWayConf) : new HEFT(
 					getWorkflowName(), fs, hiWayConf);
 			break;
@@ -1371,8 +1426,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		// federatedReport = new Data(Constant.LOG_PREFIX + getRunId()
 		// + Constant.LOG_SUFFIX);
 		federatedReport = new Data(hiWayConf.get(
-				HiWayConfiguration.HIWAY_STAT_LOG,
-				HiWayConfiguration.HIWAY_STAT_LOG_DEFAULT));
+				HiWayConfiguration.HIWAY_DB_STAT_LOG,
+				HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT));
 		// federatedReportWriter = new BufferedWriter(new FileWriter(
 		// federatedReport.getLocalPath()));
 		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
@@ -1394,7 +1449,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 					+ ", max=" + maxMem);
 			containerMemory = maxMem;
 		}
-		hdfsInstancesPerContainer = containerMemory / Constant.HDFS_MEMORY_REQ;
+		// hdfsInstancesPerContainer = containerMemory /
+		// Constant.HDFS_MEMORY_REQ;
 		if (containerCores > maxCores) {
 			log.info("Container vcores specified above max threshold of cluster."
 					+ " Using max value."

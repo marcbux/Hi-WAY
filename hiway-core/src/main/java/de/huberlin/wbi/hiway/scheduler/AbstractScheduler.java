@@ -60,7 +60,6 @@ import de.huberlin.hiwaydb.useDB.HiwayDBNoSQL;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.app.HiWayConfiguration;
-import de.huberlin.wbi.hiway.common.Constant;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 //import de.huberlin.wbi.hiway.scheduler.C3PO.ConservatismEstimate;
 //import de.huberlin.wbi.hiway.scheduler.C3PO.Estimate;
@@ -98,8 +97,10 @@ public abstract class AbstractScheduler implements Scheduler {
 	protected int numberOfFinishedTasks = 0;
 	protected int numberOfRemainingTasks = 0;
 	protected int numberOfRunningTasks = 0;
-	
+
 	protected final FileSystem fs;
+
+	protected int maxRetries = 0;
 
 	// private Set<String> nodeIds;
 	protected Set<Long> taskIds;
@@ -112,13 +113,14 @@ public abstract class AbstractScheduler implements Scheduler {
 	// a queue of nodes on which containers are to be requested
 	protected Queue<String[]> unissuedNodeRequests;
 	protected String workflowName;
-	protected HiWayConfiguration conf;
+	protected HiWayConfiguration hiWayConf;
 
-	public AbstractScheduler(String workflowName, HiWayConfiguration conf, FileSystem fs) {
+	public AbstractScheduler(String workflowName, HiWayConfiguration conf,
+			FileSystem fs) {
 		// statistics = new HashMap<Long, Map<String, Set<InvocStat>>>();
 		this.workflowName = workflowName;
-		
-		this.conf = conf;
+
+		this.hiWayConf = conf;
 		this.fs = fs;
 		unissuedNodeRequests = new LinkedList<>();
 
@@ -129,33 +131,45 @@ public abstract class AbstractScheduler implements Scheduler {
 
 	@Override
 	public void initialize() {
-		String dbType = conf.get(HiWayConfiguration.HIWAY_DB_TYPE, HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT);
+		maxRetries = hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES,
+				HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT);
+
+		HiWayConfiguration.HIWAY_DB_TYPE_OPTS dbType = HiWayConfiguration.HIWAY_DB_TYPE_OPTS
+				.valueOf(hiWayConf.get(HiWayConfiguration.HIWAY_DB_TYPE,
+						HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT.toString()));
 		switch (dbType) {
-		case HiWayConfiguration.HIWAY_DB_TYPE_SQL:
-			String sqlUser = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
-			String sqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
-			String sqlURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+		case SQL:
+			String sqlUser = hiWayConf
+					.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			String sqlPassword = hiWayConf
+					.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			String sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
 			dbInterface = new HiwayDB(sqlUser, sqlPassword, sqlURL);
 			break;
-		case HiWayConfiguration.HIWAY_DB_TYPE_NOSQL:
-			sqlUser = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
-			sqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
-			sqlURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
-			String noSqlBucket = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
-			String noSqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
-			String noSqlURIs = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
+		case NoSQL:
+			sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			sqlPassword = hiWayConf
+					.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+			String noSqlBucket = hiWayConf
+					.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
+			String noSqlPassword = hiWayConf
+					.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
+			String noSqlURIs = hiWayConf
+					.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
 			List<URI> noSqlURIList = new ArrayList<>();
 			for (String uri : noSqlURIs.split(",")) {
 				noSqlURIList.add(URI.create(uri));
 			}
-			dbInterface = new HiwayDBNoSQL(noSqlBucket, noSqlPassword, noSqlURIList, sqlUser, sqlPassword, sqlURL);
+			dbInterface = new HiwayDBNoSQL(noSqlBucket, noSqlPassword,
+					noSqlURIList, sqlUser, sqlPassword, sqlURL);
 			break;
 		default:
 			dbInterface = new LogParser();
 			parseLogs(fs);
 		}
 	}
-	
+
 	@Override
 	public void addEntryToDB(JsonReportEntry entry) {
 		log.info("HiwayDB: Adding entry " + entry + " to database.");
@@ -209,7 +223,7 @@ public abstract class AbstractScheduler implements Scheduler {
 		int fin = getNumberOfFinishedTasks();
 		int run = getNumberOfRunningTasks();
 		int rem = numberOfRemainingTasks;
-		
+
 		log.info("Scheduled Containers Finished: " + fin);
 		log.info("Scheduled Containers Running: " + run);
 		log.info("Scheduled Containers Remaining: " + rem);
@@ -249,7 +263,9 @@ public abstract class AbstractScheduler implements Scheduler {
 	}
 
 	protected void parseLogs(FileSystem fs) {
-		Path hiwayDir = new Path(fs.getHomeDirectory(), Constant.SANDBOX_DIRECTORY);
+		Path hiwayDir = new Path(fs.getHomeDirectory(), hiWayConf.get(
+				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY,
+				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT));
 		try {
 			for (FileStatus appDirStatus : fs.listStatus(hiwayDir)) {
 				if (appDirStatus.isDirectory()) {
@@ -257,7 +273,9 @@ public abstract class AbstractScheduler implements Scheduler {
 					for (FileStatus srcStatus : fs.listStatus(appDir)) {
 						Path src = srcStatus.getPath();
 						String srcName = src.getName();
-						if (srcName.equals(conf.get(HiWayConfiguration.HIWAY_STAT_LOG, HiWayConfiguration.HIWAY_STAT_LOG_DEFAULT))) {
+						if (srcName.equals(hiWayConf.get(
+								HiWayConfiguration.HIWAY_DB_STAT_LOG,
+								HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT))) {
 							Path dest = new Path(appDir.getName());
 							log.info("Parsing log " + dest.toString());
 							fs.copyToLocalFile(false, src, dest);
@@ -266,7 +284,8 @@ public abstract class AbstractScheduler implements Scheduler {
 									new FileReader(new File(dest.toString())))) {
 								String line;
 								while ((line = reader.readLine()) != null) {
-									JsonReportEntry entry = new JsonReportEntry(line);
+									JsonReportEntry entry = new JsonReportEntry(
+											line);
 									addEntryToDB(entry);
 								}
 							}
@@ -305,7 +324,7 @@ public abstract class AbstractScheduler implements Scheduler {
 
 		log.info("Task " + task + " on container "
 				+ containerStatus.getContainerId().getId() + " failed");
-		if (task.retry()) {
+		if (task.retry(maxRetries)) {
 			log.info("Retrying task " + task + ".");
 			addTask(task);
 		} else {
@@ -329,32 +348,38 @@ public abstract class AbstractScheduler implements Scheduler {
 	@Override
 	public void updateRuntimeEstimates(String runId) {
 		log.info("Updating Runtime Estimates.");
-		
+
 		Collection<String> newHostIds = dbInterface.getHostNames();
-		log.info("HiwayDB: Retrieved Host Names " + newHostIds.toString() + " from database.");
+		log.info("HiwayDB: Retrieved Host Names " + newHostIds.toString()
+				+ " from database.");
 		newHostIds.removeAll(getNodeIds());
 		for (String newHostId : newHostIds) {
 			newHost(newHostId);
 		}
 		Collection<Long> newTaskIds = dbInterface
 				.getTaskIdsForWorkflow(workflowName);
-		log.info("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
+		log.info("HiwayDB: Retrieved Task Ids " + newTaskIds.toString()
+				+ " from database.");
 
 		newTaskIds.removeAll(getTaskIds());
 		for (long newTaskId : newTaskIds) {
 			newTask(newTaskId);
 		}
-		
+
 		for (String hostName : getNodeIds()) {
 			long oldMaxTimestamp = maxTimestampPerHost.get(hostName);
 			long newMaxTimestamp = oldMaxTimestamp;
 			for (long taskId : getTaskIds()) {
-				log.info("HiwayDB: Querying InvocStats for task id " + taskId + " on host " + hostName + " since timestamp " + oldMaxTimestamp + " from database.");
+				log.info("HiwayDB: Querying InvocStats for task id " + taskId
+						+ " on host " + hostName + " since timestamp "
+						+ oldMaxTimestamp + " from database.");
 				for (InvocStat stat : dbInterface
 						.getLogEntriesForTaskOnHostSince(taskId, hostName,
 								oldMaxTimestamp)) {
-					log.info("HiwayDB: Retrieved InvocStat " + stat.toString() + " from database.");
-					newMaxTimestamp = Math.max(newMaxTimestamp, stat.getTimestamp());
+					log.info("HiwayDB: Retrieved InvocStat " + stat.toString()
+							+ " from database.");
+					newMaxTimestamp = Math.max(newMaxTimestamp,
+							stat.getTimestamp());
 					updateRuntimeEstimate(stat);
 					if (!runId.equals(stat.getRunId())) {
 						numberOfPreviousRunTasks++;

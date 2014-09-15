@@ -56,7 +56,6 @@ import org.json.JSONObject;
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.common.Constant;
 import de.huberlin.wbi.hiway.common.Data;
 
 public class Worker {
@@ -84,6 +83,7 @@ public class Worker {
 	private String taskName;
 
 	FileSystem fs;
+	protected HiWayConfiguration hiWayConf;
 
 	private Set<Data> inputFiles;
 	private Set<Data> outputFiles;
@@ -154,6 +154,7 @@ public class Worker {
 	}
 
 	public void init(String[] args) throws ParseException {
+		hiWayConf = new HiWayConfiguration();
 		dir = Paths.get(".");
 
 		Options opts = new Options();
@@ -191,7 +192,9 @@ public class Worker {
 			}
 		}
 
-		Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY + "/" + appId);
+		Data.setHdfsDirectoryPrefix(hiWayConf.get(
+				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY,
+				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT) + "/" + appId);
 
 		Configuration conf = new YarnConfiguration();
 		conf.addResource("core-site.xml");

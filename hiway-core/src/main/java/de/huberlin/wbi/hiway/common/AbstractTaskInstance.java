@@ -300,8 +300,8 @@ public class AbstractTaskInstance implements Comparable<TaskInstance>,
 	}
 
 	@Override
-	public boolean retry() {
-		return tries <= Constant.retries;
+	public boolean retry(int maxRetries) {
+		return tries <= maxRetries;
 	}
 
 	@Override

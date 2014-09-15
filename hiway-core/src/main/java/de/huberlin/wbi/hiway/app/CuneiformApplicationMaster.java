@@ -416,7 +416,8 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 		log.error("[end]");
 
-		if (!task.retry()) {
+		if (!task.retry(hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES,
+				HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
 			// ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
 			// .getTicket(), script, stdOut, stdErr));
 			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation

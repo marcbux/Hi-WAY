@@ -99,7 +99,7 @@ public interface TaskInstance {
 
 	public boolean readyToExecute();
 
-	public boolean retry();
+	public boolean retry(int maxRetries);
 
 	public void setCommand(String command);
 

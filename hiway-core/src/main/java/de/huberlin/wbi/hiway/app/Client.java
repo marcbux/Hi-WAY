@@ -31,9 +31,7 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.app;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -78,8 +76,9 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
+//import org.json.JSONException;
+//import org.json.JSONObject;
 
-import de.huberlin.wbi.hiway.common.Constant;
 import de.huberlin.wbi.hiway.common.Data;
 
 /**
@@ -145,12 +144,12 @@ public class Client {
 	private long clientTimeout;
 	// the configuration of the Hadoop installation
 	private Configuration conf;
-	// private Configuration hiwayConf;
+	private Configuration hiWayConf;
 
-	private int containerCores = 1;
+	// private int containerCores = 1;
 	// amount of memory and number of cores to request for containers in which
 	// workflow tasks will be executed
-	private int containerMemory = 4096;
+	// private int containerMemory = 4096;
 
 	// debug flag
 	boolean debugFlag = false;
@@ -158,20 +157,22 @@ public class Client {
 	// command line options
 	private Options opts;
 	// the type of workflow scheduler
-	private Constant.SchedulingPolicy scheduler;
+	// private HiWayConfiguration.HIWAY_SCHEDULER_OPTS scheduler;
 
 	// workflow task container priority
-	private int shellCmdPriority = 0;
+	// private int shellCmdPriority = 0;
 	// environment variables to be setup for the workflow tasks
-	private Map<String, String> shellEnv = new HashMap<String, String>();
+	// private Map<String, String> shellEnv = new HashMap<String, String>();
 
 	// the workflow format and its path in the file system
 	private String workflowPath;
 
-	private Constant.WorkflowFormat workflowType;
+	private HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS workflowType;
 
 	// a handle to the YARN ApplicationsManager (ASM)
 	private YarnClient yarnClient;
+
+	private String sandboxDir;
 
 	public Client() throws Exception {
 		this(new YarnConfiguration());
@@ -180,45 +181,50 @@ public class Client {
 
 	public Client(Configuration conf) {
 		this.conf = conf;
-		// hiwayConf = new HiWayConfiguration();
+		hiWayConf = new HiWayConfiguration();
 		yarnClient = YarnClient.createYarnClient();
 		yarnClient.init(conf);
 		opts = new Options();
-		opts.addOption("priority", true, "Application Priority. Default 0");
-		opts.addOption("queue", true,
-				"RM Queue in which this application is to be submitted");
-		opts.addOption("timeout", true,
-				"Application timeout in milliseconds. Default: 1 day.");
-		opts.addOption(
-				"master_memory",
-				true,
-				"Amount of memory in MB to be requested to run the application master. Default 4096");
+		// opts.addOption("priority", true, "Application Priority. Default 0");
+		// opts.addOption("queue", true,
+		// "RM Queue in which this application is to be submitted");
+		// opts.addOption("timeout", true,
+		// "Application timeout in milliseconds. Default: 1 day.");
+		// opts.addOption(
+		// "master_memory",
+		// true,
+		// "Amount of memory in MB to be requested to run the application master. Default 4096");
 		// opts.addOption("jar", true,
 		// "Jar file containing the application master");
-		opts.addOption("shell_env", true,
-				"Environment for shell script. Specified as env_key=env_val pairs");
-		opts.addOption("shell_cmd_priority", true,
-				"Priority for the shell command containers");
-		opts.addOption("container_memory", true,
-				"Amount of memory in MB to be requested to run the shell command. Default 4096");
-		opts.addOption("container_vcores", true,
-				"Number of virtual vores to be requested to run the shell command. Default 1");
+		// opts.addOption("shell_env", true,
+		// "Environment for shell script. Specified as env_key=env_val pairs");
+		// opts.addOption("shell_cmd_priority", true,
+		// "Priority for the shell command containers");
+		// opts.addOption("container_memory", true,
+		// "Amount of memory in MB to be requested to run the shell command. Default 4096");
+		// opts.addOption("container_vcores", true,
+		// "Number of virtual vores to be requested to run the shell command. Default 1");
 		opts.addOption("workflow", true,
 				"The workflow file to be executed by the Application Master");
 		String workflowFormats = "";
-		for (Constant.WorkflowFormat format : Constant.WorkflowFormat.values()) {
-			workflowFormats += ", " + format.toString();
-		}
-		opts.addOption("type", true, "The input file format. Valid arguments: "
-				+ workflowFormats.substring(2));
-		String schedulingPolicies = "";
-		for (Constant.SchedulingPolicy policy : Constant.SchedulingPolicy
+		for (HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS language : HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS
 				.values()) {
-			schedulingPolicies += ", " + policy.toString();
+			workflowFormats += ", " + language.toString();
 		}
-		opts.addOption("scheduler", true,
-				"The workflow scheduling policy. Valid arguments: "
-						+ schedulingPolicies.substring(2));
+		opts.addOption(
+				"language",
+				true,
+				"The input file format. Valid arguments: "
+						+ workflowFormats.substring(2) + ". Default: "
+						+ HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM);
+		// String schedulingPolicies = "";
+		// for (Constant.SchedulingPolicy policy : Constant.SchedulingPolicy
+		// .values()) {
+		// schedulingPolicies += ", " + policy.toString();
+		// }
+		// opts.addOption("scheduler", true,
+		// "The workflow scheduling policy. Valid arguments: "
+		// + schedulingPolicies.substring(2));
 		opts.addOption("debug", false, "Dump out debug information");
 		opts.addOption("help", false, "Print usage");
 	}
@@ -265,29 +271,17 @@ public class Client {
 			debugFlag = true;
 		}
 
-		amPriority = Integer
-				.parseInt(cliParser.getOptionValue("priority", "0"));
-		amQueue = cliParser.getOptionValue("queue", "default");
-		amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory",
-				"4096"));
-
+		amPriority = hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_PRIORITY,
+				HiWayConfiguration.HIWAY_AM_PRIORITY_DEFAULT);
+		amQueue = hiWayConf.get(HiWayConfiguration.HIWAY_AM_QUEUE,
+				HiWayConfiguration.HIWAY_AM_QUEUE_DEFAULT);
+		amMemory = hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_MEMORY,
+				HiWayConfiguration.HIWAY_AM_MEMORY_DEFAULT);
 		if (amMemory < 0) {
 			throw new IllegalArgumentException(
 					"Invalid memory specified for application master, exiting."
 							+ " Specified memory=" + amMemory);
 		}
-
-		// if (!cliParser.hasOption("jar")) {
-		// throw new
-		// IllegalArgumentException("No jar file specified for application master");
-		// }
-		// appMasterJarPath = cliParser.getOptionValue("jar");
-		// if (appMasterJarPath.startsWith("/")) {
-		// throw new IllegalArgumentException("Only relative paths supported");
-		// }
-		// if (appMasterJarPath.contains("./")) {
-		// throw new IllegalArgumentException("./ and ../ not allowed in path");
-		// }
 
 		if (!cliParser.hasOption("workflow")) {
 			throw new IllegalArgumentException(
@@ -301,39 +295,45 @@ public class Client {
 		if (workflowPath.contains("./")) {
 			throw new IllegalArgumentException("./ and ../ not allowed in path");
 		}
-		workflowType = Constant.WorkflowFormat.valueOf(cliParser
-				.getOptionValue("type",
-						Constant.WorkflowFormat.cuneiform.toString()));
-		scheduler = Constant.SchedulingPolicy.valueOf(cliParser.getOptionValue(
-				"scheduler", Constant.SchedulingPolicy.c3po.toString()));
+		workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS
+				.valueOf(cliParser
+						.getOptionValue(
+								"language",
+								HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform
+										.toString()));
 
-		if (cliParser.hasOption("shell_env")) {
-			String envs[] = cliParser.getOptionValues("shell_env");
-			for (String env : envs) {
-				env = env.trim();
-				int index = env.indexOf('=');
-				if (index == -1) {
-					shellEnv.put(env, "");
-					continue;
-				}
-				String key = env.substring(0, index);
-				String val = "";
-				if (index < (env.length() - 1)) {
-					val = env.substring(index + 1);
-				}
-				shellEnv.put(key, val);
-			}
-		}
-		shellCmdPriority = Integer.parseInt(cliParser.getOptionValue(
-				"shell_cmd_priority", "0"));
+		// scheduler =
+		// HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(hiwayConf.get(HiWayConfiguration.HIWAY_SCHEDULER,
+		// HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
 
-		containerMemory = Integer.parseInt(cliParser.getOptionValue(
-				"container_memory", "4096"));
-		containerCores = Integer.parseInt(cliParser.getOptionValue(
-				"container_vcores", "1"));
+		// if (cliParser.hasOption("shell_env")) {
+		// String envs[] = cliParser.getOptionValues("shell_env");
+		// for (String env : envs) {
+		// env = env.trim();
+		// int index = env.indexOf('=');
+		// if (index == -1) {
+		// shellEnv.put(env, "");
+		// continue;
+		// }
+		// String key = env.substring(0, index);
+		// String val = "";
+		// if (index < (env.length() - 1)) {
+		// val = env.substring(index + 1);
+		// }
+		// shellEnv.put(key, val);
+		// }
+		// }
+		// shellCmdPriority = Integer.parseInt(cliParser.getOptionValue(
+		// "shell_cmd_priority", "0"));
+		//
+		// containerMemory = Integer.parseInt(cliParser.getOptionValue(
+		// "container_memory", "4096"));
+		// containerCores = Integer.parseInt(cliParser.getOptionValue(
+		// "container_vcores", "1"));
 
-		clientTimeout = Integer.parseInt(cliParser.getOptionValue("timeout",
-				Integer.toString(1 * 24 * 60 * 60 * 1000)));
+		clientTimeout = hiWayConf.getInt(
+				HiWayConfiguration.HIWAY_CLIENT_TIMEOUT,
+				HiWayConfiguration.HIWAY_CLIENT_TIMEOUT_DEFAULT) * 1000;
 
 		return true;
 	}
@@ -360,7 +360,7 @@ public class Client {
 
 			// Get application report for the appId we are interested in
 			ApplicationReport report = yarnClient.getApplicationReport(appId);
-			
+
 			YarnApplicationState state = report.getYarnApplicationState();
 			FinalApplicationStatus dsStatus = report
 					.getFinalApplicationStatus();
@@ -390,7 +390,6 @@ public class Client {
 				return false;
 			}
 		}
-
 	}
 
 	/**
@@ -462,12 +461,16 @@ public class Client {
 		// set the application name
 		ApplicationSubmissionContext appContext = app
 				.getApplicationSubmissionContext();
-		appContext.setApplicationType(Constant.APPLICATION_TYPE);
+		appContext.setApplicationType(hiWayConf.get(
+				HiWayConfiguration.HIWAY_AM_APPLICATION_TYPE,
+				HiWayConfiguration.HIWAY_AM_APPLICATION_TYPE_DEFAULT));
 		appContext.setApplicationName("run " + workflowPath + " (type: "
-				+ workflowType.toString() + ", scheduler: "
-				+ scheduler.toString() + ")");
+				+ workflowType.toString() + ")");
 		ApplicationId appId = appContext.getApplicationId();
-		Data.setHdfsDirectoryPrefix(Constant.SANDBOX_DIRECTORY + "/" + appId);
+		sandboxDir = hiWayConf.get(
+				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY,
+				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT);
+		Data.setHdfsDirectoryPrefix(sandboxDir + "/" + appId);
 
 		// Set up the container launch context for the application master
 		ContainerLaunchContext amContainer = Records
@@ -520,8 +523,8 @@ public class Client {
 			classPathEnv.append(File.pathSeparatorChar);
 			classPathEnv.append(c.trim());
 		}
-//		classPathEnv.append(File.pathSeparatorChar)
-//				.append("./log4j.properties");
+		// classPathEnv.append(File.pathSeparatorChar)
+		// .append("./log4j.properties");
 
 		if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
 			classPathEnv.append(':');
@@ -540,26 +543,26 @@ public class Client {
 		vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
 		// Set Xmx based on am memory size
 		vargs.add("-Xmx" + amMemory + "m");
-//		vargs.add("-Dlog4j.configuration=$HIWAY_HOME/conf/log4j.properties");
+		// vargs.add("-Dlog4j.configuration=$HIWAY_HOME/conf/log4j.properties");
 		// Set class name
-		if (workflowType.equals(Constant.WorkflowFormat.dax)) {
-			vargs.add(HiWayConfiguration.HIWAY_DAX_AM_CLASS);
+		if (workflowType.equals(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX)) {
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS);
 		} else {
-			vargs.add(HiWayConfiguration.HIWAY_CF_AM_CLASS);
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS);
 		}
 
 		// Set params for Application Master
-		vargs.add("--container_memory " + String.valueOf(containerMemory));
-		vargs.add("--container_vcores " + String.valueOf(containerCores));
+		// vargs.add("--container_memory " + String.valueOf(containerMemory));
+		// vargs.add("--container_vcores " + String.valueOf(containerCores));
 		vargs.add("--workflow " + workflowPath);
-		vargs.add("--type " + workflowType.toString());
-		vargs.add("--scheduler " + scheduler.toString());
+		// vargs.add("--type " + workflowType.toString());
+		// vargs.add("--scheduler " + scheduler.toString());
 		vargs.add("--appid " + appId.toString());
-		vargs.add("--priority " + String.valueOf(shellCmdPriority));
+		// vargs.add("--priority " + String.valueOf(shellCmdPriority));
 
-		for (Map.Entry<String, String> entry : shellEnv.entrySet()) {
-			vargs.add("--shell_env " + entry.getKey() + "=" + entry.getValue());
-		}
+		// for (Map.Entry<String, String> entry : shellEnv.entrySet()) {
+		// vargs.add("--shell_env " + entry.getKey() + "=" + entry.getValue());
+		// }
 		if (debugFlag) {
 			vargs.add("--debug");
 		}
@@ -626,24 +629,47 @@ public class Client {
 
 		// Monitor the application
 		boolean success = monitorApplication(appId);
-		
-		ApplicationReport report = yarnClient.getApplicationReport(appId);
-		String host = report.getHost().substring(0, report.getHost().indexOf("/"));
-		String port = conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).substring(conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).indexOf(":") + 1);
-		String id = appId.toString().substring(12);
-		int attemptId = report.getCurrentApplicationAttemptId().getAttemptId();
-		
-		log.info("output.stdout: http://" + host + ":" + port + "/node/containerlogs/container_" + id + "_0" + attemptId + "_000001/" + Constant.SANDBOX_DIRECTORY + "/AppMaster.stdout/?start=0");
-		log.info("output.stderr: http://" + host + ":" + port + "/node/containerlogs/container_" + id + "_0" + attemptId + "_000001/" + Constant.SANDBOX_DIRECTORY + "/AppMaster.stderr/?start=0");
-		log.info("output.log: hdfs://" + Constant.SANDBOX_DIRECTORY + "/" + appId + "/" + "stat.log");
-		new Data("output").stageIn(fs, "");
-		try(BufferedReader reader = new BufferedReader(new FileReader("output"))) {
-			String line = "";
-			while ((line = reader.readLine()) != null) {
-				log.info("output.file: hdfs://" + line);
-			}
-		}
-		
+
+//		ApplicationReport report = yarnClient.getApplicationReport(appId);
+//		String host = report.getHost().substring(0,
+//				report.getHost().indexOf("/"));
+//		String port = conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).substring(
+//				conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).indexOf(":") + 1);
+//		String id = appId.toString().substring(12);
+//		int attemptId = report.getCurrentApplicationAttemptId().getAttemptId();
+//
+//		String amout = "http://" + host + ":" + port
+//				+ "/node/containerlogs/container_" + id + "_0" + attemptId
+//				+ "_000001/" + sandboxDir + "/AppMaster.stdout/?start=0";
+//		String amerr = "http://" + host + ":" + port
+//				+ "/node/containerlogs/container_" + id + "_0" + attemptId
+//				+ "_000001/" + sandboxDir + "/AppMaster.stderr/?start=0";
+//		String statlog = "hdfs://" + fs.getHomeDirectory().toString() + "/"
+//				+ sandboxDir + "/" + appId + "/" + hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT);
+//		
+		String outputFileJson = hiWayConf
+				.get(HiWayConfiguration.HIWAY_CLIENT_OUTPUT_JSON,
+						HiWayConfiguration.HIWAY_CLIENT_OUTPUT_JSON_DEFAULT);
+		new Data(outputFileJson).stageIn(fs, "");
+//		JSONObject obj = new JSONObject();
+//		
+//		try {
+//			try (BufferedReader reader = new BufferedReader(
+//					new FileReader(outputFileJson))) {
+//				obj = new JSONObject(reader.readLine());
+//			}
+//			obj.put("amout", amout);
+//			obj.put("amerr", amerr);
+//			obj.put("statlog", statlog);
+//		} catch (JSONException e) {
+//			e.printStackTrace();
+//		}
+//
+//		try (BufferedWriter writer = new BufferedWriter(
+//				new FileWriter(outputFileJson))) {
+//			writer.write(obj.toString());
+//		}
+
 		return success;
 
 	}
