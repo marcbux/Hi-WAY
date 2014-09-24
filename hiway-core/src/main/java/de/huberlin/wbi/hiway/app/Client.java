@@ -165,7 +165,7 @@ public class Client {
 	// private Map<String, String> shellEnv = new HashMap<String, String>();
 
 	// the workflow format and its path in the file system
-	private String workflowPath;
+	private Data workflow;
 
 	private HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS workflowType;
 
@@ -173,6 +173,8 @@ public class Client {
 	private YarnClient yarnClient;
 
 	private String sandboxDir;
+	
+	private Data summary;
 
 	public Client() throws Exception {
 		this(new YarnConfiguration());
@@ -204,7 +206,12 @@ public class Client {
 		// "Amount of memory in MB to be requested to run the shell command. Default 4096");
 		// opts.addOption("container_vcores", true,
 		// "Number of virtual vores to be requested to run the shell command. Default 1");
-		opts.addOption("workflow", true,
+		opts.addOption(
+				"s",
+				"summary",
+				true,
+				"The name of the json summary file. No file is created if this parameter is not specified.");
+		opts.addOption("w", "workflow", true,
 				"The workflow file to be executed by the Application Master");
 		String workflowFormats = "";
 		for (HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS language : HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS
@@ -212,6 +219,7 @@ public class Client {
 			workflowFormats += ", " + language.toString();
 		}
 		opts.addOption(
+				"l",
 				"language",
 				true,
 				"The input file format. Valid arguments: "
@@ -283,17 +291,21 @@ public class Client {
 							+ " Specified memory=" + amMemory);
 		}
 
-		if (!cliParser.hasOption("workflow")) {
-			throw new IllegalArgumentException(
-					"No workflow file specified to be executed by application master");
+		if (cliParser.hasOption("summary")) {
+			String summaryFile = cliParser
+					.getOptionValue("summary");
+			try {
+				summary = new Data((new File(summaryFile)).getCanonicalPath());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 
-		workflowPath = cliParser.getOptionValue("workflow");
-		if (workflowPath.startsWith("/")) {
-			throw new IllegalArgumentException("Only relative paths supported");
-		}
-		if (workflowPath.contains("./")) {
-			throw new IllegalArgumentException("./ and ../ not allowed in path");
+		String workflowPath = cliParser.getOptionValue("workflow");
+		try {
+			workflow = new Data((new File(workflowPath)).getCanonicalPath());
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS
 				.valueOf(cliParser
@@ -464,7 +476,7 @@ public class Client {
 		appContext.setApplicationType(hiWayConf.get(
 				HiWayConfiguration.HIWAY_AM_APPLICATION_TYPE,
 				HiWayConfiguration.HIWAY_AM_APPLICATION_TYPE_DEFAULT));
-		appContext.setApplicationName("run " + workflowPath + " (type: "
+		appContext.setApplicationName("run " + workflow.getName() + " (type: "
 				+ workflowType.toString() + ")");
 		ApplicationId appId = appContext.getApplicationId();
 		sandboxDir = hiWayConf.get(
@@ -502,7 +514,6 @@ public class Client {
 		//
 		// localResources.put(amJarPath.getName(), rsrc);
 
-		Data workflow = new Data(workflowPath);
 		workflow.stageOut(fs, "");
 
 		// set local resource info into app master container launch context
@@ -554,7 +565,10 @@ public class Client {
 		// Set params for Application Master
 		// vargs.add("--container_memory " + String.valueOf(containerMemory));
 		// vargs.add("--container_vcores " + String.valueOf(containerCores));
-		vargs.add("--workflow " + workflowPath);
+		vargs.add("--workflow " + workflow.getLocalPath());
+		if (summary != null) {
+			vargs.add("--summary " + summary.getLocalPath());
+		}
 		// vargs.add("--type " + workflowType.toString());
 		// vargs.add("--scheduler " + scheduler.toString());
 		vargs.add("--appid " + appId.toString());
@@ -630,45 +644,51 @@ public class Client {
 		// Monitor the application
 		boolean success = monitorApplication(appId);
 
-//		ApplicationReport report = yarnClient.getApplicationReport(appId);
-//		String host = report.getHost().substring(0,
-//				report.getHost().indexOf("/"));
-//		String port = conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).substring(
-//				conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).indexOf(":") + 1);
-//		String id = appId.toString().substring(12);
-//		int attemptId = report.getCurrentApplicationAttemptId().getAttemptId();
-//
-//		String amout = "http://" + host + ":" + port
-//				+ "/node/containerlogs/container_" + id + "_0" + attemptId
-//				+ "_000001/" + sandboxDir + "/AppMaster.stdout/?start=0";
-//		String amerr = "http://" + host + ":" + port
-//				+ "/node/containerlogs/container_" + id + "_0" + attemptId
-//				+ "_000001/" + sandboxDir + "/AppMaster.stderr/?start=0";
-//		String statlog = "hdfs://" + fs.getHomeDirectory().toString() + "/"
-//				+ sandboxDir + "/" + appId + "/" + hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT);
-//		
-		String outputFileJson = hiWayConf
-				.get(HiWayConfiguration.HIWAY_CLIENT_OUTPUT_JSON,
-						HiWayConfiguration.HIWAY_CLIENT_OUTPUT_JSON_DEFAULT);
-		new Data(outputFileJson).stageIn(fs, "");
-//		JSONObject obj = new JSONObject();
-//		
-//		try {
-//			try (BufferedReader reader = new BufferedReader(
-//					new FileReader(outputFileJson))) {
-//				obj = new JSONObject(reader.readLine());
-//			}
-//			obj.put("amout", amout);
-//			obj.put("amerr", amerr);
-//			obj.put("statlog", statlog);
-//		} catch (JSONException e) {
-//			e.printStackTrace();
-//		}
-//
-//		try (BufferedWriter writer = new BufferedWriter(
-//				new FileWriter(outputFileJson))) {
-//			writer.write(obj.toString());
-//		}
+		// ApplicationReport report = yarnClient.getApplicationReport(appId);
+		// String host = report.getHost().substring(0,
+		// report.getHost().indexOf("/"));
+		// String port =
+		// conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).substring(
+		// conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).indexOf(":") + 1);
+		// String id = appId.toString().substring(12);
+		// int attemptId =
+		// report.getCurrentApplicationAttemptId().getAttemptId();
+		//
+		// String amout = "http://" + host + ":" + port
+		// + "/node/containerlogs/container_" + id + "_0" + attemptId
+		// + "_000001/" + sandboxDir + "/AppMaster.stdout/?start=0";
+		// String amerr = "http://" + host + ":" + port
+		// + "/node/containerlogs/container_" + id + "_0" + attemptId
+		// + "_000001/" + sandboxDir + "/AppMaster.stderr/?start=0";
+		// String statlog = "hdfs://" + fs.getHomeDirectory().toString() + "/"
+		// + sandboxDir + "/" + appId + "/" +
+		// hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG,
+		// HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT);
+		//
+//		String outputFileJson = hiWayConf.get(
+//				HiWayConfiguration.HIWAY_CLIENT_OUTPUT_JSON,
+//				HiWayConfiguration.HIWAY_CLIENT_OUTPUT_JSON_DEFAULT);
+		if (summary != null) {
+			summary.stageIn(fs, "");
+		}
+		// JSONObject obj = new JSONObject();
+		//
+		// try {
+		// try (BufferedReader reader = new BufferedReader(
+		// new FileReader(outputFileJson))) {
+		// obj = new JSONObject(reader.readLine());
+		// }
+		// obj.put("amout", amout);
+		// obj.put("amerr", amerr);
+		// obj.put("statlog", statlog);
+		// } catch (JSONException e) {
+		// e.printStackTrace();
+		// }
+		//
+		// try (BufferedWriter writer = new BufferedWriter(
+		// new FileWriter(outputFileJson))) {
+		// writer.write(obj.toString());
+		// }
 
 		return success;
 

@@ -90,15 +90,14 @@ public class HiWayConfiguration extends Configuration {
 	public static final String HIWAY_WORKER_SHELL_ENV = "hiway.worker.shell.env";
 	public static final String HIWAY_WORKER_SHELL_ENV_DEFAULT = "";
 	
-	public static final String HIWAY_CLIENT_OUTPUT = "hiway.client.output";
-	public static final boolean HIWAY_CLIENT_OUTPUT_DEFAULT = false;
-	public static final String HIWAY_CLIENT_OUTPUT_JSON = "hiway.client.output.json";
-	public static final String HIWAY_CLIENT_OUTPUT_JSON_DEFAULT = "output.json";
+//	public static final String HIWAY_CLIENT_OUTPUT = "hiway.client.output";
+//	public static final boolean HIWAY_CLIENT_OUTPUT_DEFAULT = false;
+//	public static final String HIWAY_CLIENT_OUTPUT_JSON = "hiway.client.output.json";
+//	public static final String HIWAY_CLIENT_OUTPUT_JSON_DEFAULT = "output.json";
 	public static final String HIWAY_CLIENT_TIMEOUT = "hiway.am.timeout";
 	public static final int HIWAY_CLIENT_TIMEOUT_DEFAULT = 86400;
 	
 //	public static final String BASH_SHEBANG = "#!/usr/bin/env bash\n";
-	
 	public static final String HIWAY_SITE_XML = "hiway-site.xml";
 	
 	static {

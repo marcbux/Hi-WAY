@@ -790,6 +790,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 	private String sandboxDir;
 
+	private String summaryFile;
+
 	// protected void buildPostScript(TaskInstance task, Container container)
 	// throws IOException {
 	// File postScript = new File(Constant.POST_SCRIPT_FILENAME);
@@ -980,15 +982,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 		try {
 			federatedReport.stageOut(fs, "");
-			if (Boolean
-					.parseBoolean(hiWayConf.get(
-							HiWayConfiguration.HIWAY_CLIENT_OUTPUT,
-							Boolean.toString(HiWayConfiguration.HIWAY_CLIENT_OUTPUT_DEFAULT)))) {
-
-				String outputFileJson = hiWayConf.get(
-						HiWayConfiguration.HIWAY_CLIENT_OUTPUT_JSON,
-						HiWayConfiguration.HIWAY_CLIENT_OUTPUT_JSON_DEFAULT);
-
+			if (summaryFile != null) {
 				String host = appMasterHostname.substring(0,
 						appMasterHostname.indexOf("/"));
 				String port = conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS)
@@ -1016,7 +1010,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 								HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT);
 
 				try (BufferedWriter writer = new BufferedWriter(new FileWriter(
-						outputFileJson))) {
+						summaryFile))) {
 					Collection<String> output = new ArrayList<>();
 					for (Data outputFile : getOutputFiles()) {
 						output.add(fs.getHomeDirectory().toString()
@@ -1036,7 +1030,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 					}
 					writer.write(obj.toString());
 				}
-				new Data(outputFileJson).stageOut(fs, "");
+				new Data(summaryFile).stageOut(fs, "");
 			}
 		} catch (IOException e) {
 			log.info("Error when attempting to stage out federated output log.");
@@ -1140,6 +1134,11 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				"App Attempt ID. Not to be used unless for testing purposes");
 		opts.addOption("workflow", true,
 				"The workflow file to be executed by the Application Master");
+		opts.addOption(
+				"s",
+				"summary",
+				true,
+				"The name of the json summary file. No file is created if this parameter is not specified.");
 		// opts.addOption("type", true,
 		// "The input file format. Valid arguments: "
 		// + Constant.WorkflowFormat.values());
@@ -1179,6 +1178,10 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 		if (cliParser.hasOption("debug")) {
 			dumpOutDebugInfo();
+		}
+
+		if (cliParser.hasOption("summary")) {
+			summaryFile = cliParser.getOptionValue("summary");
 		}
 
 		sandboxDir = hiWayConf.get(

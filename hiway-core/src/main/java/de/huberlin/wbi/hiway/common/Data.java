@@ -68,6 +68,8 @@ public class Data implements Comparable<Data> {
 	// non-input files
 	private static String hdfsDirectoryPrefix = "";
 	private static final Log log = LogFactory.getLog(Data.class);
+	
+	private String absoluteLocalDirectoryPrefix = "";
 
 	public static String getHdfsDirectoryPrefix() {
 		return hdfsDirectoryPrefix;
@@ -79,7 +81,7 @@ public class Data implements Comparable<Data> {
 
 	// The local directory and name of the file. The local directory is also the
 	// suffix of the directoy in HDFS.
-	private String directorySuffix;
+	private String directorySuffix = "";
 	// is the file input or output of the workflow (otherwise, its an
 	// intermediate and possibly temporary file product)
 	private boolean input;
@@ -95,8 +97,13 @@ public class Data implements Comparable<Data> {
 		int lastSlash = path.lastIndexOf("/");
 		int endDirectory = (lastSlash > -1) ? lastSlash : 0;
 		int startName = (lastSlash > -1) ? lastSlash + 1 : 0;
-
-		this.directorySuffix = path.substring(0, endDirectory);
+		String prefix = path.substring(0, endDirectory);
+		
+		if (path.startsWith("/")) {
+			this.absoluteLocalDirectoryPrefix = prefix;
+		} else {
+			this.directorySuffix = prefix;
+		}
 		this.name = path.substring(startName);
 	}
 
@@ -224,7 +231,7 @@ public class Data implements Comparable<Data> {
 			throws IOException {
 		Path src = new Path(fs.getHomeDirectory(),
 				getHdfsPath(hdfsDirectoryMidfix));
-		Path dest = new Path(getLocalPath());
+		Path dest = new Path(absoluteLocalDirectoryPrefix.length() > 0 ? absoluteLocalDirectoryPrefix + "/" + name : getLocalPath());
 		log.debug("Staging in: " + src + " -> " + dest);
 		if (!getLocalDirectory().isEmpty()) {
 			Path dir = new Path(getLocalDirectory());
@@ -236,7 +243,7 @@ public class Data implements Comparable<Data> {
 
 	public void stageOut(FileSystem fs, String hdfsDirectoryMidfix)
 			throws IOException {
-		Path src = new Path(getLocalPath());
+		Path src = new Path(absoluteLocalDirectoryPrefix.length() > 0 ? absoluteLocalDirectoryPrefix + "/" + name : getLocalPath());
 		Path dest = new Path(fs.getHomeDirectory(),
 				getHdfsPath(hdfsDirectoryMidfix));
 		log.debug("Staging out: " + src + " -> " + dest);
