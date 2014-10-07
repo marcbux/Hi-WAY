@@ -179,8 +179,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		 * @param containerListener
 		 *            Callback handler of the container
 		 */
-		public LaunchContainerRunnable(Container lcontainer,
-				NMCallbackHandler containerListener, TaskInstance task) {
+		public LaunchContainerRunnable(Container lcontainer, NMCallbackHandler containerListener, TaskInstance task) {
 			this.container = lcontainer;
 			this.containerListener = containerListener;
 			this.task = task;
@@ -192,18 +191,12 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		 */
 		@Override
 		public void run() {
-			log.info("Setting up container launch container for containerid="
-					+ container.getId());
-			ContainerLaunchContext ctx = Records
-					.newRecord(ContainerLaunchContext.class);
+			log.info("Setting up container launch container for containerid=" + container.getId());
+			ContainerLaunchContext ctx = Records.newRecord(ContainerLaunchContext.class);
 
 			// Set the environment
-			StringBuilder classPathEnv = new StringBuilder(
-					Environment.CLASSPATH.$()).append(File.pathSeparatorChar)
-					.append("./*");
-			for (String c : conf.getStrings(
-					YarnConfiguration.YARN_APPLICATION_CLASSPATH,
-					YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
+			StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$()).append(File.pathSeparatorChar).append("./*");
+			for (String c : conf.getStrings(YarnConfiguration.YARN_APPLICATION_CLASSPATH, YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
 				classPathEnv.append(':');
 				classPathEnv.append(File.pathSeparatorChar);
 				classPathEnv.append(c.trim());
@@ -226,8 +219,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			try {
 				String containerId = container.getId().toString();
 				File script = new File(containerId + ".sh");
-				try (BufferedWriter scriptWriter = new BufferedWriter(
-						new FileWriter(script))) {
+				try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(script))) {
 					scriptWriter.write(task.getCommand());
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -238,8 +230,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-				scriptData.addToLocalResourceMap(localResources, fs,
-						containerId);
+				scriptData.addToLocalResourceMap(localResources, fs, containerId);
 			} catch (IOException e1) {
 				log.info("Error during Container startup. exiting");
 				e1.printStackTrace();
@@ -266,9 +257,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			vargs.add("--langLabel " + task.getLanguageLabel());
 			vargs.add("--signature " + task.getSignature());
 			for (Data inputData : task.getInputData()) {
-				vargs.add("--input " + inputData.getLocalPath() + ","
-						+ inputData.isInput() + ","
-						+ Data.hdfsDirectoryMidfixes.get(inputData));
+				vargs.add("--input " + inputData.getLocalPath() + "," + inputData.isInput() + "," + Data.hdfsDirectoryMidfixes.get(inputData));
 			}
 			for (Data outputData : task.getOutputData()) {
 				vargs.add("--output " + outputData.getLocalPath());
@@ -318,24 +307,20 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 
 		@Override
-		public void onContainerStarted(ContainerId containerId,
-				Map<String, ByteBuffer> allServiceResponse) {
+		public void onContainerStarted(ContainerId containerId, Map<String, ByteBuffer> allServiceResponse) {
 			if (log.isDebugEnabled()) {
 				log.debug("Succeeded to start Container " + containerId);
 			}
 			Container container = containers.get(containerId);
 			if (container != null) {
-				nmClientAsync.getContainerStatusAsync(containerId,
-						container.getNodeId());
+				nmClientAsync.getContainerStatusAsync(containerId, container.getNodeId());
 			}
 		}
 
 		@Override
-		public void onContainerStatusReceived(ContainerId containerId,
-				ContainerStatus containerStatus) {
+		public void onContainerStatusReceived(ContainerId containerId, ContainerStatus containerStatus) {
 			if (log.isDebugEnabled()) {
-				log.debug("Container Status: id=" + containerId + ", status="
-						+ containerStatus);
+				log.debug("Container Status: id=" + containerId + ", status=" + containerStatus);
 			}
 		}
 
@@ -348,8 +333,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 
 		@Override
-		public void onGetContainerStatusError(ContainerId containerId,
-				Throwable t) {
+		public void onGetContainerStatusError(ContainerId containerId, Throwable t) {
 			log.error("Failed to query the status of Container " + containerId);
 		}
 
@@ -368,16 +352,12 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 	}
 
-	protected class RMCallbackHandler implements
-			AMRMClientAsync.CallbackHandler {
+	protected class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 		@SuppressWarnings("unchecked")
 		private ContainerRequest findFirstMatchingRequest(Container container) {
-			List<? extends Collection<ContainerRequest>> requestCollections = scheduler
-					.relaxLocality() ? amRMClient.getMatchingRequests(
-					container.getPriority(), ResourceRequest.ANY,
-					container.getResource()) : amRMClient.getMatchingRequests(
-					container.getPriority(), container.getNodeId().getHost(),
-					container.getResource());
+			List<? extends Collection<ContainerRequest>> requestCollections = scheduler.relaxLocality() ? amRMClient.getMatchingRequests(
+					container.getPriority(), ResourceRequest.ANY, container.getResource()) : amRMClient.getMatchingRequests(container.getPriority(), container
+					.getNodeId().getHost(), container.getResource());
 
 			for (Collection<ContainerRequest> requestCollection : requestCollections) {
 				for (ContainerRequest request : requestCollection) {
@@ -393,30 +373,20 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			if (scheduler == null)
 				return 0f;
 			int totalTasks = scheduler.getNumberOfTotalTasks();
-			float progress = (totalTasks == 0) ? 0
-					: (float) numCompletedContainers.get() / totalTasks;
+			float progress = (totalTasks == 0) ? 0 : (float) numCompletedContainers.get() / totalTasks;
 			return progress;
 		}
 
-		protected void launchTask(TaskInstance task,
-				Container allocatedContainer) {
-			containerIdToInvocation.put(allocatedContainer.getId().getId(),
-					new HiWayInvocation(task));
-			log.info("Launching workflow task on a new container." + ", task="
-					+ task + ", containerId=" + allocatedContainer.getId()
-					+ ", containerNode="
-					+ allocatedContainer.getNodeId().getHost() + ":"
-					+ allocatedContainer.getNodeId().getPort()
-					+ ", containerNodeURI="
-					+ allocatedContainer.getNodeHttpAddress()
-					+ ", containerResourceMemory"
-					+ allocatedContainer.getResource().getMemory());
+		protected void launchTask(TaskInstance task, Container allocatedContainer) {
+			containerIdToInvocation.put(allocatedContainer.getId().getId(), new HiWayInvocation(task));
+			log.info("Launching workflow task on a new container." + ", task=" + task + ", containerId=" + allocatedContainer.getId() + ", containerNode="
+					+ allocatedContainer.getNodeId().getHost() + ":" + allocatedContainer.getNodeId().getPort() + ", containerNodeURI="
+					+ allocatedContainer.getNodeHttpAddress() + ", containerResourceMemory" + allocatedContainer.getResource().getMemory());
 
 			// try {
 			// buildScripts(task, allocatedContainer);
 
-			LaunchContainerRunnable runnableLaunchContainer = new LaunchContainerRunnable(
-					allocatedContainer, containerListener, task);
+			LaunchContainerRunnable runnableLaunchContainer = new LaunchContainerRunnable(allocatedContainer, containerListener, task);
 			Thread launchThread = new Thread(runnableLaunchContainer);
 
 			// launch and start the container on a separate thread to
@@ -446,22 +416,16 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 				if (task.getTries() == 1) {
 					JSONObject obj = new JSONObject();
 					try {
-						obj.put(JsonReportEntry.LABEL_REALTIME,
-								Long.toString(toc - tic));
+						obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 					} catch (JSONException e) {
 						e.printStackTrace();
 					}
 					task.getReport().add(
-							new JsonReportEntry(task.getWorkflowId(), task
-									.getTaskId(), task.getTaskName(), task
-									.getLanguageLabel(), task.getSignature(),
-									null, HiwayDBI.KEY_INVOC_TIME_SCHED, obj));
+							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
+									HiwayDBI.KEY_INVOC_TIME_SCHED, obj));
 					task.getReport().add(
-							new JsonReportEntry(task.getWorkflowId(), task
-									.getTaskId(), task.getTaskName(), task
-									.getLanguageLabel(), task.getSignature(),
-									null, HiwayDBI.KEY_INVOC_HOST,
-									allocatedContainer.getNodeId().getHost()));
+							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
+									HiwayDBI.KEY_INVOC_HOST, allocatedContainer.getNodeId().getHost()));
 				}
 				launchTask(task, allocatedContainer);
 			}
@@ -470,8 +434,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		@SuppressWarnings("unchecked")
 		@Override
 		public void onContainersAllocated(List<Container> allocatedContainers) {
-			log.info("Got response from RM for container ask, allocatedCnt="
-					+ allocatedContainers.size());
+			log.info("Got response from RM for container ask, allocatedCnt=" + allocatedContainers.size());
 
 			for (Container container : allocatedContainers) {
 				JSONObject value = new JSONObject();
@@ -481,17 +444,13 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 					value.put("node-id", container.getNodeId());
 					value.put("node-http", container.getNodeHttpAddress());
 					value.put("memory", container.getResource().getMemory());
-					value.put("vcores", container.getResource()
-							.getVirtualCores());
-					value.put("service", container.getContainerToken()
-							.getService());
+					value.put("vcores", container.getResource().getVirtualCores());
+					value.put("service", container.getContainerToken().getService());
 				} catch (JSONException e) {
 					e.printStackTrace();
 				}
 
-				writeEntryToLog(new JsonReportEntry(
-						UUID.fromString(getRunId()), null, null, null, null,
-						null, HiwayDBI.KEY_HIWAY_EVENT, value));
+				writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 				ContainerRequest request = findFirstMatchingRequest(container);
 
 				if (request != null) {
@@ -507,10 +466,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 
 		@Override
-		public void onContainersCompleted(
-				List<ContainerStatus> completedContainers) {
-			log.info("Got response from RM for container ask, completedCnt="
-					+ completedContainers.size());
+		public void onContainersCompleted(List<ContainerStatus> completedContainers) {
+			log.info("Got response from RM for container ask, completedCnt=" + completedContainers.size());
 			for (ContainerStatus containerStatus : completedContainers) {
 
 				JSONObject value = new JSONObject();
@@ -524,14 +481,9 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 					e.printStackTrace();
 				}
 
-				log.info("Got container status for containerID="
-						+ containerStatus.getContainerId() + ", state="
-						+ containerStatus.getState() + ", exitStatus="
-						+ containerStatus.getExitStatus() + ", diagnostics="
-						+ containerStatus.getDiagnostics());
-				writeEntryToLog(new JsonReportEntry(
-						UUID.fromString(getRunId()), null, null, null, null,
-						null, HiwayDBI.KEY_HIWAY_EVENT, value));
+				log.info("Got container status for containerID=" + containerStatus.getContainerId() + ", state=" + containerStatus.getState() + ", exitStatus="
+						+ containerStatus.getExitStatus() + ", diagnostics=" + containerStatus.getDiagnostics());
+				writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 
 				// non complete containers should not be here
 				assert (containerStatus.getState() == ContainerState.COMPLETE);
@@ -543,15 +495,12 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 				if (containerIdToInvocation.containsKey(containerId.getId())) {
 
-					HiWayInvocation invocation = containerIdToInvocation
-							.get(containerStatus.getContainerId().getId());
+					HiWayInvocation invocation = containerIdToInvocation.get(containerStatus.getContainerId().getId());
 					TaskInstance finishedTask = invocation.task;
 
 					if (exitStatus == 0) {
 
-						log.info("Container completed successfully."
-								+ ", containerId="
-								+ containerStatus.getContainerId());
+						log.info("Container completed successfully." + ", containerId=" + containerStatus.getContainerId());
 
 						// this task might have been completed previously (e.g.,
 						// via speculative replication)
@@ -560,22 +509,15 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 							evaluateReport(finishedTask, containerId);
 
-							for (JsonReportEntry entry : finishedTask
-									.getReport()) {
+							for (JsonReportEntry entry : finishedTask.getReport()) {
 								writeEntryToLog(entry);
 							}
 
-							Collection<ContainerId> toBeReleasedContainers = scheduler
-									.taskCompleted(finishedTask,
-											containerStatus,
-											System.currentTimeMillis()
-													- invocation.timestamp);
+							Collection<ContainerId> toBeReleasedContainers = scheduler.taskCompleted(finishedTask, containerStatus, System.currentTimeMillis()
+									- invocation.timestamp);
 							for (ContainerId toBeReleasedContainer : toBeReleasedContainers) {
-								log.info("Killing speculative copy of task "
-										+ finishedTask + " on container "
-										+ toBeReleasedContainer);
-								amRMClient
-										.releaseAssignedContainer(toBeReleasedContainer);
+								log.info("Killing speculative copy of task " + finishedTask + " on container " + toBeReleasedContainer);
+								amRMClient.releaseAssignedContainer(toBeReleasedContainer);
 								numKilledContainers.incrementAndGet();
 							}
 
@@ -589,16 +531,12 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 					// The container was released by the framework (e.g., it was
 					// a speculative copy of a finished task)
-					else if (diagnostics
-							.equals(SchedulerUtils.RELEASED_CONTAINER)) {
-						log.info("Container was released." + ", containerId="
-								+ containerStatus.getContainerId());
+					else if (diagnostics.equals(SchedulerUtils.RELEASED_CONTAINER)) {
+						log.info("Container was released." + ", containerId=" + containerStatus.getContainerId());
 					}
 
 					else if (exitStatus == ExitCode.FORCE_KILLED.getExitCode()) {
-						log.info("Container was force killed."
-								+ ", containerId="
-								+ containerStatus.getContainerId());
+						log.info("Container was force killed." + ", containerId=" + containerStatus.getContainerId());
 					}
 
 					// The container failed horribly.
@@ -609,22 +547,14 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 						metrics.failedTask(finishedTask);
 
 						if (exitStatus == ExitCode.TERMINATED.getExitCode()) {
-							log.info("Container was terminated."
-									+ ", containerId="
-									+ containerStatus.getContainerId());
+							log.info("Container was terminated." + ", containerId=" + containerStatus.getContainerId());
 						} else {
-							log.info("Container completed with failure."
-									+ ", containerId="
-									+ containerStatus.getContainerId());
+							log.info("Container completed with failure." + ", containerId=" + containerStatus.getContainerId());
 
-							Collection<ContainerId> toBeReleasedContainers = scheduler
-									.taskFailed(finishedTask, containerStatus);
+							Collection<ContainerId> toBeReleasedContainers = scheduler.taskFailed(finishedTask, containerStatus);
 							for (ContainerId toBeReleasedContainer : toBeReleasedContainers) {
-								log.info("Killing speculative copy of task "
-										+ finishedTask + " on container "
-										+ toBeReleasedContainer);
-								amRMClient
-										.releaseAssignedContainer(toBeReleasedContainer);
+								log.info("Killing speculative copy of task " + finishedTask + " on container " + toBeReleasedContainer);
+								amRMClient.releaseAssignedContainer(toBeReleasedContainer);
 								numKilledContainers.incrementAndGet();
 
 							}
@@ -666,8 +596,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	// public static int hdfsInstancesPerContainer;
 
 	// a handle to the log, in which any events are recorded
-	private static final Log log = LogFactory
-			.getLog(AbstractApplicationMaster.class);
+	private static final Log log = LogFactory.getLog(AbstractApplicationMaster.class);
 
 	protected static final Log statLog = LogFactory.getLog("statLogger");
 
@@ -926,10 +855,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		log.info("Dump debug output");
 		Map<String, String> envs = System.getenv();
 		for (Map.Entry<String, String> env : envs.entrySet()) {
-			log.info("System env: key=" + env.getKey() + ", val="
-					+ env.getValue());
-			System.out.println("System env: key=" + env.getKey() + ", val="
-					+ env.getValue());
+			log.info("System env: key=" + env.getKey() + ", val=" + env.getValue());
+			System.out.println("System env: key=" + env.getKey() + ", val=" + env.getValue());
 		}
 
 		String cmd = "ls -al";
@@ -939,8 +866,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			pr = run.exec(cmd);
 			pr.waitFor();
 
-			BufferedReader buf = new BufferedReader(new InputStreamReader(
-					pr.getInputStream()));
+			BufferedReader buf = new BufferedReader(new InputStreamReader(pr.getInputStream()));
 			String line = "";
 			while ((line = buf.readLine()) != null) {
 				log.info("System CWD content: " + line);
@@ -975,67 +901,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	// }
 
 	private void finish() {
-		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
-				null, null, null, null, HiwayDBI.KEY_WF_TIME,
-				Long.toString(System.currentTimeMillis()
-						- amRMClient.getStartTime())));
-
-		try {
-			federatedReport.stageOut(fs, "");
-			if (summaryFile != null) {
-				String host = appMasterHostname.substring(0,
-						appMasterHostname.indexOf("/"));
-				String port = conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS)
-						.substring(
-								conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS)
-										.indexOf(":") + 1);
-				String id = appId.toString().substring(12);
-				int attemptId = appAttemptID.getAttemptId();
-
-				String amout = "http://" + host + ":" + port
-						+ "/node/containerlogs/container_" + id + "_0"
-						+ attemptId + "_000001/" + sandboxDir
-						+ "/AppMaster.stdout/?start=0";
-				String amerr = "http://" + host + ":" + port
-						+ "/node/containerlogs/container_" + id + "_0"
-						+ attemptId + "_000001/" + sandboxDir
-						+ "/AppMaster.stderr/?start=0";
-				String statlog = fs.getHomeDirectory().toString()
-						+ "/"
-						+ sandboxDir
-						+ "/"
-						+ appId
-						+ "/"
-						+ hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG,
-								HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT);
-
-				try (BufferedWriter writer = new BufferedWriter(new FileWriter(
-						summaryFile))) {
-					Collection<String> output = new ArrayList<>();
-					for (Data outputFile : getOutputFiles()) {
-						output.add(fs.getHomeDirectory().toString()
-								+ "/"
-								+ outputFile
-										.getHdfsPath(Data.hdfsDirectoryMidfixes
-												.get(outputFile)));
-					}
-					JSONObject obj = new JSONObject();
-					try {
-						obj.put("output", output);
-						obj.put("amout", amout);
-						obj.put("amerr", amerr);
-						obj.put("statlog", statlog);
-					} catch (JSONException e) {
-						e.printStackTrace();
-					}
-					writer.write(obj.toString());
-				}
-				new Data(summaryFile).stageOut(fs, "");
-			}
-		} catch (IOException e) {
-			log.info("Error when attempting to stage out federated output log.");
-			e.printStackTrace();
-		}
+		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null, null, null, null, null, HiwayDBI.KEY_WF_TIME, Long.toString(System
+				.currentTimeMillis() - amRMClient.getStartTime())));
 
 		// Join all launched threads needed for when we time out and we need to
 		// release containers
@@ -1067,19 +934,61 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 		log.info("Total Scheduled Containers: " + numTotalContainers);
 
-		if (numFailedContainers.get() == 0
-				&& numCompletedContainers.get() == numTotalContainers) {
+		if (numFailedContainers.get() == 0 && numCompletedContainers.get() == numTotalContainers) {
 			appStatus = FinalApplicationStatus.SUCCEEDED;
 			// metrics.completedWorkflow(workflow);
 		} else {
 			appStatus = FinalApplicationStatus.FAILED;
 			// metrics.failedWorkflow(workflow);
-			appMessage = "Diagnostics." + ", total=" + numTotalContainers
-					+ ", completed=" + numCompletedContainers.get()
-					+ ", allocated=" + numAllocatedContainers.get()
-					+ ", failed=" + numFailedContainers.get() + ", killed="
-					+ numKilledContainers.get();
+			appMessage = "Diagnostics." + ", total=" + numTotalContainers + ", completed=" + numCompletedContainers.get() + ", allocated="
+					+ numAllocatedContainers.get() + ", failed=" + numFailedContainers.get() + ", killed=" + numKilledContainers.get();
 			success = false;
+		}
+		
+		try {
+			federatedReport.stageOut(fs, "");
+			if (summaryFile != null) {
+//				String host = appMasterHostname.substring(0, appMasterHostname.indexOf("/"));
+//				String port = conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).substring(conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).indexOf(":") + 1);
+//				String id = appId.toString().substring(12);
+//				int attemptId = appAttemptID.getAttemptId();
+
+				// String amout = "http://" + host + ":" + port
+				// + "/node/containerlogs/container_" + id + "_0"
+				// + attemptId + "_000001/" + sandboxDir
+				// + "/AppMaster.stdout/?start=0";
+				// String amerr = "http://" + host + ":" + port
+				// + "/node/containerlogs/container_" + id + "_0"
+				// + attemptId + "_000001/" + sandboxDir
+				// + "/AppMaster.stderr/?start=0";
+				String stdout = fs.getHomeDirectory().toString() + "/" + sandboxDir + "/" + appId + "/AppMaster.stdout";
+				String stderr = fs.getHomeDirectory().toString() + "/" + sandboxDir + "/" + appId + "/AppMaster.stderr";
+				String statlog = fs.getHomeDirectory().toString() + "/" + sandboxDir + "/" + appId + "/"
+						+ hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT);
+
+				try (BufferedWriter writer = new BufferedWriter(new FileWriter(summaryFile))) {
+					Collection<String> output = new ArrayList<>();
+					for (Data outputFile : getOutputFiles()) {
+						output.add(fs.getHomeDirectory().toString() + "/" + outputFile.getHdfsPath(Data.hdfsDirectoryMidfixes.get(outputFile)));
+					}
+					JSONObject obj = new JSONObject();
+					try {
+						obj.put("output", output);
+						obj.put("stdout", stdout);
+						obj.put("stderr", stderr);
+						obj.put("statlog", statlog);
+					} catch (JSONException e) {
+						e.printStackTrace();
+					}
+					writer.write(obj.toString());
+				}
+				new Data("AppMaster.stdout").stageOut(fs, "");
+				new Data("AppMaster.stderr").stageOut(fs, "");
+				new Data(summaryFile).stageOut(fs, "");
+			}
+		} catch (IOException e) {
+			log.info("Error when attempting to stage out federated output log.");
+			e.printStackTrace();
 		}
 
 		try {
@@ -1130,15 +1039,9 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		DefaultMetricsSystem.initialize("ApplicationMaster");
 
 		Options opts = new Options();
-		opts.addOption("app_attempt_id", true,
-				"App Attempt ID. Not to be used unless for testing purposes");
-		opts.addOption("workflow", true,
-				"The workflow file to be executed by the Application Master");
-		opts.addOption(
-				"s",
-				"summary",
-				true,
-				"The name of the json summary file. No file is created if this parameter is not specified.");
+		opts.addOption("app_attempt_id", true, "App Attempt ID. Not to be used unless for testing purposes");
+		opts.addOption("workflow", true, "The workflow file to be executed by the Application Master");
+		opts.addOption("s", "summary", true, "The name of the json summary file. No file is created if this parameter is not specified.");
 		// opts.addOption("type", true,
 		// "The input file format. Valid arguments: "
 		// + Constant.WorkflowFormat.values());
@@ -1160,13 +1063,11 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 		if (args.length == 0) {
 			printUsage(opts);
-			throw new IllegalArgumentException(
-					"No args specified for application master to initialize");
+			throw new IllegalArgumentException("No args specified for application master to initialize");
 		}
 
 		if (!cliParser.hasOption("appid")) {
-			throw new IllegalArgumentException(
-					"No id of Application Master specified");
+			throw new IllegalArgumentException("No id of Application Master specified");
 		}
 
 		appId = cliParser.getOptionValue("appid");
@@ -1184,56 +1085,42 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			summaryFile = cliParser.getOptionValue("summary");
 		}
 
-		sandboxDir = hiWayConf.get(
-				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY,
-				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT);
+		sandboxDir = hiWayConf.get(HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY, HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT);
 		Data.setHdfsDirectoryPrefix(sandboxDir + "/" + appId);
 
 		Map<String, String> envs = System.getenv();
 
 		if (!envs.containsKey(Environment.CONTAINER_ID.name())) {
 			if (cliParser.hasOption("app_attempt_id")) {
-				String appIdStr = cliParser
-						.getOptionValue("app_attempt_id", "");
+				String appIdStr = cliParser.getOptionValue("app_attempt_id", "");
 				appAttemptID = ConverterUtils.toApplicationAttemptId(appIdStr);
 			} else {
-				throw new IllegalArgumentException(
-						"Application Attempt Id not set in the environment");
+				throw new IllegalArgumentException("Application Attempt Id not set in the environment");
 			}
 		} else {
-			ContainerId containerId = ConverterUtils.toContainerId(envs
-					.get(Environment.CONTAINER_ID.name()));
+			ContainerId containerId = ConverterUtils.toContainerId(envs.get(Environment.CONTAINER_ID.name()));
 			appAttemptID = containerId.getApplicationAttemptId();
 		}
 
 		if (!envs.containsKey(ApplicationConstants.APP_SUBMIT_TIME_ENV)) {
-			throw new RuntimeException(ApplicationConstants.APP_SUBMIT_TIME_ENV
-					+ " not set in the environment");
+			throw new RuntimeException(ApplicationConstants.APP_SUBMIT_TIME_ENV + " not set in the environment");
 		}
 		if (!envs.containsKey(Environment.NM_HOST.name())) {
-			throw new RuntimeException(Environment.NM_HOST.name()
-					+ " not set in the environment");
+			throw new RuntimeException(Environment.NM_HOST.name() + " not set in the environment");
 		}
 		if (!envs.containsKey(Environment.NM_HTTP_PORT.name())) {
-			throw new RuntimeException(Environment.NM_HTTP_PORT
-					+ " not set in the environment");
+			throw new RuntimeException(Environment.NM_HTTP_PORT + " not set in the environment");
 		}
 		if (!envs.containsKey(Environment.NM_PORT.name())) {
-			throw new RuntimeException(Environment.NM_PORT.name()
-					+ " not set in the environment");
+			throw new RuntimeException(Environment.NM_PORT.name() + " not set in the environment");
 		}
 
-		log.info("Application master for app" + ", appId="
-				+ appAttemptID.getApplicationId().getId()
-				+ ", clustertimestamp="
-				+ appAttemptID.getApplicationId().getClusterTimestamp()
-				+ ", attemptId=" + appAttemptID.getAttemptId());
+		log.info("Application master for app" + ", appId=" + appAttemptID.getApplicationId().getId() + ", clustertimestamp="
+				+ appAttemptID.getApplicationId().getClusterTimestamp() + ", attemptId=" + appAttemptID.getAttemptId());
 
 		// if (cliParser.hasOption("shell_env")) {
 		// String shellEnvs[] = cliParser.getOptionValues("shell_env");
-		String shellEnvs[] = hiWayConf.getStrings(
-				HiWayConfiguration.HIWAY_WORKER_SHELL_ENV,
-				HiWayConfiguration.HIWAY_WORKER_SHELL_ENV_DEFAULT);
+		String shellEnvs[] = hiWayConf.getStrings(HiWayConfiguration.HIWAY_WORKER_SHELL_ENV, HiWayConfiguration.HIWAY_WORKER_SHELL_ENV_DEFAULT);
 		for (String env : shellEnvs) {
 			env = env.trim();
 			int index = env.indexOf('=');
@@ -1251,25 +1138,17 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		// }
 
 		if (!cliParser.hasOption("workflow")) {
-			throw new IllegalArgumentException(
-					"No workflow file specified to be executed by application master");
+			throw new IllegalArgumentException("No workflow file specified to be executed by application master");
 		}
 
 		workflowPath = cliParser.getOptionValue("workflow");
 		workflowFile = new Data(workflowPath);
-		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS
-				.valueOf(hiWayConf.get(HiWayConfiguration.HIWAY_SCHEDULER,
-						HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
+		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(hiWayConf.get(HiWayConfiguration.HIWAY_SCHEDULER,
+				HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
 
-		containerMemory = hiWayConf.getInt(
-				HiWayConfiguration.HIWAY_WORKER_MEMORY,
-				HiWayConfiguration.HIWAY_WORKER_MEMORY_DEFAULT);
-		containerCores = hiWayConf.getInt(
-				HiWayConfiguration.HIWAY_WORKER_VCORES,
-				HiWayConfiguration.HIWAY_WORKER_VCORES_DEFAULT);
-		requestPriority = hiWayConf.getInt(
-				HiWayConfiguration.HIWAY_WORKER_PRIORITY,
-				HiWayConfiguration.HIWAY_WORKER_PRIORITY_DEFAULT);
+		containerMemory = hiWayConf.getInt(HiWayConfiguration.HIWAY_WORKER_MEMORY, HiWayConfiguration.HIWAY_WORKER_MEMORY_DEFAULT);
+		containerCores = hiWayConf.getInt(HiWayConfiguration.HIWAY_WORKER_VCORES, HiWayConfiguration.HIWAY_WORKER_VCORES_DEFAULT);
+		requestPriority = hiWayConf.getInt(HiWayConfiguration.HIWAY_WORKER_PRIORITY, HiWayConfiguration.HIWAY_WORKER_PRIORITY_DEFAULT);
 		return true;
 	}
 
@@ -1293,8 +1172,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	public boolean run() throws YarnException, IOException {
 		log.info("Starting ApplicationMaster");
 
-		Credentials credentials = UserGroupInformation.getCurrentUser()
-				.getCredentials();
+		Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
 		DataOutputBuffer dob = new DataOutputBuffer();
 		credentials.writeTokenStorageToStream(dob);
 		// Now remove the AM->RM token so that containers cannot access it.
@@ -1329,9 +1207,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		// Register self with ResourceManager. This will start heartbeating to
 		// the RM.
 		appMasterHostname = NetUtils.getHostname();
-		RegisterApplicationMasterResponse response = amRMClient
-				.registerApplicationMaster(appMasterHostname, appMasterRpcPort,
-						appMasterTrackingUrl);
+		RegisterApplicationMasterResponse response = amRMClient.registerApplicationMaster(appMasterHostname, appMasterRpcPort, appMasterTrackingUrl);
 
 		switch (schedulerName) {
 		case staticRoundRobin:
@@ -1379,10 +1255,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			// }
 			// }
 
-			scheduler = schedulerName
-					.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new StaticRoundRobin(
-					getWorkflowName(), fs, hiWayConf) : new HEFT(
-					getWorkflowName(), fs, hiWayConf);
+			scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new StaticRoundRobin(getWorkflowName(), fs, hiWayConf)
+					: new HEFT(getWorkflowName(), fs, hiWayConf);
 			break;
 		case greedyQueue:
 			scheduler = new GreedyQueue(getWorkflowName(), hiWayConf, fs);
@@ -1428,55 +1302,38 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		scheduler.updateRuntimeEstimates(getRunId());
 		// federatedReport = new Data(Constant.LOG_PREFIX + getRunId()
 		// + Constant.LOG_SUFFIX);
-		federatedReport = new Data(hiWayConf.get(
-				HiWayConfiguration.HIWAY_DB_STAT_LOG,
-				HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT));
+		federatedReport = new Data(hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT));
 		// federatedReportWriter = new BufferedWriter(new FileWriter(
 		// federatedReport.getLocalPath()));
-		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
-				null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
+		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null, null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
 
 		// Dump out information about cluster capability as seen by the resource
 		// manager
 		int maxMem = response.getMaximumResourceCapability().getMemory();
-		int maxCores = response.getMaximumResourceCapability()
-				.getVirtualCores();
+		int maxCores = response.getMaximumResourceCapability().getVirtualCores();
 		log.info("Max mem capabililty of resources in this cluster " + maxMem);
 
 		// A resource ask cannot exceed the max.
 		if (containerMemory > maxMem) {
-			log.info("Container memory specified above max threshold of cluster."
-					+ " Using max value."
-					+ ", specified="
-					+ containerMemory
-					+ ", max=" + maxMem);
+			log.info("Container memory specified above max threshold of cluster." + " Using max value." + ", specified=" + containerMemory + ", max=" + maxMem);
 			containerMemory = maxMem;
 		}
 		// hdfsInstancesPerContainer = containerMemory /
 		// Constant.HDFS_MEMORY_REQ;
 		if (containerCores > maxCores) {
-			log.info("Container vcores specified above max threshold of cluster."
-					+ " Using max value."
-					+ ", specified="
-					+ containerCores
-					+ ", max=" + maxCores);
+			log.info("Container vcores specified above max threshold of cluster." + " Using max value." + ", specified=" + containerCores + ", max=" + maxCores);
 			containerCores = maxCores;
 		}
 
 		while (!done) {
 			try {
 				while (scheduler.hasNextNodeRequest()) {
-					ContainerRequest containerAsk = setupContainerAskForRM(scheduler
-							.getNextNodeRequest());
+					ContainerRequest containerAsk = setupContainerAskForRM(scheduler.getNextNodeRequest());
 					amRMClient.addContainerRequest(containerAsk);
 				}
 				Thread.sleep(1000);
-				log.info("Current application state: requested="
-						+ numRequestedContainers + ", completed="
-						+ numCompletedContainers + ", failed="
-						+ numFailedContainers + ", killed="
-						+ numKilledContainers + ", allocated="
-						+ numAllocatedContainers);
+				log.info("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
+						+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
 			} catch (InterruptedException ex) {
 			}
 		}
@@ -1506,8 +1363,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		capability.setMemory(containerMemory);
 		capability.setVirtualCores(containerCores);
 
-		ContainerRequest request = new ContainerRequest(capability, nodes,
-				null, pri, scheduler.relaxLocality());
+		ContainerRequest request = new ContainerRequest(capability, nodes, null, pri, scheduler.relaxLocality());
 		JSONObject value = new JSONObject();
 		try {
 			value.put("type", "container-requested");
@@ -1519,10 +1375,8 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			e.printStackTrace();
 		}
 
-		log.info("Requested container ask: " + request.toString() + " Nodes"
-				+ Arrays.toString(nodes));
-		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null,
-				null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
+		log.info("Requested container ask: " + request.toString() + " Nodes" + Arrays.toString(nodes));
+		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 		return request;
 	}
 
@@ -1539,8 +1393,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 			// (a) evaluate report
 			Set<JsonReportEntry> report = task.getReport();
-			try (BufferedReader reader = new BufferedReader(new FileReader(
-					Invocation.REPORT_FILENAME))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.REPORT_FILENAME))) {
 				String line;
 				while ((line = reader.readLine()) != null) {
 					line = line.trim();
@@ -1549,48 +1402,35 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 					report.add(new JsonReportEntry(line));
 				}
 			}
-			try (BufferedReader reader = new BufferedReader(new FileReader(
-					Invocation.STDOUT_FILENAME))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.STDOUT_FILENAME))) {
 				String line;
 				StringBuffer sb = new StringBuffer();
 				while ((line = reader.readLine()) != null) {
-					sb.append(
-							line.replaceAll("\\\\", "\\\\\\\\").replaceAll(
-									"\"", "\\\"")).append('\n');
+					sb.append(line.replaceAll("\\\\", "\\\\\\\\").replaceAll("\"", "\\\"")).append('\n');
 				}
 				String s = sb.toString();
 				if (s.length() > 0) {
-					JsonReportEntry re = new JsonReportEntry(
-							task.getWorkflowId(), task.getTaskId(),
-							task.getTaskName(), task.getLanguageLabel(),
-							task.getSignature(), null,
-							JsonReportEntry.KEY_INVOC_STDOUT, sb.toString());
+					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
+							task.getSignature(), null, JsonReportEntry.KEY_INVOC_STDOUT, sb.toString());
 					report.add(re);
 				}
 			}
-			try (BufferedReader reader = new BufferedReader(new FileReader(
-					Invocation.STDERR_FILENAME))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.STDERR_FILENAME))) {
 				String line;
 				StringBuffer sb = new StringBuffer();
 				while ((line = reader.readLine()) != null) {
-					sb.append(
-							line.replaceAll("\\\\", "\\\\\\\\").replaceAll(
-									"\"", "\\\"")).append('\n');
+					sb.append(line.replaceAll("\\\\", "\\\\\\\\").replaceAll("\"", "\\\"")).append('\n');
 				}
 				String s = sb.toString();
 				if (s.length() > 0) {
-					JsonReportEntry re = new JsonReportEntry(
-							task.getWorkflowId(), task.getTaskId(),
-							task.getTaskName(), task.getLanguageLabel(),
-							task.getSignature(), null,
-							JsonReportEntry.KEY_INVOC_STDERR, sb.toString());
+					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
+							task.getSignature(), null, JsonReportEntry.KEY_INVOC_STDERR, sb.toString());
 					report.add(re);
 				}
 			}
 
 		} catch (Exception e) {
-			log.info("Error when attempting to evaluate report of invocation "
-					+ task.toString() + ". exiting");
+			log.info("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
 			e.printStackTrace();
 			System.exit(1);
 		}

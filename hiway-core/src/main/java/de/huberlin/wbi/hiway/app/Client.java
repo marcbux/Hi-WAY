@@ -581,9 +581,9 @@ public class Client {
 			vargs.add("--debug");
 		}
 
-		vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+		vargs.add("1>&1 | tee AppMaster.stdout > " + ApplicationConstants.LOG_DIR_EXPANSION_VAR
 				+ "/AppMaster.stdout");
-		vargs.add("2>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+		vargs.add("2>&2 | tee AppMaster.stderr > " + ApplicationConstants.LOG_DIR_EXPANSION_VAR
 				+ "/AppMaster.stderr");
 
 		// Get final command
