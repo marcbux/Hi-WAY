@@ -45,7 +45,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 
 import de.huberlin.wbi.hiway.app.HiWayConfiguration;
-import de.huberlin.wbi.hiway.common.AbstractTaskInstance;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
@@ -177,7 +176,7 @@ public class HEFT extends StaticScheduler {
 	@Override
 	public void addTasks(Collection<TaskInstance> tasks) {
 		List<TaskInstance> taskList = new LinkedList<>(tasks);
-		Collections.sort(taskList, AbstractTaskInstance.Comparators.DEPTH);
+		Collections.sort(taskList, TaskInstance.Comparators.DEPTH);
 
 		Collection<String> nodes = runtimeEstimatesPerNode.keySet();
 
@@ -216,7 +215,7 @@ public class HEFT extends StaticScheduler {
 
 		// Phase 1: Task Prioritizing (sort by decreasing order of rank)
 		Collections
-				.sort(taskList, AbstractTaskInstance.Comparators.UPWARDSRANK);
+				.sort(taskList, TaskInstance.Comparators.UPWARDSRANK);
 
 		// Phase 2: Processor Selection
 		for (TaskInstance task : taskList) {

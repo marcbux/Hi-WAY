@@ -42,7 +42,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 
 import de.huberlin.wbi.hiway.app.HiWayConfiguration;
-import de.huberlin.wbi.hiway.common.AbstractTaskInstance;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -80,7 +79,7 @@ public class StaticRoundRobin extends StaticScheduler {
 	@Override
 	public void addTasks(Collection<TaskInstance> tasks) {
 		List<TaskInstance> taskList = new LinkedList<>(tasks);
-		Collections.sort(taskList, AbstractTaskInstance.Comparators.DEPTH);
+		Collections.sort(taskList, TaskInstance.Comparators.DEPTH);
 		super.addTasks(taskList);
 	}
 

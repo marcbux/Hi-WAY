@@ -49,7 +49,6 @@ import org.junit.Test;
 
 //import de.huberlin.wbi.hiway.app.ApplicationMaster;
 //import de.huberlin.wbi.hiway.app.DaxApplicationMaster;
-import de.huberlin.wbi.hiway.common.AbstractTaskInstance;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.C3PO;
 import de.huberlin.wbi.hiway.scheduler.GreedyQueue;
@@ -123,7 +122,7 @@ public class TestScheduler {
 		List<TaskInstance> tasks = new ArrayList<>();
 		for (String taskName : taskNames) {
 			for (int i = 0; i < nTasks[taskNames.indexOf(taskName)]; i++)
-				tasks.add(new AbstractTaskInstance(UUID.randomUUID(), taskName,
+				tasks.add(new TaskInstance(UUID.randomUUID(), taskName,
 						taskName.hashCode()));
 		}
 

@@ -413,7 +413,8 @@ public class C3PO extends AbstractScheduler {
 							/ ((double) dataLocalityStatistic.totalData);
 				} catch (IOException e) {
 					log.info("Error during hdfs block location determination.");
-					e.printStackTrace();
+					logStackTrace(e);
+					System.exit(1);
 				}
 			}
 		}
@@ -444,6 +445,8 @@ public class C3PO extends AbstractScheduler {
 
 	@Override
 	public TaskInstance getNextTask(Container container) {
+		TaskInstance task = null;
+		
 		super.getNextTask(container);
 
 		boolean replicate = getNumberOfReadyTasks() == 0;
@@ -487,7 +490,7 @@ public class C3PO extends AbstractScheduler {
 					queue = readyTasks.get(taskId);
 				}
 
-				TaskInstance task = queue.remove();
+				task = queue.remove();
 				runningTasks.get(taskId).add(task);
 				if (!taskToContainers.containsKey(task)) {
 					taskToContainers.put(task, new ArrayList<Container>());
@@ -510,7 +513,7 @@ public class C3PO extends AbstractScheduler {
 			min = max;
 		}
 
-		return null;
+		return task;
 	}
 
 //	@Override

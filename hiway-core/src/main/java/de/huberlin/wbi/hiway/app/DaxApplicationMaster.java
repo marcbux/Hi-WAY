@@ -35,10 +35,12 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
 import java.util.UUID;
 
 import org.apache.commons.logging.Log;
@@ -49,7 +51,6 @@ import org.json.JSONObject;
 
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.common.AbstractTaskInstance;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
@@ -87,22 +88,78 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 	// }
 	// }
 
-	private static final Log log = LogFactory
-			.getLog(DaxApplicationMaster.class);
+	public class DaxTaskInstance extends TaskInstance {
 
-	public static void main(String[] args) {
-		AbstractApplicationMaster.loop(new DaxApplicationMaster(), args);
+		Map<Data, Long> fileSizes;
+		double runtime;
+
+		public DaxTaskInstance(UUID workflowId, String taskName, long taskId) {
+			super(workflowId, taskName, taskId);
+			fileSizes = new HashMap<>();
+			determineFileSizes = true;
+		}
+
+		public void setRuntime(double runtime) {
+			this.runtime = runtime;
+		}
+
+		public void addInputData(Data data, Long fileSize) {
+			super.addInputData(data);
+			fileSizes.put(data, fileSize);
+		}
+
+		public void addOutputData(Data data, Long fileSize) {
+			super.addOutputData(data);
+			fileSizes.put(data, fileSize);
+		}
+
+		@Override
+		public String getCommand() {
+			if (runtime > 0) {
+				StringBuilder sb = new StringBuilder("sleep " + runtime + "\n");
+				for (Data output : getOutputData()) {
+					sb.append("dd if=/dev/zero of=" + output.getLocalPath() + " bs=" + fileSizes.get(output) + " count=1\n");
+				}
+				return sb.toString();
+			}
+			return super.getCommand();
+		}
+
+		@Override
+		public Set<Data> getInputData() {
+			if (runtime > 0) {
+				Set<Data> intermediateData = new HashSet<>();
+				for (Data input : super.getInputData()) {
+					if (!input.isInput()) {
+						intermediateData.add(input);
+					} else {
+						writeEntryToLog(new JsonReportEntry(getWorkflowId(), getTaskId(), getTaskName(), getLanguageLabel(), getSignature(),
+								input.getLocalPath(), JsonReportEntry.KEY_FILE_SIZE_STAGEIN, Long.toString(fileSizes.get(input))));
+					}
+				}
+				return intermediateData;
+			}
+			return super.getInputData();
+		}
 	}
 
+	private static final Log log = LogFactory.getLog(DaxApplicationMaster.class);
+
 	private ADag dag;
+	private UUID runId;
 
 	public DaxApplicationMaster() {
 		super();
+		runId = UUID.randomUUID();
 	}
 
 	@Override
-	public String getRunId() {
-		return dag.getWorkflowUUID();
+	public UUID getRunId() {
+		return runId;
+	}
+
+	public static void main(String[] args) {
+		AbstractApplicationMaster.loop(new DaxApplicationMaster(), args);
 	}
 
 	@Override
@@ -120,11 +177,9 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 		logger.setLevel(5);
 		bag.add(PegasusBag.PEGASUS_LOGMANAGER, logger);
 
-		DAXParser daxParser = DAXParserFactory.loadDAXParser(bag, "DAX2CDAG",
-				workflowFile.getLocalPath());
+		DAXParser daxParser = DAXParserFactory.loadDAXParser(bag, "DAX2CDAG", workflowFile.getLocalPath());
 		((Parser) daxParser).startParser(workflowFile.getLocalPath());
-		dag = (ADag) ((DAX2CDAG) daxParser.getDAXCallback())
-				.getConstructedObject();
+		dag = (ADag) ((DAX2CDAG) daxParser.getDAXCallback()).getConstructedObject();
 
 		log.info("Generating Workflow " + dag.getAbstractWorkflowName());
 
@@ -133,27 +188,30 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 			jobQueue.add((String) rootNode);
 		}
 
+		Map<TaskInstance, Job> taskToJob = new HashMap<>();
+
 		while (!jobQueue.isEmpty()) {
 			String jobName = jobQueue.remove();
 			Job job = dag.getSubInfo(jobName);
 			String taskId = job.getID();
 
 			String taskName = job.getTXName();
-			TaskInstance task = new AbstractTaskInstance(UUID.fromString(dag
-					.getWorkflowUUID()), taskName,
-					Math.abs(taskName.hashCode()));
+			DaxTaskInstance task = new DaxTaskInstance(getRunId(), taskName, Math.abs(taskName.hashCode()));
+			task.setRuntime(job.getRuntime());
+			taskToJob.put(task, job);
 			task.setSignature(Math.abs(taskId.hashCode()));
 			tasks.put(taskId, task);
 
 			for (Object input : job.getInputFiles()) {
-				String inputName = ((PegasusFile) input).getLFN();
+				PegasusFile file = (PegasusFile) input;
+				String inputName = file.getLFN();
 				if (!files.containsKey(inputName)) {
 					Data data = new Data(inputName);
 					data.setInput(true);
 					files.put(inputName, data);
 				}
 				Data data = files.get(inputName);
-				task.addInputData(data);
+				task.addInputData(data, (long) file.getSize());
 			}
 
 			if (job.getOutputFiles().size() > 0) {
@@ -161,22 +219,20 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 				List<String> outputs = new LinkedList<>();
 
 				for (Object output : job.getOutputFiles()) {
-					String outputName = ((PegasusFile) output).getLFN();
+					PegasusFile file = (PegasusFile) output;
+					String outputName = file.getLFN();
 					if (!files.containsKey(outputName))
 						files.put(outputName, new Data(outputName));
 					Data data = files.get(outputName);
-					task.addOutputData(data);
+					task.addOutputData(data, (long) file.getSize());
 					data.setInput(false);
 					outputs.add(outputName);
 				}
 
 				try {
 					task.getReport().add(
-							new JsonReportEntry(task.getWorkflowId(), task
-									.getTaskId(), task.getTaskName(), task
-									.getLanguageLabel(), task.getSignature(),
-									null, JsonReportEntry.KEY_INVOC_OUTPUT,
-									new JSONObject().put("output", outputs)));
+							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
+									JsonReportEntry.KEY_INVOC_OUTPUT, new JSONObject().put("output", outputs)));
 				} catch (JSONException e) {
 					e.printStackTrace();
 				}
@@ -195,16 +251,12 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 
 			for (Object child : dag.getChildren(jobName)) {
 				String childName = (String) child;
-				if (!tasks.containsKey(child)
-						&& tasks.keySet()
-								.containsAll(dag.getParents(childName)))
+				if (!tasks.containsKey(child) && tasks.keySet().containsAll(dag.getParents(childName)))
 					jobQueue.add(childName);
 			}
 
-			log.info("Adding task " + task + ": " + task.getInputData()
-					+ " -> " + task.getOutputData());
-
 			task.setCommand(taskName + job.getArguments().replaceAll(" +", " "));
+			log.info("Adding task " + task + ": " + task.getInputData() + " -> " + task.getOutputData());
 		}
 
 		for (TaskInstance task : tasks.values()) {
@@ -218,6 +270,9 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 				e.printStackTrace();
 				System.exit(1);
 			}
+
+			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
+					JsonReportEntry.KEY_INVOC_EXEC, task.getCommand()));
 		}
 
 		scheduler.addTasks(tasks.values());
@@ -234,8 +289,7 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 			stdoutFile.stageIn(fs, containerId.toString());
 
 			log.error("[out]");
-			try (BufferedReader reader = new BufferedReader(new FileReader(
-					new File(stdoutFile.getLocalPath())))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stdoutFile.getLocalPath())))) {
 				while ((line = reader.readLine()) != null)
 					log.error(line);
 			}
@@ -248,8 +302,7 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 			stderrFile.stageIn(fs, containerId.toString());
 
 			log.error("[err]");
-			try (BufferedReader reader = new BufferedReader(new FileReader(
-					new File(stderrFile.getLocalPath())))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stderrFile.getLocalPath())))) {
 				while ((line = reader.readLine()) != null)
 					log.error(line);
 			}
@@ -274,8 +327,7 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 		for (Data data : task.getOutputData()) {
 			Data.hdfsDirectoryMidfixes.put(data, containerId.toString());
 		}
-		if (scheduler.getNumberOfReadyTasks() == 0
-				&& scheduler.getNumberOfRunningTasks() == 0) {
+		if (scheduler.getNumberOfReadyTasks() == 0 && scheduler.getNumberOfRunningTasks() == 0) {
 			done = true;
 		}
 	}

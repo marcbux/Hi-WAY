@@ -60,48 +60,39 @@ import de.huberlin.wbi.cuneiform.core.semanticmodel.Ticket;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketFailedMsg;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketFinishedMsg;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketSrcActor;
-import de.huberlin.wbi.hiway.common.AbstractTaskInstance;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
-	public class CuneiformTaskInstance extends AbstractTaskInstance {
+	public class CuneiformTaskInstance extends TaskInstance {
 
 		private Invocation invocation;
 
 		public CuneiformTaskInstance(Invocation invocation) {
-			super(invocation.getRunId(), invocation.getTaskName(), invocation
-					.getTaskId(), invocation.getLangLabel());
+			super(invocation.getRunId(), invocation.getTaskName(), invocation.getTaskId(), invocation.getLangLabel());
 			this.invocation = invocation;
 		}
 
 		@Override
-		public void addChildTask(TaskInstance childTask)
-				throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException(
-					"Workflow structure not derivable in Cuneiform");
+		public void addChildTask(TaskInstance childTask) throws WorkflowStructureUnknownException {
+			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
 		}
 
 		@Override
-		public void addParentTask(TaskInstance parentTask)
-				throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException(
-					"Workflow structure not derivable in Cuneiform");
+		public void addParentTask(TaskInstance parentTask) throws WorkflowStructureUnknownException {
+			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
 		}
 
 		@Override
-		public Set<TaskInstance> getChildTasks()
-				throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException(
-					"Workflow structure not derivable in Cuneiform");
+		public Set<TaskInstance> getChildTasks() throws WorkflowStructureUnknownException {
+			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
 		}
 
 		@Override
 		public int getDepth() throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException(
-					"Workflow structure not derivable in Cuneiform");
+			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
 		}
 
 		public Invocation getInvocation() {
@@ -109,16 +100,13 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		}
 
 		@Override
-		public Set<TaskInstance> getParentTasks()
-				throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException(
-					"Workflow structure not derivable in Cuneiform");
+		public Set<TaskInstance> getParentTasks() throws WorkflowStructureUnknownException {
+			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
 		}
 
 		@Override
 		public double getUpwardRank() throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException(
-					"Workflow structure not derivable in Cuneiform");
+			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
 		}
 
 		@Override
@@ -127,17 +115,13 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		}
 
 		@Override
-		public void setDepth(int depth)
-				throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException(
-					"Workflow structure not derivable in Cuneiform");
+		public void setDepth(int depth) throws WorkflowStructureUnknownException {
+			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
 		}
 
 		@Override
-		public void setUpwardRank(double upwardRank)
-				throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException(
-					"Workflow structure not derivable in Cuneiform");
+		public void setUpwardRank(double upwardRank) throws WorkflowStructureUnknownException {
+			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
 		}
 
 	}
@@ -150,7 +134,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 			Ticket ticket = msg.getTicket();
 
-			writeEntryToLog(ticket.getExecutableLogEntry());
+			// writeEntryToLog(ticket.getExecutableLogEntry());
 
 			Invocation invoc = Invocation.createInvocation(ticket);
 			TaskInstance task = new CuneiformTaskInstance(invoc);
@@ -173,7 +157,9 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			}
 
 			try {
-				task.setCommand(invoc.toScript());
+				String script = invoc.toScript();
+				task.setCommand(script);
+				writeEntryToLog(new JsonReportEntry(invoc, null, JsonReportEntry.KEY_INVOC_EXEC, script));
 			} catch (NotBoundException | NotDerivableException e) {
 				e.printStackTrace();
 			}
@@ -194,15 +180,15 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 	public class HiWayRepl extends BaseRepl {
 
 		@Override
-		protected void flushStatLog(Set<JsonReportEntry> reportEntrySet) {}
-		
+		protected void flushStatLog(Set<JsonReportEntry> reportEntrySet) {
+		}
+
 		public HiWayRepl(TicketSrcActor ticketSrc) {
 			super(ticketSrc);
 		}
 
 		@Override
-		public void queryFailedPost(UUID queryId, Long ticketId, Exception e,
-				String script, String stdOut, String stdErr) {
+		public void queryFailedPost(UUID queryId, Long ticketId, Exception e, String script, String stdOut, String stdErr) {
 			log.info("Query failed.");
 			done = true;
 		}
@@ -228,10 +214,10 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 	}
 
-	public static final String CUNEIFORM_SCRIPT_FILENAME = "__cuneiform_script__";
+	// public static final String CUNEIFORM_SCRIPT_FILENAME =
+	// "__cuneiform_script__";
 
-	private static final Log log = LogFactory
-			.getLog(CuneiformApplicationMaster.class);
+	private static final Log log = LogFactory.getLog(CuneiformApplicationMaster.class);
 
 	public static void main(String[] args) {
 		AbstractApplicationMaster.loop(new CuneiformApplicationMaster(), args);
@@ -260,8 +246,8 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 	// private Map<CuneiformTaskInstance, Invocation> taskToInvocation;
 
 	@Override
-	public String getRunId() {
-		return (ticketSrc.getRunId().toString());
+	public UUID getRunId() {
+		return (ticketSrc.getRunId());
 	}
 
 	// @Override
@@ -343,8 +329,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		StringBuffer buf = new StringBuffer();
 
 		try {
-			try (BufferedReader reader = new BufferedReader(new FileReader(
-					new File(workflowFile.getLocalPath())))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(workflowFile.getLocalPath())))) {
 				String line;
 				while ((line = reader.readLine()) != null) {
 					buf.append(line).append('\n');
@@ -370,8 +355,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		try {
 			script = invocation.toScript();
 			log.error("[script]");
-			try (BufferedReader reader = new BufferedReader(new StringReader(
-					script))) {
+			try (BufferedReader reader = new BufferedReader(new StringReader(script))) {
 				int i = 0;
 				while ((line = reader.readLine()) != null)
 					log.error(String.format("%02d  %s", ++i, line));
@@ -384,8 +368,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
 			stdoutFile.stageIn(fs, containerId.toString());
 			StringBuffer buf = new StringBuffer();
-			try (BufferedReader reader = new BufferedReader(new FileReader(
-					new File(stdoutFile.getLocalPath())))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stdoutFile.getLocalPath())))) {
 
 				while ((line = reader.readLine()) != null)
 					buf.append(line).append('\n');
@@ -401,8 +384,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
 			stderrFile.stageIn(fs, containerId.toString());
 			StringBuffer buf = new StringBuffer();
-			try (BufferedReader reader = new BufferedReader(new FileReader(
-					new File(stderrFile.getLocalPath())))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stderrFile.getLocalPath())))) {
 
 				while ((line = reader.readLine()) != null)
 					buf.append(line).append('\n');
@@ -416,12 +398,10 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 		log.error("[end]");
 
-		if (!task.retry(hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES,
-				HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
+		if (!task.retry(hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
 			// ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
 			// .getTicket(), script, stdOut, stdErr));
-			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
-					.getTicket(), null, script, stdOut, stdErr));
+			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, script, stdOut, stdErr));
 		}
 
 	}
@@ -429,11 +409,9 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
 		try {
-			Invocation invocation = ((CuneiformTaskInstance) task)
-					.getInvocation();
+			Invocation invocation = ((CuneiformTaskInstance) task).getInvocation();
 			invocation.evalReport(task.getReport());
-			ticketSrc.sendMsg(new TicketFinishedMsg(creActor, invocation
-					.getTicket(), task.getReport()));
+			ticketSrc.sendMsg(new TicketFinishedMsg(creActor, invocation.getTicket(), task.getReport()));
 			log.info("Message sent.");
 
 			// (b) set output files
@@ -454,8 +432,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			}
 
 		} catch (Exception e) {
-			log.info("Error when attempting to evaluate report of invocation "
-					+ task.toString() + ". exiting");
+			log.info("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
 			e.printStackTrace();
 			System.exit(1);
 		}

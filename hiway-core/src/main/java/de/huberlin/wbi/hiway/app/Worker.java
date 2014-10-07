@@ -81,6 +81,7 @@ public class Worker {
 	private long signature;
 	private long taskId;
 	private String taskName;
+	private boolean determineFileSizes = false;
 
 	FileSystem fs;
 	protected HiWayConfiguration hiWayConf;
@@ -96,30 +97,6 @@ public class Worker {
 	}
 
 	private int exec() {
-		// List<String> commands = new LinkedList<>();
-		// commands.add("/usr/bin/time");
-		// commands.add("-a");
-		// commands.add("-o");
-		// commands.add(Invocation.REPORT_FILENAME);
-		// commands.add("-f");
-		// commands.add("{" + JsonReportEntry.ATT_TIMESTAMP + ":"
-		// + System.currentTimeMillis() + "," + JsonReportEntry.ATT_RUNID
-		// + ":\"" + workflowId + "\"," + JsonReportEntry.ATT_TASKID + ":"
-		// + taskId + "," + JsonReportEntry.ATT_TASKNAME + ":\""
-		// + taskName + "\"," + JsonReportEntry.ATT_LANG + ":\""
-		// + langLabel + "\"," + JsonReportEntry.ATT_INVOCID + ":"
-		// + signature + "," + JsonReportEntry.ATT_KEY + ":\""
-		// + JsonReportEntry.KEY_INVOC_TIME + "\","
-		// + JsonReportEntry.ATT_VALUE + ":"
-		// + "{\"realTime\":%e,\"userTime\":%U,\"sysTime\":%S,"
-		// + "\"maxResidentSetSize\":%M,\"avgResidentSetSize\":%t,"
-		// + "\"avgDataSize\":%D,\"avgStackSize\":%p,\"avgTextSize\":%X,"
-		// + "\"nMajPageFault\":%F,\"nMinPageFault\":%R,"
-		// + "\"nSwapOutMainMem\":%W,\"nForcedContextSwitch\":%c,"
-		// + "\"nWaitContextSwitch\":%w,\"nIoRead\":%I,\"nIoWrite\":%O,"
-		// + "\"nSocketRead\":%r,\"nSocketWrite\":%s,\"nSignal\":%k}}");
-		// commands.add("./" + containerId + ".sh");
-
 		File script = new File("./" + containerId + ".sh");
 		script.setExecutable(true);
 		ProcessBuilder processBuilder = new ProcessBuilder(script.getPath());
@@ -127,30 +104,19 @@ public class Worker {
 		Process process;
 		int exitValue = -1;
 		try {
-			// File stdInFile = new File("__stdin__.txt");
 			File stdOutFile = new File(Invocation.STDOUT_FILENAME);
 			File stdErrFile = new File(Invocation.STDERR_FILENAME);
-			// stdInFile.createNewFile();
-			// stdOutFile.createNewFile();
-			// stdErrFile.createNewFile();
-			// processBuilder.redirectInput(stdInFile);
 			processBuilder.redirectOutput(stdOutFile);
 			processBuilder.redirectError(stdErrFile);
-			// processBuilder.inheritIO();
 			process = processBuilder.start();
 			exitValue = process.waitFor();
-			
-			
-
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		
+
 		return exitValue;
-		
-		
 	}
 
 	public void init(String[] args) throws ParseException {
@@ -158,8 +124,7 @@ public class Worker {
 		dir = Paths.get(".");
 
 		Options opts = new Options();
-		opts.addOption("appId", true,
-				"Id of this Container's Application Master.");
+		opts.addOption("appId", true, "Id of this Container's Application Master.");
 		opts.addOption("containerId", true, "Id of this Container.");
 		opts.addOption("workflowId", true, "");
 		opts.addOption("taskId", true, "");
@@ -168,6 +133,7 @@ public class Worker {
 		opts.addOption("signature", true, "");
 		opts.addOption("input", true, "");
 		opts.addOption("output", true, "");
+		opts.addOption("size", false, "");
 
 		CommandLine cliParser = new GnuParser().parse(opts, args);
 		appId = cliParser.getOptionValue("appId");
@@ -186,64 +152,42 @@ public class Worker {
 				inputFiles.add(input);
 			}
 		}
+		if (cliParser.hasOption("size")) {
+			determineFileSizes = true;
+		}
 		if (cliParser.hasOption("output")) {
 			for (String output : cliParser.getOptionValues("output")) {
 				outputFiles.add(new Data(output));
 			}
 		}
 
-		Data.setHdfsDirectoryPrefix(hiWayConf.get(
-				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY,
-				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT) + "/" + appId);
+		Data.setHdfsDirectoryPrefix(hiWayConf.get(HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY, HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT) + "/"
+				+ appId);
 
 		Configuration conf = new YarnConfiguration();
 		conf.addResource("core-site.xml");
 		try {
 			fs = FileSystem.get(conf);
-			// for (Path file : files) {
-			// Data data = new Data(dir.relativize(file).toString());
-			// data.stageOut(fs, containerId);
-			// }
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	// private Set<Path> parseDir(Path dir) throws IOException {
-	// Set<Path> files = new HashSet<>();
-	// for (Path file : Files.newDirectoryStream(dir)) {
-	// if (Files.isDirectory(file)) {
-	// files.addAll(parseDir(file));
-	// } else {
-	// files.add(file);
-	// }
-	// }
-	// return files;
-	// }
-
 	public void run() throws IOException, JSONException {
-		// Set<Path> oldFiles = parseDir(dir);
-		// oldFiles.remove(Paths.get("./", Invocation.STDOUT_FILENAME));
-		// oldFiles.remove(Paths.get("./", Invocation.STDERR_FILENAME));
-		// System.out.println("Starting execution");
-
 		long tic = System.currentTimeMillis();
 		stageIn();
 		long toc = System.currentTimeMillis();
 		JSONObject obj = new JSONObject();
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName,
-				langLabel, signature, null, HiwayDBI.KEY_INVOC_TIME_STAGEIN,
-				obj));
+		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, null, HiwayDBI.KEY_INVOC_TIME_STAGEIN, obj));
 
 		tic = System.currentTimeMillis();
 		int exitValue = exec();
 		toc = System.currentTimeMillis();
 		obj = new JSONObject();
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName,
-				langLabel, signature, null, JsonReportEntry.KEY_INVOC_TIME, obj));
-		
+		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, null, JsonReportEntry.KEY_INVOC_TIME, obj));
+
 		tic = System.currentTimeMillis();
 		new Data(Invocation.STDOUT_FILENAME).stageOut(fs, containerId);
 		new Data(Invocation.STDERR_FILENAME).stageOut(fs, containerId);
@@ -254,18 +198,9 @@ public class Worker {
 		toc = System.currentTimeMillis();
 		obj = new JSONObject();
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName,
-				langLabel, signature, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT,
-				obj));
-		
-		new Data(Invocation.REPORT_FILENAME).stageOut(fs, containerId);
+		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT, obj));
 
-		// System.out.println("Starting traversal");
-		// Set<Path> newFiles = parseDir(dir);
-		// newFiles.removeAll(oldFiles);
-		// newFiles.removeAll(traverseSymbolicLinks(newFiles));
-		// System.out.println("Starting stageout");
-		// stageOut(newFiles);
+		new Data(Invocation.REPORT_FILENAME).stageOut(fs, containerId);
 	}
 
 	public void stageIn() throws IOException, JSONException {
@@ -275,20 +210,22 @@ public class Worker {
 			long toc = System.currentTimeMillis();
 			JSONObject obj = new JSONObject();
 			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId,
-					taskName, langLabel, signature, input.getLocalPath(),
-					HiwayDBI.KEY_FILE_TIME_STAGEIN, obj));
+			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, input.getLocalPath(), HiwayDBI.KEY_FILE_TIME_STAGEIN,
+					obj));
+			if (determineFileSizes) {
+				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, input.getLocalPath(),
+						JsonReportEntry.KEY_FILE_SIZE_STAGEIN, Long.toString((new File(input.getLocalPath())).length())));
+			}
+
 		}
 	}
 
 	public void stageOut() throws IOException, JSONException {
-		try (BufferedReader logReader = new BufferedReader(new FileReader(
-				new File(Invocation.REPORT_FILENAME)))) {
+		try (BufferedReader logReader = new BufferedReader(new FileReader(new File(Invocation.REPORT_FILENAME)))) {
 			String line;
 			while ((line = logReader.readLine()) != null) {
 				JsonReportEntry entry = new JsonReportEntry(line);
-				if (entry.getKey().equals(
-						JsonReportEntry.KEY_FILE_SIZE_STAGEOUT)) {
+				if (entry.getKey().equals(JsonReportEntry.KEY_FILE_SIZE_STAGEOUT)) {
 					outputFiles.add(new Data(entry.getFile()));
 				}
 			}
@@ -301,41 +238,17 @@ public class Worker {
 			long toc = System.currentTimeMillis();
 			JSONObject obj = new JSONObject();
 			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId,
-						taskName, langLabel, signature, output.getLocalPath(),
-						HiwayDBI.KEY_FILE_TIME_STAGEOUT, obj));
+			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, output.getLocalPath(),
+					HiwayDBI.KEY_FILE_TIME_STAGEOUT, obj));
+			if (determineFileSizes) {
+				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, output.getLocalPath(),
+						JsonReportEntry.KEY_FILE_SIZE_STAGEOUT, Long.toString((new File(output.getLocalPath())).length())));
+			}
 		}
 	}
 
-	// private void stageOut(Set<Path> files) {
-	// Configuration conf = new YarnConfiguration();
-	// conf.addResource("core-site.xml");
-	// try {
-	// FileSystem fs = FileSystem.get(conf);
-	// for (Path file : files) {
-	// Data data = new Data(dir.relativize(file).toString());
-	// data.stageOut(fs, containerId);
-	// }
-	// } catch (IOException e) {
-	// e.printStackTrace();
-	// }
-	// }
-
-	// private Set<Path> traverseSymbolicLinks(Set<Path> files) throws
-	// IOException {
-	// Set<Path> traversals = new HashSet<>();
-	// for (Path file : files) {
-	// if (Files.isSymbolicLink(file)) {
-	// traversals.add(Paths.get("./", Files.readSymbolicLink(file)
-	// .toString()));
-	// }
-	// }
-	// return traversals;
-	// }
-
 	protected void writeEntryToLog(JsonReportEntry entry) throws IOException {
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(
-				new File(Invocation.REPORT_FILENAME), true))) {
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(Invocation.REPORT_FILENAME), true))) {
 			writer.write(entry.toString() + "\n");
 		}
 	}

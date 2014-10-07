@@ -32,84 +32,279 @@
 package de.huberlin.wbi.hiway.common;
 
 import java.io.IOException;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 
+import de.huberlin.wbi.cuneiform.core.semanticmodel.ForeignLambdaExpr;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 
-public interface TaskInstance {
+public class TaskInstance implements Comparable<TaskInstance> {
+
+	public static class Comparators {
+
+		public static Comparator<TaskInstance> DEPTH = new Comparator<TaskInstance>() {
+			@Override
+			public int compare(TaskInstance task1, TaskInstance task2) {
+				try {
+					return Integer.compare(task1.getDepth(), task2.getDepth());
+				} catch (WorkflowStructureUnknownException e) {
+					e.printStackTrace();
+					System.exit(1);
+					throw new RuntimeException(e);
+				}
+			};
+		};
+
+		public static Comparator<TaskInstance> UPWARDSRANK = new Comparator<TaskInstance>() {
+			@Override
+			public int compare(TaskInstance task1, TaskInstance task2) {
+				try {
+					return -Double.compare(task1.getUpwardRank(),
+							task2.getUpwardRank());
+				} catch (WorkflowStructureUnknownException e) {
+					e.printStackTrace();
+					System.exit(1);
+					throw new RuntimeException(e);
+				}
+			};
+		};
+
+	}
+
+	private static int runningId = 0;
+
+	private Set<TaskInstance> childTasks;
+
+	// the command to be executed
+	private String command;
+	// whether this task is completed yet
+	private boolean completed;
+
+	private int depth = 0;
+
+	// this task instance's id
+	private final long id;
+
+	// input and output data
+	private Set<Data> inputData;
+
+	// the programming language of this task (default: bash)
+	private String languageLabel;
+
+	private Set<Data> outputData;
+
+	// parent and child tasks (denotes the workflow structure)
+	private Set<TaskInstance> parentTasks;
+	private Set<JsonReportEntry> report;
+
+	// the scripts associated with this task
+	// private Data superScript;
+	// private Set<Data> scripts;
+
+	private long signature;
+
+	// HEFT parameters
+	// the depth of the task in the workflow (input tasks have depth 0)
+
+	private long taskId;
+
+	// the name and (internal) id of the task's executable (e.g. tar)
+	private String taskName;
+
+	// the number of times this task has been attempted
+	private int tries = 0;
+	// the upward rank of tasks in the workflow
+	private double upwardRank = 0d;
+
+	// the id of the workflow this task instance belongs to
+	private UUID workflowId;
+
+	public TaskInstance(UUID workflowId, String taskName, long taskId) {
+		this(workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);
+	}
+	
+	public TaskInstance(UUID workflowId, String taskName, long taskId,
+			String languageLabel) {
+		this.id = runningId++;
+		this.workflowId = workflowId;
+		this.taskName = taskName;
+		this.taskId = taskId;
+		this.languageLabel = languageLabel;
+
+		this.completed = false;
+		// scripts = new CopyOnWriteArraySet<>();
+		this.inputData = new HashSet<>();
+		this.outputData = new HashSet<>();
+		this.report = new HashSet<>();
+		this.parentTasks = new HashSet<>();
+		this.childTasks = new HashSet<>();
+	}
 
 	public void addChildTask(TaskInstance childTask)
-			throws WorkflowStructureUnknownException;
+			throws WorkflowStructureUnknownException {
+		childTasks.add(childTask);
+	}
 
-	public void addInputData(Data data);
+	public void addInputData(Data data) {
+		inputData.add(data);
+	}
 
-	public void addOutputData(Data data);
+	public void addOutputData(Data data) {
+		outputData.add(data);
+	}
 
 	public void addParentTask(TaskInstance parentTask)
-			throws WorkflowStructureUnknownException;
+			throws WorkflowStructureUnknownException {
+		parentTasks.add(parentTask);
+		this.setDepth(parentTask.getDepth() + 1);
+	}
 
-	// public void addScript(Data script);
+	// @Override
+	// public void addScript(Data script) {
+	// scripts.add(script);
+	// }
+
+	public int compareTo(TaskInstance other) {
+		return Long.compare(this.getId(), other.getId());
+	}
 
 	public long countAvailableLocalData(FileSystem fs, Container container)
-			throws IOException;
+			throws IOException {
+		long sum = 0;
+		for (Data input : getInputData()) {
+			sum += input.countAvailableLocalData(fs, container);
+		}
+		return sum;
+	}
 
-	public long countAvailableTotalData(FileSystem fs) throws IOException;
+	public long countAvailableTotalData(FileSystem fs) throws IOException {
+		long sum = 0;
+		for (Data input : getInputData()) {
+			sum += input.countAvailableTotalData(fs);
+		}
+		return sum;
+	}
 
 	public Set<TaskInstance> getChildTasks()
-			throws WorkflowStructureUnknownException;
+			throws WorkflowStructureUnknownException {
+		return childTasks;
+	}
 
-	public String getCommand();
+	public String getCommand() {
+		return command;
+	}
 
-	public int getDepth() throws WorkflowStructureUnknownException;
+	public int getDepth() throws WorkflowStructureUnknownException {
+		return depth;
+	}
 
-	public long getId();
+	public long getId() {
+		return id;
+	}
 
-	public Set<Data> getInputData();
+	public Set<Data> getInputData() {
+		return inputData;
+	}
 
-	public String getLanguageLabel();
+	public String getLanguageLabel() {
+		return languageLabel;
+	}
 
-	public Set<Data> getOutputData();
+	public Set<Data> getOutputData() {
+		return outputData;
+	}
 
 	public Set<TaskInstance> getParentTasks()
-			throws WorkflowStructureUnknownException;
+			throws WorkflowStructureUnknownException {
+		return parentTasks;
+	}
 
-	public Set<JsonReportEntry> getReport();
+	public Set<JsonReportEntry> getReport() {
+		return report;
+	}
 
-	// public Set<Data> getScripts();
+	// @Override
+	// public Set<Data> getScripts() {
+	// return scripts;
+	// }
 
-	public long getSignature();
+	public long getSignature() {
+		return signature;
+	}
 
-	public long getTaskId();
+	public long getTaskId() {
+		return taskId;
+	}
 
-	public String getTaskName();
+	public String getTaskName() {
+		return taskName;
+	}
 
-	public int getTries();
+	public int getTries() {
+		return tries;
+	}
 
-	public double getUpwardRank() throws WorkflowStructureUnknownException;
+	public double getUpwardRank() throws WorkflowStructureUnknownException {
+		return upwardRank;
+	}
 
-	public UUID getWorkflowId();
+	public UUID getWorkflowId() {
+		return workflowId;
+	}
 
-	public void incTries();
+	public void incTries() {
+		tries++;
+	}
 
-	public boolean isCompleted();
+	public boolean isCompleted() {
+		return completed;
+	}
 
-	public boolean readyToExecute();
+	public boolean readyToExecute() {
+		for (TaskInstance parentTask : parentTasks) {
+			if (!parentTask.isCompleted())
+				return false;
+		}
+		return true;
+	}
 
-	public boolean retry(int maxRetries);
+	public boolean retry(int maxRetries) {
+		return tries <= maxRetries;
+	}
 
-	public void setCommand(String command);
+	public void setCommand(String command) {
+		this.command = command;
+	}
 
-	public void setCompleted();
+	public void setCompleted() {
+		completed = true;
+	}
 
-	public void setDepth(int depth) throws WorkflowStructureUnknownException;
+	public void setDepth(int depth) throws WorkflowStructureUnknownException {
+		if (this.depth < depth) {
+			this.depth = depth;
+			for (TaskInstance child : this.getChildTasks()) {
+				child.setDepth(depth + 1);
+			}
+		}
+	}
 
-	public void setSignature(long signature);
+	public void setSignature(long signature) {
+		this.signature = signature;
+	}
 
 	public void setUpwardRank(double upwardRank)
-			throws WorkflowStructureUnknownException;
+			throws WorkflowStructureUnknownException {
+		this.upwardRank = upwardRank;
+	}
+
+	public String toString() {
+		return id + " [" + taskName + "]";
+	}
 
 }

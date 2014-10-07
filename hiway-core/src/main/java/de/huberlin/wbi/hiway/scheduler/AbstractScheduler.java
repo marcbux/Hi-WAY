@@ -34,6 +34,9 @@ package de.huberlin.wbi.hiway.scheduler;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -389,5 +392,12 @@ public abstract class AbstractScheduler implements Scheduler {
 			}
 			maxTimestampPerHost.put(hostName, newMaxTimestamp);
 		}
+	}
+	
+	public void logStackTrace(Throwable e) {
+		Writer writer = new StringWriter();
+		PrintWriter printWriter = new PrintWriter(writer);
+		e.printStackTrace(printWriter);
+		log.info(writer.toString());
 	}
 }

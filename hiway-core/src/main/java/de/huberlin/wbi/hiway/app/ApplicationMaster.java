@@ -33,6 +33,7 @@ package de.huberlin.wbi.hiway.app;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.UUID;
 
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -49,7 +50,7 @@ public interface ApplicationMaster {
 
 	public Collection<Data> getOutputFiles();
 
-	public String getRunId();
+	public UUID getRunId();
 
 	public Scheduler getScheduler();
 

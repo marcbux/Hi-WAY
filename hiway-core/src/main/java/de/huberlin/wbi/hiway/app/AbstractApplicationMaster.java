@@ -38,6 +38,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,7 +52,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.UUID;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -110,10 +112,6 @@ import de.huberlin.wbi.hiway.scheduler.GreedyQueue;
 import de.huberlin.wbi.hiway.scheduler.HEFT;
 import de.huberlin.wbi.hiway.scheduler.Scheduler;
 import de.huberlin.wbi.hiway.scheduler.StaticRoundRobin;
-//import de.huberlin.wbi.hiway.workflow.AbstractWorkflow;
-//import de.huberlin.wbi.hiway.workflow.CuneiformWorkflowLegacy;
-//import de.huberlin.wbi.hiway.workflow.DaxWorkflow;
-//import de.huberlin.wbi.hiway.workflow.Workflow;
 
 /**
  * <p>
@@ -262,10 +260,9 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			for (Data outputData : task.getOutputData()) {
 				vargs.add("--output " + outputData.getLocalPath());
 			}
-
-			// Add log redirect params
-			// vargs.add("1>" + Invocation.STDOUT_FILENAME);
-			// vargs.add("2>" + Invocation.STDERR_FILENAME);
+			if (determineFileSizes) {
+				vargs.add("--size");
+			}
 
 			// Get final commmand
 			StringBuilder command = new StringBuilder();
@@ -397,11 +394,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			metrics.endWaitingTask();
 			metrics.runningTask(task);
 			metrics.launchedTask(task);
-			// } catch (IOException e) {
-			// log.info("Error during invocation setup. exiting");
-			// e.printStackTrace();
-			// System.exit(1);
-			// }
 
 		}
 
@@ -450,7 +442,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 					e.printStackTrace();
 				}
 
-				writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
+				writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 				ContainerRequest request = findFirstMatchingRequest(container);
 
 				if (request != null) {
@@ -483,7 +475,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 
 				log.info("Got container status for containerID=" + containerStatus.getContainerId() + ", state=" + containerStatus.getState() + ", exitStatus="
 						+ containerStatus.getExitStatus() + ", diagnostics=" + containerStatus.getDiagnostics());
-				writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
+				writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 
 				// non complete containers should not be here
 				assert (containerStatus.getState() == ContainerState.COMPLETE);
@@ -577,7 +569,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		@Override
 		public void onError(Throwable e) {
 			log.info("Error.");
-			e.printStackTrace();
+			logStackTrace(e);
 			done = true;
 			amRMClient.stop();
 		}
@@ -717,119 +709,11 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 	// system
 	protected String workflowPath;
 
+	protected boolean determineFileSizes = false;
+
 	private String sandboxDir;
 
 	private String summaryFile;
-
-	// protected void buildPostScript(TaskInstance task, Container container)
-	// throws IOException {
-	// File postScript = new File(Constant.POST_SCRIPT_FILENAME);
-	// BufferedWriter postScriptWriter = new BufferedWriter(new FileWriter(
-	// postScript));
-	// postScriptWriter.write(Constant.BASH_SHEBANG);
-	//
-	// for (Data data : task.getOutputData()) {
-	// if (data.getHdfsDirectory(container.getId().toString()).length() > 0) {
-	// postScriptWriter.write("hdfs dfs -mkdir -p "
-	// + data.getHdfsDirectory(container.getId().toString())
-	// + " && ");
-	// }
-	// postScriptWriter.write(generateTimeString(task,
-	// Constant.KEY_FILE_TIME_STAGEOUT)
-	// + "hdfs dfs -copyFromLocal -f "
-	// + data.getLocalPath()
-	// + " "
-	// + data.getHdfsPath(container.getId().toString()) + " &\n");
-	// postScriptWriter
-	// .write("\twhile [ $(jobs -l | grep -c Running) -ge "
-	// + hdfsInstancesPerContainer
-	// + " ]\ndo\n\tsleep 1\ndone\n");
-	// }
-	// postScriptWriter.write("for job in `jobs -p`\ndo\n\twait $job\ndone\n");
-	//
-	// postScriptWriter.close();
-	// task.addScript(new Data(postScript.getPath()));
-	// }
-
-	// protected void buildPreScript(TaskInstance task, Container container)
-	// throws IOException {
-	// File preScript = new File(Constant.PRE_SCRIPT_FILENAME);
-	// BufferedWriter preScriptWriter = new BufferedWriter(new FileWriter(
-	// preScript));
-	// preScriptWriter.write(Constant.BASH_SHEBANG);
-	//
-	// for (Data data : task.getInputData()) {
-	// if (data.getLocalDirectory().length() > 0) {
-	// preScriptWriter.write("mkdir -p " + data.getLocalDirectory()
-	// + " && ");
-	// }
-	// String hdfsDirectoryMidfix = Data.hdfsDirectoryMidfixes
-	// .containsKey(data) ? Data.hdfsDirectoryMidfixes.get(data)
-	// : "";
-	// preScriptWriter.write(generateTimeString(task,
-	// Constant.KEY_FILE_TIME_STAGEIN)
-	// + "hdfs dfs -copyToLocal "
-	// + data.getHdfsPath(hdfsDirectoryMidfix)
-	// + " "
-	// + data.getLocalPath() + " &\n");
-	// preScriptWriter.write("\twhile [ $(jobs -l | grep -c Running) -ge "
-	// + hdfsInstancesPerContainer + " ]\ndo\n\tsleep 1\ndone\n");
-	// }
-	// for (Data data : task.getOutputData()) {
-	// if (data.getLocalDirectory().length() > 0) {
-	// preScriptWriter.write("mkdir -p " + data.getLocalDirectory()
-	// + " &\n");
-	// }
-	// }
-	// preScriptWriter.write("for job in `jobs -p`\ndo\n\twait $job\ndone\n");
-	//
-	// preScriptWriter.close();
-	// task.addScript(new Data(preScript.getPath()));
-	// }
-
-	// @Override
-	// public void buildScripts(TaskInstance task, Container container)
-	// throws IOException {
-	//
-	// buildSuperScript(task, container);
-	// buildPreScript(task, container);
-	// buildPostScript(task, container);
-	//
-	// for (Data script : task.getScripts()) {
-	// script.stageOut(fs, container.getId().toString());
-	// }
-	// }
-
-	// protected void buildSuperScript(TaskInstance task, Container container)
-	// throws IOException {
-	// File superScript = new File(Constant.SUPER_SCRIPT_FILENAME);
-	// BufferedWriter superScriptWriter = new BufferedWriter(new FileWriter(
-	// superScript));
-	// superScriptWriter.write(Constant.BASH_SHEBANG);
-	// superScriptWriter.write("failure=0\n");
-	// superScriptWriter.write(generateTimeString(task,
-	// JsonReportEntry.KEY_INVOC_TIME) + task.getCommand() + "\n");
-	// superScriptWriter
-	// .write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Task invocation returned non-zero exit value. >&2\nfi\n");
-	// superScriptWriter.write(generateTimeString(task,
-	// Constant.KEY_INVOC_TIME_STAGEOUT)
-	// + "./"
-	// + Constant.POST_SCRIPT_FILENAME + "\n");
-	// superScriptWriter
-	// .write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Error during file stage-out. >&2\nfi\n");
-	// superScriptWriter.write("hdfs dfs -copyFromLocal -f stderr stdout "
-	// + Invocation.REPORT_FILENAME + " "
-	// + Data.getHdfsDirectoryPrefix() + "/"
-	// + container.getId().toString() + "\n");
-	// superScriptWriter
-	// .write("exit=$?\nif [ $exit -ne 0 ] && [ $failure -eq 0 ]\nthen\n\tfailure=$exit\n\techo Error during report stage-out. >&2\nfi\n");
-	// superScriptWriter
-	// .write("if [ $failure -ne \"0\" ]\nthen\n\texit $failure\nfi\n");
-	// superScriptWriter.close();
-	// Data script = new Data(superScript.getPath());
-	// // task.setSuperScript(script);
-	// task.addScript(script);
-	// }
 
 	protected Map<Long, JsonReportEntry> taskIdContainerRequestedEvent = new HashMap<>();
 	protected Map<Long, JsonReportEntry> taskIdContainerAllocatedEvent = new HashMap<>();
@@ -880,29 +764,9 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 	}
 
-	// protected String generateTimeString(TaskInstance task, String key) {
-	// return "/usr/bin/time -a -o " + Invocation.REPORT_FILENAME + " -f '{"
-	// + JsonReportEntry.ATT_TIMESTAMP + ":"
-	// + System.currentTimeMillis() + "," + JsonReportEntry.ATT_RUNID
-	// + ":\"" + task.getWorkflowId() + "\","
-	// + JsonReportEntry.ATT_TASKID + ":" + task.getTaskId() + ","
-	// + JsonReportEntry.ATT_TASKNAME + ":\"" + task.getTaskName()
-	// + "\"," + JsonReportEntry.ATT_LANG + ":\""
-	// + task.getLanguageLabel() + "\"," + JsonReportEntry.ATT_INVOCID
-	// + ":" + task.getSignature() + "," + JsonReportEntry.ATT_KEY
-	// + ":\"" + key + "\"," + JsonReportEntry.ATT_VALUE + ":"
-	// + "{\"realTime\":%e,\"userTime\":%U,\"sysTime\":%S,"
-	// + "\"maxResidentSetSize\":%M,\"avgResidentSetSize\":%t,"
-	// + "\"avgDataSize\":%D,\"avgStackSize\":%p,\"avgTextSize\":%X,"
-	// + "\"nMajPageFault\":%F,\"nMinPageFault\":%R,"
-	// + "\"nSwapOutMainMem\":%W,\"nForcedContextSwitch\":%c,"
-	// + "\"nWaitContextSwitch\":%w,\"nIoRead\":%I,\"nIoWrite\":%O,"
-	// + "\"nSocketRead\":%r,\"nSocketWrite\":%s,\"nSignal\":%k}}' ";
-	// }
-
 	private void finish() {
-		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null, null, null, null, null, HiwayDBI.KEY_WF_TIME, Long.toString(System
-				.currentTimeMillis() - amRMClient.getStartTime())));
+		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_TIME, Long.toString(System.currentTimeMillis()
+				- amRMClient.getStartTime())));
 
 		// Join all launched threads needed for when we time out and we need to
 		// release containers
@@ -944,23 +808,10 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 					+ numAllocatedContainers.get() + ", failed=" + numFailedContainers.get() + ", killed=" + numKilledContainers.get();
 			success = false;
 		}
-		
+
 		try {
 			federatedReport.stageOut(fs, "");
 			if (summaryFile != null) {
-//				String host = appMasterHostname.substring(0, appMasterHostname.indexOf("/"));
-//				String port = conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).substring(conf.get(YarnConfiguration.NM_WEBAPP_ADDRESS).indexOf(":") + 1);
-//				String id = appId.toString().substring(12);
-//				int attemptId = appAttemptID.getAttemptId();
-
-				// String amout = "http://" + host + ":" + port
-				// + "/node/containerlogs/container_" + id + "_0"
-				// + attemptId + "_000001/" + sandboxDir
-				// + "/AppMaster.stdout/?start=0";
-				// String amerr = "http://" + host + ":" + port
-				// + "/node/containerlogs/container_" + id + "_0"
-				// + attemptId + "_000001/" + sandboxDir
-				// + "/AppMaster.stderr/?start=0";
 				String stdout = fs.getHomeDirectory().toString() + "/" + sandboxDir + "/" + appId + "/AppMaster.stdout";
 				String stderr = fs.getHomeDirectory().toString() + "/" + sandboxDir + "/" + appId + "/AppMaster.stderr";
 				String statlog = fs.getHomeDirectory().toString() + "/" + sandboxDir + "/" + appId + "/"
@@ -1042,19 +893,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		opts.addOption("app_attempt_id", true, "App Attempt ID. Not to be used unless for testing purposes");
 		opts.addOption("workflow", true, "The workflow file to be executed by the Application Master");
 		opts.addOption("s", "summary", true, "The name of the json summary file. No file is created if this parameter is not specified.");
-		// opts.addOption("type", true,
-		// "The input file format. Valid arguments: "
-		// + Constant.WorkflowFormat.values());
-		// opts.addOption("scheduler", true,
-		// "The workflow scheduling policy. Valid arguments: "
-		// + Constant.SchedulingPolicy.values());
-		// opts.addOption("shell_env", true,
-		// "Environment for shell script. Specified as env_key=env_val pairs");
-		// opts.addOption("container_memory", true,
-		// "Amount of memory in MB to be requested to run the shell command");
-		// opts.addOption("container_vcores", true,
-		// "Number of virtual cores to be requested to run the shell command");
-		// opts.addOption("priority", true, "Application Priority. Default 0");
 		opts.addOption("debug", false, "Dump out debug information");
 		opts.addOption("appid", true, "Id of this Application Master.");
 
@@ -1118,8 +956,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		log.info("Application master for app" + ", appId=" + appAttemptID.getApplicationId().getId() + ", clustertimestamp="
 				+ appAttemptID.getApplicationId().getClusterTimestamp() + ", attemptId=" + appAttemptID.getAttemptId());
 
-		// if (cliParser.hasOption("shell_env")) {
-		// String shellEnvs[] = cliParser.getOptionValues("shell_env");
 		String shellEnvs[] = hiWayConf.getStrings(HiWayConfiguration.HIWAY_WORKER_SHELL_ENV, HiWayConfiguration.HIWAY_WORKER_SHELL_ENV_DEFAULT);
 		for (String env : shellEnvs) {
 			env = env.trim();
@@ -1196,13 +1032,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		nmClientAsync.start();
 
 		Data workflowFile = new Data(workflowPath);
-		// if (workflowType.equals(Constant.WorkflowFormat.dax)) {
-		// workflow = new DaxWorkflow(workflowFile, fs);
-		// } else {
-		// workflow = new CuneiformWorkflowLegacy(workflowFile, fs);
-		// }
 		workflowFile.stageIn(fs, "");
-		// metrics.submittedWorkflow(workflow);
 
 		// Register self with ResourceManager. This will start heartbeating to
 		// the RM.
@@ -1212,49 +1042,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		switch (schedulerName) {
 		case staticRoundRobin:
 		case heft:
-			// Map<String, Map<String, Double>> runtimeEstimates = new
-			// HashMap<>();
-			//
-			// Data estimates = new Data("estimates.csv");
-			// estimates.setInput(true);
-			// estimates.stageIn(fs, "");
-			// BufferedReader reader = new BufferedReader(new FileReader(new
-			// File(
-			// "estimates.csv")));
-			//
-			// List<List<String>> table = new ArrayList<>();
-			// String line;
-			// while ((line = reader.readLine()) != null) {
-			// List<String> row = new ArrayList<>();
-			// table.add(row);
-			// String[] splittedLine = line.split(";");
-			// for (int i = 0; i < splittedLine.length; i++) {
-			// row.add(splittedLine[i]);
-			// }
-			// }
-			// reader.close();
-			//
-			// for (int j = 1; j < table.get(0).size(); j++) {
-			// Map<String, Double> runtimeEstimate = new HashMap<>();
-			// runtimeEstimates.put(table.get(0).get(j), runtimeEstimate);
-			// }
-			//
-			// for (int i = 1; i < table.size(); i++) {
-			// String rowName = table.get(i).get(0);
-			// for (int j = 1; j < table.get(i).size(); j++) {
-			// String columnName = table.get(0).get(j);
-			// Double value = Double.parseDouble(table.get(i).get(j));
-			// runtimeEstimates.get(columnName).put(rowName, value);
-			// }
-			// }
-			//
-			// for (int j = 1; j < table.get(0).size(); j++) {
-			// String host = table.get(0).get(j);
-			// if (appMasterHostname.contains(host)) {
-			// runtimeEstimates.remove(host);
-			// }
-			// }
-
 			scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new StaticRoundRobin(getWorkflowName(), fs, hiWayConf)
 					: new HEFT(getWorkflowName(), fs, hiWayConf);
 			break;
@@ -1298,14 +1085,10 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 
 		scheduler.initialize();
+		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
 		parseWorkflow();
-		scheduler.updateRuntimeEstimates(getRunId());
-		// federatedReport = new Data(Constant.LOG_PREFIX + getRunId()
-		// + Constant.LOG_SUFFIX);
+		scheduler.updateRuntimeEstimates(getRunId().toString());
 		federatedReport = new Data(hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT));
-		// federatedReportWriter = new BufferedWriter(new FileWriter(
-		// federatedReport.getLocalPath()));
-		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null, null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
 
 		// Dump out information about cluster capability as seen by the resource
 		// manager
@@ -1318,8 +1101,6 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			log.info("Container memory specified above max threshold of cluster." + " Using max value." + ", specified=" + containerMemory + ", max=" + maxMem);
 			containerMemory = maxMem;
 		}
-		// hdfsInstancesPerContainer = containerMemory /
-		// Constant.HDFS_MEMORY_REQ;
 		if (containerCores > maxCores) {
 			log.info("Container vcores specified above max threshold of cluster." + " Using max value." + ", specified=" + containerCores + ", max=" + maxCores);
 			containerCores = maxCores;
@@ -1376,7 +1157,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		}
 
 		log.info("Requested container ask: " + request.toString() + " Nodes" + Arrays.toString(nodes));
-		writeEntryToLog(new JsonReportEntry(UUID.fromString(getRunId()), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
+		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 		return request;
 	}
 
@@ -1441,6 +1222,13 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 			statLog.debug(entry.toString());
 		}
 		scheduler.addEntryToDB(entry);
+	}
+	
+	public void logStackTrace(Throwable e) {
+		Writer writer = new StringWriter();
+		PrintWriter printWriter = new PrintWriter(writer);
+		e.printStackTrace(printWriter);
+		log.info(writer.toString());
 	}
 
 }
