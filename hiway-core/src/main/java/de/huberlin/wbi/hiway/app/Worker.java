@@ -76,18 +76,18 @@ public class Worker {
 
 	private String appId;
 	private String containerId;
-	private Path dir;
-	private String langLabel;
-	private long signature;
-	private long taskId;
-	private String taskName;
 	private boolean determineFileSizes = false;
-
+	private Path dir;
 	FileSystem fs;
 	protected HiWayConfiguration hiWayConf;
-
 	private Set<Data> inputFiles;
+	private String langLabel;
+
 	private Set<Data> outputFiles;
+	private long signature;
+
+	private long taskId;
+	private String taskName;
 
 	private UUID workflowId;
 

@@ -135,18 +135,18 @@ public class Client {
 	private long clientTimeout;
 	// the configuration of the Hadoop installation
 	private Configuration conf;
-	private Configuration hiWayConf;
 	// debug flag
 	boolean debugFlag = false;
+	private Configuration hiWayConf;
 	// command line options
 	private Options opts;
+	private String sandboxDir;
+	private Data summary;
 	// the workflow format and its path in the file system
 	private Data workflow;
 	private HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS workflowType;
 	// a handle to the YARN ApplicationsManager (ASM)
 	private YarnClient yarnClient;
-	private String sandboxDir;
-	private Data summary;
 
 	public Client() throws Exception {
 		this(new YarnConfiguration());

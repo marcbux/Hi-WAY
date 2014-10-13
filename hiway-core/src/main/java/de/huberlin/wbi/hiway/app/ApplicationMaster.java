@@ -163,14 +163,6 @@ public abstract class ApplicationMaster {
 		}
 	}
 
-	public abstract UUID getRunId();
-
-	public abstract void parseWorkflow();
-
-	public abstract void taskFailure(TaskInstance task, ContainerId containerId);
-
-	public abstract void taskSuccess(TaskInstance task, ContainerId containerId);
-
 	/**
 	 * Thread to connect to the {@link ContainerManagementProtocol} and launch
 	 * the container that will execute the shell command.
@@ -589,8 +581,6 @@ public abstract class ApplicationMaster {
 		}
 	}
 
-	// public static int hdfsInstancesPerContainer;
-
 	// a handle to the log, in which any events are recorded
 	private static final Log log = LogFactory.getLog(ApplicationMaster.class);
 
@@ -625,13 +615,19 @@ public abstract class ApplicationMaster {
 	}
 
 	protected AMRMClientAsync.CallbackHandler allocListener;
+
+	// public static int hdfsInstancesPerContainer;
+
 	// the yarn tokens to be passed to any launched containers
 	protected ByteBuffer allTokens;
+
 	// a handle to the YARN ResourceManager
 	@SuppressWarnings("rawtypes")
 	protected AMRMClientAsync amRMClient;
+
 	// this application's attempt id (combination of attemptId and fail count)
 	protected ApplicationAttemptId appAttemptID;
+
 	// the internal id assigned to this application by the YARN ResourceManager
 	protected String appId;
 	// the hostname of the container running the Hi-WAY ApplicationMaster
@@ -644,7 +640,6 @@ public abstract class ApplicationMaster {
 	protected String appMasterTrackingUrl = "";
 	// the configuration of the Hadoop installation
 	protected Configuration conf;
-	protected HiWayConfiguration hiWayConf;
 	protected int containerCores = 1;
 	// a data structure storing the invocation launched by each container
 	protected Map<Integer, HiWayInvocation> containerIdToInvocation = new HashMap<>();
@@ -655,6 +650,7 @@ public abstract class ApplicationMaster {
 	protected int containerMemory = 4096;
 	// a queue for allocated containers that have yet to be assigned a task
 	protected Queue<Container> containerQueue = new LinkedList<>();
+	protected boolean determineFileSizes = false;
 	// flags denoting workflow execution has finished and been successful
 	protected volatile boolean done;
 	// the report, in which provenance information is stored
@@ -663,6 +659,7 @@ public abstract class ApplicationMaster {
 	protected Map<String, Data> files = new HashMap<>();
 	// a handle to the hdfs
 	protected FileSystem fs;
+	protected HiWayConfiguration hiWayConf;
 	// a list of threads, one for each container launch
 	protected List<Thread> launchThreads = new ArrayList<Thread>();
 	// a structure that stores various metrics during workflow execution
@@ -681,22 +678,20 @@ public abstract class ApplicationMaster {
 	protected AtomicInteger numRequestedContainers = new AtomicInteger();
 	// priority of the container request
 	protected int requestPriority;
+	private String sandboxDir;
 	// the workflow scheduler, as defined at workflow launch time
 	protected Scheduler scheduler;
 	protected HiWayConfiguration.HIWAY_SCHEDULER_OPTS schedulerName;
 	// environment variables to be passed to any launched containers
 	protected Map<String, String> shellEnv = new HashMap<String, String>();
 	protected volatile boolean success;
+	private String summaryFile;
+	protected Map<Long, JsonReportEntry> taskIdContainerAllocatedEvent = new HashMap<>();
+	protected Map<Long, JsonReportEntry> taskIdContainerRequestedEvent = new HashMap<>();
 	protected Data workflowFile;
 	// the workflow to be executed along with its format and path in the file
 	// system
 	protected String workflowPath;
-	protected boolean determineFileSizes = false;
-	private String sandboxDir;
-	private String summaryFile;
-	protected Map<Long, JsonReportEntry> taskIdContainerRequestedEvent = new HashMap<>();
-	protected Map<Long, JsonReportEntry> taskIdContainerAllocatedEvent = new HashMap<>();
-
 	public ApplicationMaster() {
 		conf = new YarnConfiguration();
 		conf.addResource("core-site.xml");
@@ -709,7 +704,6 @@ public abstract class ApplicationMaster {
 			e.printStackTrace();
 		}
 	}
-
 	/**
 	 * If the debug flag is set, dump out contents of current working directory
 	 * and the environment to stdout for debugging.
@@ -742,7 +736,59 @@ public abstract class ApplicationMaster {
 			e.printStackTrace();
 		}
 	}
+	public void evaluateReport(TaskInstance task, ContainerId containerId) {
+		try {
 
+			Data reportFile = new Data(Invocation.REPORT_FILENAME);
+			reportFile.stageIn(fs, containerId.toString());
+			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
+			stdoutFile.stageIn(fs, containerId.toString());
+			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
+			stderrFile.stageIn(fs, containerId.toString());
+
+			// (a) evaluate report
+			Set<JsonReportEntry> report = task.getReport();
+			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.REPORT_FILENAME))) {
+				String line;
+				while ((line = reader.readLine()) != null) {
+					line = line.trim();
+					if (line.isEmpty())
+						continue;
+					report.add(new JsonReportEntry(line));
+				}
+			}
+			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.STDOUT_FILENAME))) {
+				String line;
+				StringBuffer sb = new StringBuffer();
+				while ((line = reader.readLine()) != null) {
+					sb.append(line.replaceAll("\\\\", "\\\\\\\\").replaceAll("\"", "\\\"")).append('\n');
+				}
+				String s = sb.toString();
+				if (s.length() > 0) {
+					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
+							task.getSignature(), null, JsonReportEntry.KEY_INVOC_STDOUT, sb.toString());
+					report.add(re);
+				}
+			}
+			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.STDERR_FILENAME))) {
+				String line;
+				StringBuffer sb = new StringBuffer();
+				while ((line = reader.readLine()) != null) {
+					sb.append(line.replaceAll("\\\\", "\\\\\\\\").replaceAll("\"", "\\\"")).append('\n');
+				}
+				String s = sb.toString();
+				if (s.length() > 0) {
+					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
+							task.getSignature(), null, JsonReportEntry.KEY_INVOC_STDERR, sb.toString());
+					report.add(re);
+				}
+			}
+
+		} catch (Exception e) {
+			log.info("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
+			shutdown(e);
+		}
+	}
 	private void finish() {
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_TIME, Long.toString(System.currentTimeMillis()
 				- amRMClient.getStartTime())));
@@ -842,6 +888,8 @@ public abstract class ApplicationMaster {
 
 		return outputFiles;
 	}
+
+	public abstract UUID getRunId();
 
 	public Scheduler getScheduler() {
 		return scheduler;
@@ -962,6 +1010,8 @@ public abstract class ApplicationMaster {
 		requestPriority = hiWayConf.getInt(HiWayConfiguration.HIWAY_WORKER_PRIORITY, HiWayConfiguration.HIWAY_WORKER_PRIORITY_DEFAULT);
 		return true;
 	}
+
+	public abstract void parseWorkflow();
 
 	/**
 	 * Helper function to print usage.
@@ -1136,67 +1186,6 @@ public abstract class ApplicationMaster {
 		return request;
 	}
 
-	public void evaluateReport(TaskInstance task, ContainerId containerId) {
-		try {
-
-			Data reportFile = new Data(Invocation.REPORT_FILENAME);
-			reportFile.stageIn(fs, containerId.toString());
-			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
-			stdoutFile.stageIn(fs, containerId.toString());
-			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
-			stderrFile.stageIn(fs, containerId.toString());
-
-			// (a) evaluate report
-			Set<JsonReportEntry> report = task.getReport();
-			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.REPORT_FILENAME))) {
-				String line;
-				while ((line = reader.readLine()) != null) {
-					line = line.trim();
-					if (line.isEmpty())
-						continue;
-					report.add(new JsonReportEntry(line));
-				}
-			}
-			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.STDOUT_FILENAME))) {
-				String line;
-				StringBuffer sb = new StringBuffer();
-				while ((line = reader.readLine()) != null) {
-					sb.append(line.replaceAll("\\\\", "\\\\\\\\").replaceAll("\"", "\\\"")).append('\n');
-				}
-				String s = sb.toString();
-				if (s.length() > 0) {
-					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
-							task.getSignature(), null, JsonReportEntry.KEY_INVOC_STDOUT, sb.toString());
-					report.add(re);
-				}
-			}
-			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.STDERR_FILENAME))) {
-				String line;
-				StringBuffer sb = new StringBuffer();
-				while ((line = reader.readLine()) != null) {
-					sb.append(line.replaceAll("\\\\", "\\\\\\\\").replaceAll("\"", "\\\"")).append('\n');
-				}
-				String s = sb.toString();
-				if (s.length() > 0) {
-					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
-							task.getSignature(), null, JsonReportEntry.KEY_INVOC_STDERR, sb.toString());
-					report.add(re);
-				}
-			}
-
-		} catch (Exception e) {
-			log.info("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
-			shutdown(e);
-		}
-	}
-
-	public void writeEntryToLog(JsonReportEntry entry) {
-		if (statLog.isDebugEnabled()) {
-			statLog.debug(entry.toString());
-		}
-		scheduler.addEntryToDB(entry);
-	}
-
 	public void shutdown(Throwable t) {
 		Writer writer = new StringWriter();
 		PrintWriter printWriter = new PrintWriter(writer);
@@ -1204,6 +1193,17 @@ public abstract class ApplicationMaster {
 		log.error(writer.toString());
 		done = true;
 		amRMClient.stop();
+	}
+
+	public abstract void taskFailure(TaskInstance task, ContainerId containerId);
+
+	public abstract void taskSuccess(TaskInstance task, ContainerId containerId);
+
+	public void writeEntryToLog(JsonReportEntry entry) {
+		if (statLog.isDebugEnabled()) {
+			statLog.debug(entry.toString());
+		}
+		scheduler.addEntryToDB(entry);
 	}
 
 }

@@ -40,23 +40,19 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.UUID;
 
-//import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.junit.Test;
 
-//import de.huberlin.wbi.hiway.app.ApplicationMaster;
-//import de.huberlin.wbi.hiway.app.DaxApplicationMaster;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.C3PO;
 import de.huberlin.wbi.hiway.scheduler.GreedyQueue;
 
 public class TestScheduler {
 
-	private void run(Scheduler scheduler, List<String> nodeNames,
-			List<String> taskNames, int[][] runtimes) {
+	private void run(Scheduler scheduler, List<String> nodeNames, List<String> taskNames, int[][] runtimes) {
 
 		Queue<NodeId> availableNodes = new LinkedList<>();
 		for (String nodeName : nodeNames) {
@@ -72,15 +68,11 @@ public class TestScheduler {
 		while (!scheduler.nothingToSchedule() || !runningTasks.isEmpty()) {
 			if (!scheduler.nothingToSchedule() && !availableNodes.isEmpty()) {
 				NodeId nodeId = availableNodes.remove();
-				ContainerId containerId = ContainerId.newInstance(null,
-						runningId++);
-				Container container = Container.newInstance(containerId,
-						nodeId, "", null, null, null);
+				ContainerId containerId = ContainerId.newInstance(null, runningId++);
+				Container container = Container.newInstance(containerId, nodeId, "", null, null, null);
 				TaskInstance task = scheduler.getNextTask(container);
 				runningTasks.put(container, task);
-				long runtime = (runtimes == null) ? 1 : runtimes[nodeNames
-						.indexOf(nodeId.getHost())][taskNames.indexOf(task
-						.getTaskName())];
+				long runtime = (runtimes == null) ? 1 : runtimes[nodeNames.indexOf(nodeId.getHost())][taskNames.indexOf(task.getTaskName())];
 
 				finishTimes.put(container, clock + runtime);
 			}
@@ -88,13 +80,10 @@ public class TestScheduler {
 			for (Container container : finishTimes.keySet()) {
 				if (clock == finishTimes.get(container)) {
 					NodeId nodeId = container.getNodeId();
-					ContainerStatus containerStatus = ContainerStatus
-							.newInstance(container.getId(), null, "", 0);
+					ContainerStatus containerStatus = ContainerStatus.newInstance(container.getId(), null, "", 0);
 					TaskInstance task = runningTasks.get(container);
 					task.setCompleted();
-					long runtime = (runtimes == null) ? 1 : runtimes[nodeNames
-							.indexOf(nodeId.getHost())][taskNames.indexOf(task
-							.getTaskName())];
+					long runtime = (runtimes == null) ? 1 : runtimes[nodeNames.indexOf(nodeId.getHost())][taskNames.indexOf(task.getTaskName())];
 					scheduler.taskCompleted(task, containerStatus, runtime);
 					runningTasks.remove(container);
 					availableNodes.add(nodeId);
@@ -121,8 +110,7 @@ public class TestScheduler {
 		List<TaskInstance> tasks = new ArrayList<>();
 		for (String taskName : taskNames) {
 			for (int i = 0; i < nTasks[taskNames.indexOf(taskName)]; i++)
-				tasks.add(new TaskInstance(UUID.randomUUID(), taskName,
-						taskName.hashCode()));
+				tasks.add(new TaskInstance(UUID.randomUUID(), taskName, taskName.hashCode()));
 		}
 
 		scheduler.addTasks(tasks);
@@ -130,35 +118,6 @@ public class TestScheduler {
 		run(scheduler, nodeNames, taskNames, runtimes);
 
 	}
-
-	// @Test
-	// public void montage05GreedyQueue() {
-	// montage05("greedyQueue");
-	// }
-
-	// @Test
-	// public void montage05C3PO() {
-	// montage05("c3po");
-	// }
-
-	// private void montage05(String scheduler) {
-	// List<String> nodeNames = new ArrayList<>();
-	// nodeNames.add("Worker");
-	// ApplicationMaster workflow;
-	// try {
-	// workflow = new DaxApplicationMaster();
-	// String[] args = { "--workflow", "examples/dag_0.5.xml",
-	// "--scheduler", scheduler };
-	// workflow.init(args);
-	// workflow.parseWorkflow();
-	//
-	// run(workflow.getScheduler(), nodeNames, null, null);
-	// } catch (IOException e1) {
-	// e1.printStackTrace();
-	// } catch (ParseException e) {
-	// e.printStackTrace();
-	// }
-	// }
 
 	@Test
 	public void shakeRattelRollC3PO() {

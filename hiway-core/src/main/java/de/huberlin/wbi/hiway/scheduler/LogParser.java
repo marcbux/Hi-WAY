@@ -50,13 +50,13 @@ import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 
 public class LogParser implements HiwayDBI {
 
+	private static final Log log = LogFactory.getLog(LogParser.class);
 	private Set<String> hostNames;
 	private Map<UUID, Map<Long, InvocStat>> runToInvocStats;
 	private Map<UUID, String> runToWorkflowName;
 	private Map<Long, String> taskIdToTaskName;
-	private Map<String, Set<Long>> workflowNameToTaskIds;
 
-	private static final Log log = LogFactory.getLog(LogParser.class);
+	private Map<String, Set<Long>> workflowNameToTaskIds;
 
 	public LogParser() {
 		runToWorkflowName = new HashMap<>();
@@ -76,15 +76,6 @@ public class LogParser implements HiwayDBI {
 		Collection<InvocStat> stats = new LinkedList<>();
 		for (String hostName : getHostNames()) {
 			stats.addAll(getLogEntriesForTaskOnHostSince(taskId, hostName, 0l));
-		}
-		return stats;
-	}
-
-	@Override
-	public Collection<InvocStat> getLogEntriesForTasks(Set<Long> taskIds) {
-		Collection<InvocStat> stats = new LinkedList<>();
-		for (long taskId : taskIds) {
-			stats.addAll(getLogEntriesForTask(taskId));
 		}
 		return stats;
 	}
@@ -110,6 +101,15 @@ public class LogParser implements HiwayDBI {
 					stats.add(stat);
 				}
 			}
+		}
+		return stats;
+	}
+
+	@Override
+	public Collection<InvocStat> getLogEntriesForTasks(Set<Long> taskIds) {
+		Collection<InvocStat> stats = new LinkedList<>();
+		for (long taskId : taskIds) {
+			stats.addAll(getLogEntriesForTask(taskId));
 		}
 		return stats;
 	}

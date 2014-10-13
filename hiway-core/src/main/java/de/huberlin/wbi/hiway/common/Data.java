@@ -69,8 +69,6 @@ public class Data implements Comparable<Data> {
 	private static String hdfsDirectoryPrefix = "";
 	private static final Log log = LogFactory.getLog(Data.class);
 
-	private String absoluteLocalDirectoryPrefix = "";
-
 	public static String getHdfsDirectoryPrefix() {
 		return hdfsDirectoryPrefix;
 	}
@@ -78,6 +76,8 @@ public class Data implements Comparable<Data> {
 	public static void setHdfsDirectoryPrefix(String hdfsDirectoryPrefixDefault) {
 		Data.hdfsDirectoryPrefix = hdfsDirectoryPrefixDefault;
 	}
+
+	private String absoluteLocalDirectoryPrefix = "";
 
 	// The local directory and name of the file. The local directory is also the
 	// suffix of the directoy in HDFS.

@@ -176,12 +176,12 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 	// Repl - Read evaluation print loop
 	public class HiWayRepl extends BaseRepl {
 
-		@Override
-		protected void flushStatLog(Set<JsonReportEntry> reportEntrySet) {
-		}
-
 		public HiWayRepl(TicketSrcActor ticketSrc) {
 			super(ticketSrc);
+		}
+
+		@Override
+		protected void flushStatLog(Set<JsonReportEntry> reportEntrySet) {
 		}
 
 		@Override

@@ -79,10 +79,6 @@ public class DaxApplicationMaster extends ApplicationMaster {
 			determineFileSizes = true;
 		}
 
-		public void setRuntime(double runtime) {
-			this.runtime = runtime;
-		}
-
 		public void addInputData(Data data, Long fileSize) {
 			super.addInputData(data);
 			fileSizes.put(data, fileSize);
@@ -118,11 +114,19 @@ public class DaxApplicationMaster extends ApplicationMaster {
 			}
 			return super.getInputData();
 		}
+
+		public void setRuntime(double runtime) {
+			this.runtime = runtime;
+		}
 	}
 
 	private static final Log log = LogFactory.getLog(DaxApplicationMaster.class);
 
+	public static void main(String[] args) {
+		ApplicationMaster.loop(new DaxApplicationMaster(), args);
+	}
 	private ADag dag;
+
 	private UUID runId;
 
 	public DaxApplicationMaster() {
@@ -133,10 +137,6 @@ public class DaxApplicationMaster extends ApplicationMaster {
 	@Override
 	public UUID getRunId() {
 		return runId;
-	}
-
-	public static void main(String[] args) {
-		ApplicationMaster.loop(new DaxApplicationMaster(), args);
 	}
 
 	@Override

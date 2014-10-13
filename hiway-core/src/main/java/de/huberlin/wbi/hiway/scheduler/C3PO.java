@@ -270,10 +270,6 @@ public class C3PO extends Scheduler {
 
 	protected Map<TaskInstance, List<Container>> taskToContainers;
 
-	public C3PO(String workflowName, HiWayConfiguration conf) {
-		this(workflowName, System.currentTimeMillis(), conf);
-	}
-
 	public C3PO(String workflowName, FileSystem fs, HiWayConfiguration conf) {
 		this(workflowName, fs, System.currentTimeMillis(), conf);
 	}
@@ -293,24 +289,13 @@ public class C3PO extends Scheduler {
 		df.setMaximumIntegerDigits(7);
 	}
 
+	public C3PO(String workflowName, HiWayConfiguration conf) {
+		this(workflowName, System.currentTimeMillis(), conf);
+	}
+
 	public C3PO(String workflowName, long seed, HiWayConfiguration conf) {
 		this(workflowName, null, seed, conf);
 		this.placementAwarenessWeight = 0d;
-	}
-
-	@Override
-	public void initialize() {
-		super.initialize();
-
-		log.info("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
-		Collection<Long> taskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
-		log.info("HiwayDB: Retrieved Task Ids " + taskIds.toString() + " from database.");
-		for (long taskId : taskIds) {
-			log.info("HiwayDB: Querying Task Name for Task Id " + taskId + " from database.");
-			String taskName = dbInterface.getTaskName(taskId);
-			taskIdToName.put(taskId, taskName);
-			log.info("HiwayDB: Retrieved Task Name " + taskName + " from database.");
-		}
 	}
 
 	@Override
@@ -507,6 +492,21 @@ public class C3PO extends Scheduler {
 
 	public void init() {
 
+	}
+
+	@Override
+	public void initialize() {
+		super.initialize();
+
+		log.info("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
+		Collection<Long> taskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
+		log.info("HiwayDB: Retrieved Task Ids " + taskIds.toString() + " from database.");
+		for (long taskId : taskIds) {
+			log.info("HiwayDB: Querying Task Name for Task Id " + taskId + " from database.");
+			String taskName = dbInterface.getTaskName(taskId);
+			taskIdToName.put(taskId, taskName);
+			log.info("HiwayDB: Retrieved Task Name " + taskName + " from database.");
+		}
 	}
 
 	private void multiplyWeights(Map<Long, Estimate> weights, Map<Long, ? extends Estimate> statistics, double factor) {

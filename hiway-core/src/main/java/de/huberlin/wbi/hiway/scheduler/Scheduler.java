@@ -75,8 +75,6 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  */
 public abstract class Scheduler {
 
-	public abstract int getNumberOfReadyTasks();
-
 	protected class Estimate {
 		String taskName;
 		double weight = 1d;
@@ -92,24 +90,24 @@ public abstract class Scheduler {
 
 	protected HiwayDBI dbInterface;
 
-	protected Map<String, Long> maxTimestampPerHost;
-
-	protected int numberOfPreviousRunTasks = 0;
-	protected int numberOfFinishedTasks = 0;
-	protected int numberOfRemainingTasks = 0;
-	protected int numberOfRunningTasks = 0;
-
 	protected final FileSystem fs;
 
+	protected HiWayConfiguration hiWayConf;
+
 	protected int maxRetries = 0;
-	protected Set<Long> taskIds;
+	protected Map<String, Long> maxTimestampPerHost;
+	protected int numberOfFinishedTasks = 0;
+	protected int numberOfPreviousRunTasks = 0;
+
+	protected int numberOfRemainingTasks = 0;
+
+	protected int numberOfRunningTasks = 0;
 	protected Map<String, Map<Long, RuntimeEstimate>> runtimeEstimatesPerNode;
+	protected Set<Long> taskIds;
 
 	// a queue of nodes on which containers are to be requested
 	protected Queue<String[]> unissuedNodeRequests;
 	protected String workflowName;
-	protected HiWayConfiguration hiWayConf;
-
 	public Scheduler(String workflowName, HiWayConfiguration conf, FileSystem fs) {
 		this.workflowName = workflowName;
 
@@ -120,37 +118,6 @@ public abstract class Scheduler {
 		taskIds = new HashSet<>();
 		runtimeEstimatesPerNode = new HashMap<>();
 		maxTimestampPerHost = new HashMap<>();
-	}
-
-	public void initialize() {
-		maxRetries = hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT);
-
-		HiWayConfiguration.HIWAY_DB_TYPE_OPTS dbType = HiWayConfiguration.HIWAY_DB_TYPE_OPTS.valueOf(hiWayConf.get(HiWayConfiguration.HIWAY_DB_TYPE,
-				HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT.toString()));
-		switch (dbType) {
-		case SQL:
-			String sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
-			String sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
-			String sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
-			dbInterface = new HiwayDB(sqlUser, sqlPassword, sqlURL);
-			break;
-		case NoSQL:
-			sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
-			sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
-			sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
-			String noSqlBucket = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
-			String noSqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
-			String noSqlURIs = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
-			List<URI> noSqlURIList = new ArrayList<>();
-			for (String uri : noSqlURIs.split(",")) {
-				noSqlURIList.add(URI.create(uri));
-			}
-			dbInterface = new HiwayDBNoSQL(noSqlBucket, noSqlPassword, noSqlURIList, sqlUser, sqlPassword, sqlURL);
-			break;
-		default:
-			dbInterface = new LogParser();
-			parseLogs(fs);
-		}
 	}
 
 	public void addEntryToDB(JsonReportEntry entry) {
@@ -191,6 +158,8 @@ public abstract class Scheduler {
 		return numberOfFinishedTasks - numberOfPreviousRunTasks;
 	}
 
+	public abstract int getNumberOfReadyTasks();
+
 	public int getNumberOfRunningTasks() {
 		return numberOfRunningTasks;
 	}
@@ -213,6 +182,44 @@ public abstract class Scheduler {
 
 	public boolean hasNextNodeRequest() {
 		return !unissuedNodeRequests.isEmpty();
+	}
+
+	public void initialize() {
+		maxRetries = hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT);
+
+		HiWayConfiguration.HIWAY_DB_TYPE_OPTS dbType = HiWayConfiguration.HIWAY_DB_TYPE_OPTS.valueOf(hiWayConf.get(HiWayConfiguration.HIWAY_DB_TYPE,
+				HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT.toString()));
+		switch (dbType) {
+		case SQL:
+			String sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			String sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			String sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+			dbInterface = new HiwayDB(sqlUser, sqlPassword, sqlURL);
+			break;
+		case NoSQL:
+			sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+			String noSqlBucket = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
+			String noSqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
+			String noSqlURIs = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
+			List<URI> noSqlURIList = new ArrayList<>();
+			for (String uri : noSqlURIs.split(",")) {
+				noSqlURIList.add(URI.create(uri));
+			}
+			dbInterface = new HiwayDBNoSQL(noSqlBucket, noSqlPassword, noSqlURIList, sqlUser, sqlPassword, sqlURL);
+			break;
+		default:
+			dbInterface = new LogParser();
+			parseLogs(fs);
+		}
+	}
+
+	public void logStackTrace(Throwable t) {
+		Writer writer = new StringWriter();
+		PrintWriter printWriter = new PrintWriter(writer);
+		t.printStackTrace(printWriter);
+		log.error(writer.toString());
 	}
 
 	protected void newHost(String nodeId) {
@@ -340,12 +347,5 @@ public abstract class Scheduler {
 			}
 			maxTimestampPerHost.put(hostName, newMaxTimestamp);
 		}
-	}
-
-	public void logStackTrace(Throwable t) {
-		Writer writer = new StringWriter();
-		PrintWriter printWriter = new PrintWriter(writer);
-		t.printStackTrace(printWriter);
-		log.error(writer.toString());
 	}
 }
