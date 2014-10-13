@@ -43,8 +43,7 @@ import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
- * A basic implementation of a scheduler that stores ready-to-execute tasks in a
- * queue. Whenever a container has been allocated, this container is greedily
+ * A basic implementation of a scheduler that stores ready-to-execute tasks in a queue. Whenever a container has been allocated, this container is greedily
  * assigned the first task from the queue.
  * 
  * @author Marc Bux

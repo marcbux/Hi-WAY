@@ -50,13 +50,11 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 /**
  * <p>
- * The HEFT scheduler, as described in [1]. This implementation of HEFT does not
- * yet make use of estimates for data transfer times between nodes.
+ * The HEFT scheduler, as described in [1]. This implementation of HEFT does not yet make use of estimates for data transfer times between nodes.
  * </p>
  * 
  * <p>
- * [1] Topcuoglu, H., Hariri, S., & Wu, M.-Y. (2002). <i>Performance-Effective
- * and Low-Complexity Task Scheduling for Heterogeneous Computing.</i> IEEE
+ * [1] Topcuoglu, H., Hariri, S., & Wu, M.-Y. (2002). <i>Performance-Effective and Low-Complexity Task Scheduling for Heterogeneous Computing.</i> IEEE
  * Transactions on Parallel and Distributed Systems, 13(3), 260�274.
  * </p>
  * 
@@ -99,9 +97,8 @@ public class HEFT extends StaticScheduler {
 		for (String node : nodes) {
 			double computationCost = runtimeEstimatesPerNode.get(node).get(task.getTaskId()).weight;
 
-			// the readytime of this task will have been set by now, as all
-			// predecessor tasks have a higher upward
-			// rank and thus have been assigned to a vm already
+			/* the readytime of this task will have been set by now, as all predecessor tasks have a higher upward rank and thus have been assigned to a vm
+			 * already */
 			TreeSet<Double> freeTimeSlotStarts = freeTimeSlotStartsPerNode.get(node);
 			Map<Double, Double> freeTimeSlotLengths = freeTimeSlotLengthsPerNode.get(node);
 
@@ -138,8 +135,7 @@ public class HEFT extends StaticScheduler {
 				}
 			}
 		} catch (WorkflowStructureUnknownException e) {
-			e.printStackTrace();
-			System.exit(1);
+			HiWayConfiguration.onError(e, log);
 		}
 
 		double timeslotStart = freeTimeSlotStartsPerNode.get(bestNode).floor(bestNodeFreeTimeSlotActualStart);
@@ -180,8 +176,7 @@ public class HEFT extends StaticScheduler {
 					}
 				}
 			} catch (WorkflowStructureUnknownException e) {
-				e.printStackTrace();
-				System.exit(1);
+				HiWayConfiguration.onError(e, log);
 			}
 
 			double averageComputationCost = 0;
@@ -190,13 +185,11 @@ public class HEFT extends StaticScheduler {
 			}
 			averageComputationCost /= nodes.size();
 
-			// note that the upward rank of a task will always be greater than
-			// that of its successors
+			// note that the upward rank of a task will always be greater than that of its successors
 			try {
 				task.setUpwardRank(averageComputationCost + maxSuccessorRank);
 			} catch (WorkflowStructureUnknownException e) {
-				e.printStackTrace();
-				System.exit(1);
+				HiWayConfiguration.onError(e, log);
 			}
 		}
 

@@ -51,21 +51,16 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
- * A file stored locally and in HDFS. HDFS directory paths are all relative to
- * the HDFS user directory.
+ * A file stored locally and in HDFS. HDFS directory paths are all relative to the HDFS user directory.
  * 
  * @author Marc Bux
  */
 public class Data implements Comparable<Data> {
-	// The hdfs directory midfixes (usually application and container id) for
-	// non-input files, e.g. for a
-	// non-input-file:
-	// local: my_folder/my_file.txt
-	// hdfs: sandbox/app_01/container_01/my_folder/my_file.txt
+	/* The hdfs directory midfixes (usually application and container id) for non-input files, e.g. for a non-input-file: local: my_folder/my_file.txt hdfs:
+	 * sandbox/app_01/container_01/my_folder/my_file.txt */
 	public static Map<Data, String> hdfsDirectoryMidfixes = new HashMap<>();
 
-	// The hdfs directory prefix (usually the Hi-WAY sandbox folder) for
-	// non-input files
+	// The hdfs directory prefix (usually the Hi-WAY sandbox folder) for non-input files
 	private static String hdfsDirectoryPrefix = "";
 	private static final Log log = LogFactory.getLog(Data.class);
 
@@ -79,11 +74,9 @@ public class Data implements Comparable<Data> {
 
 	private String absoluteLocalDirectoryPrefix = "";
 
-	// The local directory and name of the file. The local directory is also the
-	// suffix of the directoy in HDFS.
+	// The local directory and name of the file. The local directory is also the suffix of the directoy in HDFS.
 	private String directorySuffix = "";
-	// is the file input or output of the workflow (otherwise, its an
-	// intermediate and possibly temporary file product)
+	// is the file input or output of the workflow (otherwise, its an intermediate and possibly temporary file product)
 	private boolean input;
 
 	private String name;

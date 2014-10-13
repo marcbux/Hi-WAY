@@ -113,7 +113,7 @@ public class Client {
 			result = client.run();
 		} catch (Throwable t) {
 			log.fatal("Error running Client", t);
-			System.exit(1);
+			HiWayConfiguration.onError(t, log);
 		}
 		if (result) {
 			log.info("Application completed successfully");
@@ -181,8 +181,7 @@ public class Client {
 	 * @throws IOException
 	 */
 	private void forceKillApplication(ApplicationId appId) throws YarnException, IOException {
-		// Response can be ignored as it is non-null on success or throws an
-		// exception in case of failures
+		// Response can be ignored as it is non-null on success or throws an exception in case of failures
 		yarnClient.killApplication(appId);
 	}
 
@@ -223,7 +222,7 @@ public class Client {
 			try {
 				summary = new Data((new File(summaryFile)).getCanonicalPath());
 			} catch (IOException e) {
-				e.printStackTrace();
+				HiWayConfiguration.onError(e, log);
 			}
 		}
 
@@ -231,7 +230,7 @@ public class Client {
 		try {
 			workflow = new Data((new File(workflowPath)).getCanonicalPath());
 		} catch (IOException e) {
-			e.printStackTrace();
+			HiWayConfiguration.onError(e, log);
 		}
 		workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.valueOf(cliParser.getOptionValue("language",
 				HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform.toString()));
@@ -242,8 +241,7 @@ public class Client {
 	}
 
 	/**
-	 * Monitor the submitted application for completion. Kill application if
-	 * time expires.
+	 * Monitor the submitted application for completion. Kill application if time expires.
 	 * 
 	 * @param appId
 	 *            Application Id of application to be monitored
@@ -333,8 +331,7 @@ public class Client {
 		YarnClientApplication app = yarnClient.createApplication();
 		GetNewApplicationResponse appResponse = app.getNewApplicationResponse();
 
-		// Get min/max resource capabilities from RM and change memory ask if
-		// needed
+		// Get min/max resource capabilities from RM and change memory ask if needed
 		int maxMem = appResponse.getMaximumResourceCapability().getMemory();
 		log.info("Max mem capabililty of resources in this cluster " + maxMem);
 
@@ -367,8 +364,7 @@ public class Client {
 		// set local resource info into app master container launch context
 		amContainer.setLocalResources(localResources);
 
-		// set the env variables to be setup in the env where the application
-		// master will be run
+		/* set the env variables to be setup in the env where the application master will be run */
 		log.info("Set the environment for the application master");
 		Map<String, String> env = new HashMap<String, String>();
 

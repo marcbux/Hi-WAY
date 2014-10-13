@@ -65,12 +65,9 @@ public class Worker {
 		try {
 			worker.init(args);
 			worker.run();
-		} catch (ParseException e) {
+		} catch (ParseException | IOException | JSONException e) {
 			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (JSONException e) {
-			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -110,10 +107,9 @@ public class Worker {
 			processBuilder.redirectError(stdErrFile);
 			process = processBuilder.start();
 			exitValue = process.waitFor();
-		} catch (IOException e) {
+		} catch (IOException | InterruptedException e) {
 			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		return exitValue;
@@ -170,6 +166,7 @@ public class Worker {
 			fs = FileSystem.get(conf);
 		} catch (IOException e) {
 			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -231,6 +228,7 @@ public class Worker {
 			}
 		} catch (JSONException e) {
 			e.printStackTrace();
+			System.exit(-1);
 		}
 		for (Data output : outputFiles) {
 			long tic = System.currentTimeMillis();

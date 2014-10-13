@@ -29,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app;
+package de.huberlin.wbi.hiway.app.am;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -47,6 +47,7 @@ import java.util.concurrent.Executors;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.json.JSONException;
 
 import de.huberlin.wbi.cuneiform.core.cre.BaseCreActor;
 import de.huberlin.wbi.cuneiform.core.cre.TicketReadyMsg;
@@ -60,6 +61,7 @@ import de.huberlin.wbi.cuneiform.core.semanticmodel.Ticket;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketFailedMsg;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketFinishedMsg;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketSrcActor;
+import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
@@ -151,7 +153,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 					task.addInputData(data);
 				}
 			} catch (NotDerivableException e) {
-				e.printStackTrace();
+				HiWayConfiguration.onError(e, log);
 			}
 
 			try {
@@ -159,7 +161,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 				writeEntryToLog(invoc.getExecutableLogEntry());
 				writeEntryToLog(invoc.getScriptLogEntry());
 			} catch (NotBoundException | NotDerivableException e) {
-				e.printStackTrace();
+				HiWayConfiguration.onError(e, log);
 			}
 
 			Collection<TaskInstance> tasks = new ArrayList<>();
@@ -201,7 +203,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 					}
 				}
 			} catch (NotDerivableException e) {
-				e.printStackTrace();
+				HiWayConfiguration.onError(e, log);
 			}
 		}
 
@@ -252,9 +254,9 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 				}
 			}
 		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+			HiWayConfiguration.onError(e, log);
 		} catch (IOException e) {
-			e.printStackTrace();
+			HiWayConfiguration.onError(e, log);
 		}
 		repl.interpret(buf.toString());
 	}
@@ -276,8 +278,8 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 				while ((line = reader.readLine()) != null)
 					log.error(String.format("%02d  %s", ++i, line));
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (NotBoundException | NotDerivableException | IOException e) {
+			HiWayConfiguration.onError(e, log);
 		}
 
 		try {
@@ -292,8 +294,8 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 			stdOut = buf.toString();
 			log.error("[out]");
 			log.error(stdOut);
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (IOException e) {
+			HiWayConfiguration.onError(e, log);
 		}
 
 		try {
@@ -308,8 +310,8 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 			stdErr = buf.toString();
 			log.error("[err]");
 			log.error(stdErr);
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (IOException e) {
+			HiWayConfiguration.onError(e, log);
 		}
 
 		log.error("[end]");
@@ -341,10 +343,9 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 				output.setInput(false);
 			}
 
-		} catch (Exception e) {
+		} catch (JSONException | NotDerivableException e) {
 			log.info("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
-			e.printStackTrace();
-			System.exit(1);
+			HiWayConfiguration.onError(e, log);
 		}
 	}
 }

@@ -34,9 +34,7 @@ package de.huberlin.wbi.hiway.scheduler;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
+import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,6 +54,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.json.JSONException;
 
 import de.huberlin.hiwaydb.useDB.HiwayDB;
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
@@ -64,8 +63,6 @@ import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
-//import de.huberlin.wbi.hiway.scheduler.C3PO.ConservatismEstimate;
-//import de.huberlin.wbi.hiway.scheduler.C3PO.Estimate;
 
 /**
  * An abstract implementation of a workflow scheduler.
@@ -108,6 +105,7 @@ public abstract class Scheduler {
 	// a queue of nodes on which containers are to be requested
 	protected Queue<String[]> unissuedNodeRequests;
 	protected String workflowName;
+
 	public Scheduler(String workflowName, HiWayConfiguration conf, FileSystem fs) {
 		this.workflowName = workflowName;
 
@@ -215,13 +213,6 @@ public abstract class Scheduler {
 		}
 	}
 
-	public void logStackTrace(Throwable t) {
-		Writer writer = new StringWriter();
-		PrintWriter printWriter = new PrintWriter(writer);
-		t.printStackTrace(printWriter);
-		log.error(writer.toString());
-	}
-
 	protected void newHost(String nodeId) {
 		Map<Long, RuntimeEstimate> runtimeEstimates = new HashMap<>();
 		for (long taskId : getTaskIds()) {
@@ -268,8 +259,8 @@ public abstract class Scheduler {
 					}
 				}
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (IOException | JSONException e) {
+			HiWayConfiguration.onError(e, log);
 		}
 	}
 

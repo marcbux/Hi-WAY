@@ -29,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app;
+package de.huberlin.wbi.hiway.app.am;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -38,9 +38,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -106,6 +103,8 @@ import org.json.JSONObject;
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
+import de.huberlin.wbi.hiway.app.HiWayConfiguration;
+import de.huberlin.wbi.hiway.app.WFAppMetrics;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.Scheduler;
@@ -116,33 +115,23 @@ import de.huberlin.wbi.hiway.scheduler.StaticRoundRobin;
 
 /**
  * <p>
- * The Heterogeneity-incorporating Workflow ApplicationMaster for YARN (Hi-WAY)
- * provides the means to execute arbitrary scientific workflows on top of <a
- * href="http://hadoop.apache.org/">Apache's Hadoop 2.2.0 (YARN)</a>. In this
- * context, scientific workflows are directed acyclic graphs (DAGs), in which
- * nodes are executables accessible from the command line (e.g. tar, cat, or any
- * other executable in the PATH of the worker nodes), and edges represent data
+ * The Heterogeneity-incorporating Workflow ApplicationMaster for YARN (Hi-WAY) provides the means to execute arbitrary scientific workflows on top of <a
+ * href="http://hadoop.apache.org/">Apache's Hadoop 2.2.0 (YARN)</a>. In this context, scientific workflows are directed acyclic graphs (DAGs), in which nodes
+ * are executables accessible from the command line (e.g. tar, cat, or any other executable in the PATH of the worker nodes), and edges represent data
  * dependencies between these executables.
  * </p>
  * 
  * <p>
- * Hi-WAY currently supports the workflow languages <a
- * href="http://pegasus.isi.edu/wms/docs/latest/creating_workflows.php">Pegasus
- * DAX</a> and <a href="https://github.com/joergen7/cuneiform">Cuneiform</a> as
- * well as the workflow schedulers static round robin, HEFT, greedy queue and
- * C3PO. Hi-WAY uses Hadoop's distributed file system HDFS to store the
- * workflow's input, output and intermediate data. The ApplicationMaster has
- * been tested for up to 320 concurrent tasks and is fault-tolerant in that it
- * is able to restart failed tasks.
+ * Hi-WAY currently supports the workflow languages <a href="http://pegasus.isi.edu/wms/docs/latest/creating_workflows.php">Pegasus DAX</a> and <a
+ * href="https://github.com/joergen7/cuneiform">Cuneiform</a> as well as the workflow schedulers static round robin, HEFT, greedy queue and C3PO. Hi-WAY uses
+ * Hadoop's distributed file system HDFS to store the workflow's input, output and intermediate data. The ApplicationMaster has been tested for up to 320
+ * concurrent tasks and is fault-tolerant in that it is able to restart failed tasks.
  * </p>
  * 
  * <p>
- * When executing a scientific workflow, Hi-WAY requests a container from YARN's
- * ResourceManager for each workflow task that is ready to execute. A task is
- * ready to execute once all its input data is available, i.e., all its data
- * dependencies are resolved. The worker nodes on which containers are to be
- * allocated as well as the task assigned to an allocated container depend on
- * the selected scheduling strategy.
+ * When executing a scientific workflow, Hi-WAY requests a container from YARN's ResourceManager for each workflow task that is ready to execute. A task is
+ * ready to execute once all its input data is available, i.e., all its data dependencies are resolved. The worker nodes on which containers are to be allocated
+ * as well as the task assigned to an allocated container depend on the selected scheduling strategy.
  * </p>
  * 
  * <p>
@@ -151,8 +140,7 @@ import de.huberlin.wbi.hiway.scheduler.StaticRoundRobin;
  */
 public abstract class ApplicationMaster {
 
-	// an internal class that stores a task along with some additional
-	// information
+	// an internal class that stores a task along with some additional information
 	private class HiWayInvocation {
 		final TaskInstance task;
 		final long timestamp;
@@ -164,8 +152,7 @@ public abstract class ApplicationMaster {
 	}
 
 	/**
-	 * Thread to connect to the {@link ContainerManagementProtocol} and launch
-	 * the container that will execute the shell command.
+	 * Thread to connect to the {@link ContainerManagementProtocol} and launch the container that will execute the shell command.
 	 */
 	private class LaunchContainerRunnable implements Runnable {
 		Container container;
@@ -185,8 +172,7 @@ public abstract class ApplicationMaster {
 		}
 
 		/**
-		 * Connects to CM, sets up container launch context for shell command
-		 * and eventually dispatches the container start request to the CM.
+		 * Connects to CM, sets up container launch context for shell command and eventually dispatches the container start request to the CM.
 		 */
 		@Override
 		public void run() {
@@ -219,18 +205,18 @@ public abstract class ApplicationMaster {
 				try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(script))) {
 					scriptWriter.write(task.getCommand());
 				} catch (IOException e) {
-					e.printStackTrace();
+					HiWayConfiguration.onError(e, log);
 				}
 				Data scriptData = new Data(script.getPath());
 				try {
 					scriptData.stageOut(fs, containerId);
 				} catch (IOException e) {
-					e.printStackTrace();
+					HiWayConfiguration.onError(e, log);
 				}
 				scriptData.addToLocalResourceMap(localResources, fs, containerId);
 			} catch (IOException e1) {
 				log.info("Error during Container startup. exiting");
-				shutdown(e1);
+				HiWayConfiguration.onError(e1, log);
 			}
 			ctx.setLocalResources(localResources);
 
@@ -270,15 +256,9 @@ public abstract class ApplicationMaster {
 			commands.add(command.toString());
 			ctx.setCommands(commands);
 
-			// Set up tokens for the container. For normal shell commands,
-			// the container in distribute-shell doesn't need any tokens. We are
-			// populating them mainly for NodeManagers to be able to download
-			// any
-			// files in the distributed file-system. The tokens are otherwise
-			// also
-			// useful in cases, for e.g., when one is running a "hadoop dfs"
-			// command
-			// inside the distributed shell.
+			/* Set up tokens for the container. For normal shell commands, the container in distribute-shell doesn't need any tokens. We are populating them
+			 * mainly for NodeManagers to be able to download any files in the distributed file-system. The tokens are otherwise also useful in cases, for e.g.,
+			 * when one is running a "hadoop dfs" command inside the distributed shell. */
 			ctx.setTokens(allTokens.duplicate());
 
 			containerListener.addContainer(container.getId(), container);
@@ -328,13 +308,13 @@ public abstract class ApplicationMaster {
 		@Override
 		public void onGetContainerStatusError(ContainerId containerId, Throwable t) {
 			log.error("Failed to query the status of Container " + containerId);
-			shutdown(t);
+			HiWayConfiguration.onError(t, log);
 		}
 
 		@Override
 		public void onStartContainerError(ContainerId containerId, Throwable t) {
 			log.error("Failed to start Container " + containerId);
-			shutdown(t);
+			HiWayConfiguration.onError(t, log);
 			containers.remove(containerId);
 			applicationMaster.numCompletedContainers.incrementAndGet();
 			applicationMaster.numFailedContainers.incrementAndGet();
@@ -343,7 +323,7 @@ public abstract class ApplicationMaster {
 		@Override
 		public void onStopContainerError(ContainerId containerId, Throwable t) {
 			log.error("Failed to stop Container " + containerId);
-			shutdown(t);
+			HiWayConfiguration.onError(t, log);
 			containers.remove(containerId);
 		}
 	}
@@ -379,15 +359,10 @@ public abstract class ApplicationMaster {
 					+ allocatedContainer.getNodeId().getHost() + ":" + allocatedContainer.getNodeId().getPort() + ", containerNodeURI="
 					+ allocatedContainer.getNodeHttpAddress() + ", containerResourceMemory" + allocatedContainer.getResource().getMemory());
 
-			// try {
-			// buildScripts(task, allocatedContainer);
-
 			LaunchContainerRunnable runnableLaunchContainer = new LaunchContainerRunnable(allocatedContainer, containerListener, task);
 			Thread launchThread = new Thread(runnableLaunchContainer);
 
-			// launch and start the container on a separate thread to
-			// keep the main thread unblocked as all
-			// containers may not be allocated at one go.
+			/* launch and start the container on a separate thread to keep the main thread unblocked as all containers may not be allocated at one go. */
 			launchThreads.add(launchThread);
 			launchThread.start();
 			metrics.endWaitingTask();
@@ -409,7 +384,7 @@ public abstract class ApplicationMaster {
 					try {
 						obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 					} catch (JSONException e) {
-						e.printStackTrace();
+						HiWayConfiguration.onError(e, log);
 					}
 					task.getReport().add(
 							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
@@ -438,7 +413,7 @@ public abstract class ApplicationMaster {
 					value.put("vcores", container.getResource().getVirtualCores());
 					value.put("service", container.getContainerToken().getService());
 				} catch (JSONException e) {
-					e.printStackTrace();
+					HiWayConfiguration.onError(e, log);
 				}
 
 				writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
@@ -469,7 +444,7 @@ public abstract class ApplicationMaster {
 					value.put("exit-code", containerStatus.getExitStatus());
 					value.put("diagnostics", containerStatus.getDiagnostics());
 				} catch (JSONException e) {
-					e.printStackTrace();
+					HiWayConfiguration.onError(e, log);
 				}
 
 				log.info("Got container status for containerID=" + containerStatus.getContainerId() + ", state=" + containerStatus.getState() + ", exitStatus="
@@ -493,8 +468,7 @@ public abstract class ApplicationMaster {
 
 						log.info("Container completed successfully." + ", containerId=" + containerStatus.getContainerId());
 
-						// this task might have been completed previously (e.g.,
-						// via speculative replication)
+						// this task might have been completed previously (e.g., via speculative replication)
 						if (!finishedTask.isCompleted()) {
 							finishedTask.setCompleted();
 
@@ -520,8 +494,7 @@ public abstract class ApplicationMaster {
 						}
 					}
 
-					// The container was released by the framework (e.g., it was
-					// a speculative copy of a finished task)
+					// The container was released by the framework (e.g., it was a speculative copy of a finished task)
 					else if (diagnostics.equals(SchedulerUtils.RELEASED_CONTAINER)) {
 						log.info("Container was released." + ", containerId=" + containerStatus.getContainerId());
 					}
@@ -553,10 +526,8 @@ public abstract class ApplicationMaster {
 					}
 				}
 
-				// The container was aborted by the framework without it having
-				// been assigned an invocation
-				// (e.g., because the RM allocated more containers than
-				// requested)
+				/* The container was aborted by the framework without it having been assigned an invocation (e.g., because the RM allocated more containers than
+				 * requested) */
 				else {
 
 				}
@@ -567,7 +538,7 @@ public abstract class ApplicationMaster {
 
 		@Override
 		public void onError(Throwable e) {
-			shutdown(e);
+			HiWayConfiguration.onError(e, log);
 		}
 
 		@Override
@@ -603,7 +574,7 @@ public abstract class ApplicationMaster {
 			result = appMaster.run();
 		} catch (Throwable t) {
 			log.fatal("Error running ApplicationMaster", t);
-			appMaster.shutdown(t);
+			HiWayConfiguration.onError(t, log);
 		}
 		if (result) {
 			log.info("Application Master completed successfully. exiting");
@@ -615,8 +586,6 @@ public abstract class ApplicationMaster {
 	}
 
 	protected AMRMClientAsync.CallbackHandler allocListener;
-
-	// public static int hdfsInstancesPerContainer;
 
 	// the yarn tokens to be passed to any launched containers
 	protected ByteBuffer allTokens;
@@ -632,11 +601,9 @@ public abstract class ApplicationMaster {
 	protected String appId;
 	// the hostname of the container running the Hi-WAY ApplicationMaster
 	protected String appMasterHostname = "";
-	// the port on which the ApplicationMaster listens for status updates from
-	// clients
+	// the port on which the ApplicationMaster listens for status updates from clients
 	protected int appMasterRpcPort = -1;
-	// the tracking URL to which the ApplicationMaster publishes info for
-	// clients to monitor
+	// the tracking URL to which the ApplicationMaster publishes info for clients to monitor
 	protected String appMasterTrackingUrl = "";
 	// the configuration of the Hadoop installation
 	protected Configuration conf;
@@ -645,8 +612,7 @@ public abstract class ApplicationMaster {
 	protected Map<Integer, HiWayInvocation> containerIdToInvocation = new HashMap<>();
 	// a listener for processing the responses from the NodeManagers
 	protected NMCallbackHandler containerListener;
-	// the memory and number of virtual cores to request for the container on
-	// which the workflow tasks are launched
+	// the memory and number of virtual cores to request for the container on which the workflow tasks are launched
 	protected int containerMemory = 4096;
 	// a queue for allocated containers that have yet to be assigned a task
 	protected Queue<Container> containerQueue = new LinkedList<>();
@@ -692,21 +658,20 @@ public abstract class ApplicationMaster {
 	// the workflow to be executed along with its format and path in the file
 	// system
 	protected String workflowPath;
+
 	public ApplicationMaster() {
 		conf = new YarnConfiguration();
 		conf.addResource("core-site.xml");
 		hiWayConf = new HiWayConfiguration();
-		// conf.addResource(new Path(System.getenv("HADOOP_CONF_DIR") +
-		// "/core-site.xml"));
 		try {
 			fs = FileSystem.get(conf);
 		} catch (IOException e) {
-			e.printStackTrace();
+			HiWayConfiguration.onError(e, log);
 		}
 	}
+
 	/**
-	 * If the debug flag is set, dump out contents of current working directory
-	 * and the environment to stdout for debugging.
+	 * If the debug flag is set, dump out contents of current working directory and the environment to stdout for debugging.
 	 */
 	private void dumpOutDebugInfo() {
 		log.info("Dump debug output");
@@ -730,12 +695,11 @@ public abstract class ApplicationMaster {
 				System.out.println("System CWD content: " + line);
 			}
 			buf.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+		} catch (IOException | InterruptedException e) {
+			HiWayConfiguration.onError(e, log);
 		}
 	}
+
 	public void evaluateReport(TaskInstance task, ContainerId containerId) {
 		try {
 
@@ -786,21 +750,21 @@ public abstract class ApplicationMaster {
 
 		} catch (Exception e) {
 			log.info("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
-			shutdown(e);
+			HiWayConfiguration.onError(e, log);
 		}
 	}
+
 	private void finish() {
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_TIME, Long.toString(System.currentTimeMillis()
 				- amRMClient.getStartTime())));
 
-		// Join all launched threads needed for when we time out and we need to
-		// release containers
+		// Join all launched threads needed for when we time out and we need to release containers
 		for (Thread launchThread : launchThreads) {
 			try {
 				launchThread.join(10000);
 			} catch (InterruptedException e) {
 				log.info("Exception thrown in thread join: " + e.getMessage());
-				e.printStackTrace();
+				HiWayConfiguration.onError(e, log);
 			}
 		}
 
@@ -808,8 +772,7 @@ public abstract class ApplicationMaster {
 		log.info("Application completed. Stopping running containers");
 		nmClientAsync.stop();
 
-		// When the application completes, it should send a finish application
-		// signal to the RM
+		// When the application completes, it should send a finish application signal to the RM
 		log.info("Application completed. Signalling finish to RM");
 
 		FinalApplicationStatus appStatus;
@@ -825,10 +788,8 @@ public abstract class ApplicationMaster {
 
 		if (numFailedContainers.get() == 0 && numCompletedContainers.get() == numTotalContainers) {
 			appStatus = FinalApplicationStatus.SUCCEEDED;
-			// metrics.completedWorkflow(workflow);
 		} else {
 			appStatus = FinalApplicationStatus.FAILED;
-			// metrics.failedWorkflow(workflow);
 			appMessage = "Diagnostics." + ", total=" + numTotalContainers + ", completed=" + numCompletedContainers.get() + ", allocated="
 					+ numAllocatedContainers.get() + ", failed=" + numFailedContainers.get() + ", killed=" + numKilledContainers.get();
 			success = false;
@@ -854,7 +815,7 @@ public abstract class ApplicationMaster {
 						obj.put("stderr", stderr);
 						obj.put("statlog", statlog);
 					} catch (JSONException e) {
-						e.printStackTrace();
+						HiWayConfiguration.onError(e, log);
 					}
 					writer.write(obj.toString());
 				}
@@ -864,14 +825,14 @@ public abstract class ApplicationMaster {
 			}
 		} catch (IOException e) {
 			log.info("Error when attempting to stage out federated output log.");
-			shutdown(e);
+			HiWayConfiguration.onError(e, log);
 		}
 
 		try {
 			amRMClient.unregisterApplicationMaster(appStatus, appMessage, null);
 		} catch (YarnException | IOException e) {
 			log.error("Failed to unregister application", e);
-			shutdown(e);
+			HiWayConfiguration.onError(e, log);
 		}
 
 		amRMClient.stop();
@@ -994,7 +955,6 @@ public abstract class ApplicationMaster {
 			}
 			shellEnv.put(key, val);
 		}
-		// }
 
 		if (!cliParser.hasOption("workflow")) {
 			throw new IllegalArgumentException("No workflow file specified to be executed by application master");
@@ -1059,8 +1019,7 @@ public abstract class ApplicationMaster {
 		Data workflowFile = new Data(workflowPath);
 		workflowFile.stageIn(fs, "");
 
-		// Register self with ResourceManager. This will start heartbeating to
-		// the RM.
+		// Register self with ResourceManager. This will start heartbeating to the RM.
 		appMasterHostname = NetUtils.getHostname();
 		RegisterApplicationMasterResponse response = amRMClient.registerApplicationMaster(appMasterHostname, appMasterRpcPort, appMasterTrackingUrl);
 
@@ -1115,8 +1074,7 @@ public abstract class ApplicationMaster {
 		scheduler.updateRuntimeEstimates(getRunId().toString());
 		federatedReport = new Data(hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT));
 
-		// Dump out information about cluster capability as seen by the resource
-		// manager
+		// Dump out information about cluster capability as seen by the resource manager
 		int maxMem = response.getMaximumResourceCapability().getMemory();
 		int maxCores = response.getMaximumResourceCapability().getVirtualCores();
 		log.info("Max mem capabililty of resources in this cluster " + maxMem);
@@ -1152,9 +1110,8 @@ public abstract class ApplicationMaster {
 	 * Setup the request that will be sent to the RM for the container ask.
 	 * 
 	 * @param nodes
-	 *            The worker nodes on which this container is to be allocated.
-	 *            If left empty, the container will be launched on any worker
-	 *            node fulfilling the resource requirements.
+	 *            The worker nodes on which this container is to be allocated. If left empty, the container will be launched on any worker node fulfilling the
+	 *            resource requirements.
 	 * @return the setup ResourceRequest to be sent to RM
 	 */
 	private ContainerRequest setupContainerAskForRM(String[] nodes) {
@@ -1178,21 +1135,12 @@ public abstract class ApplicationMaster {
 			value.put("nodes", nodes);
 			value.put("priority", pri);
 		} catch (JSONException e) {
-			e.printStackTrace();
+			HiWayConfiguration.onError(e, log);
 		}
 
 		log.info("Requested container ask: " + request.toString() + " Nodes" + Arrays.toString(nodes));
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 		return request;
-	}
-
-	public void shutdown(Throwable t) {
-		Writer writer = new StringWriter();
-		PrintWriter printWriter = new PrintWriter(writer);
-		t.printStackTrace(printWriter);
-		log.error(writer.toString());
-		done = true;
-		amRMClient.stop();
 	}
 
 	public abstract void taskFailure(TaskInstance task, ContainerId containerId);

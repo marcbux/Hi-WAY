@@ -31,6 +31,11 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.app;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
+
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 
 public class HiWayConfiguration extends Configuration {
@@ -46,6 +51,7 @@ public class HiWayConfiguration extends Configuration {
 	public static enum HIWAY_WORKFLOW_LANGUAGE_OPTS {
 		cuneiform, dax
 	}
+
 	public static final String HIWAY_AM_APPLICATION_TYPE = "hiway.am.application.type";
 	public static final String HIWAY_AM_APPLICATION_TYPE_DEFAULT = "Hi-WAY";
 	public static final String HIWAY_AM_MEMORY = "hiway.am.memory";
@@ -110,6 +116,14 @@ public class HiWayConfiguration extends Configuration {
 
 	public HiWayConfiguration(Configuration conf) {
 		super(conf);
+	}
+
+	public static void onError(Throwable t, Log log) {
+		Writer writer = new StringWriter();
+		PrintWriter printWriter = new PrintWriter(writer);
+		t.printStackTrace(printWriter);
+		log.error(writer.toString());
+		System.exit(-1);
 	}
 
 }

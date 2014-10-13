@@ -56,50 +56,34 @@ import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
- * A basic implementation of the <b>C</b>loning, <b>C</b>urious,
- * <b>C</b>onservative, <b>P</b>lacement-aware, <b>O</b>utlooking (C3PO)
- * workflow scheduler. Consider the following example as a showcase for how C3PO
- * operates.
+ * A basic implementation of the <b>C</b>loning, <b>C</b>urious, <b>C</b>onservative, <b>P</b>lacement-aware, <b>O</b>utlooking (C3PO) workflow scheduler.
+ * Consider the following example as a showcase for how C3PO operates.
  * 
  * <p>
- * Imagine there's three kinds of task instances in a given workflow: Shake,
- * Rattle, and Roll. Or &ndash; to put it in MapReduce terminology &ndash;
- * there's three jobs, Shake, Rattle, and Roll, each of which comprises a
- * multitude of tasks. Say that we're currently in the middle of executing this
- * workflow on three machines: Charlie, Tango, and Foxtrot. Currently, Tango and
- * Foxtrot are working on some previously assigned task and Charlie is waiting
- * to be assigned a task by the C3PO scheduler. How does C3PO decide, which kind
- * of task to assign to Charlie?
+ * Imagine there's three kinds of task instances in a given workflow: Shake, Rattle, and Roll. Or &ndash; to put it in MapReduce terminology &ndash; there's
+ * three jobs, Shake, Rattle, and Roll, each of which comprises a multitude of tasks. Say that we're currently in the middle of executing this workflow on three
+ * machines: Charlie, Tango, and Foxtrot. Currently, Tango and Foxtrot are working on some previously assigned task and Charlie is waiting to be assigned a task
+ * by the C3PO scheduler. How does C3PO decide, which kind of task to assign to Charlie?
  * </p>
  * 
  * <p>
- * If no tasks are available for assignment, C3PO assigns a speculative copy of
- * a task that's already running on a different machine (Tango or Foxtrot) to
- * Charlie. If any of a task's clones finish execution (including the original
- * task), the execution of all other clones is cancelled. The selection policy
- * for speculative copies of tasks is similar to that of regular tasks, as
- * outlined in detail below. The main intend of C3PO's <b>Cloning</b> strategy
- * is to speedup execution at computationally intensive bottlenecks within a
- * workflow. The mantra of the <b>Cloning</b> strategy is <i>"Nobody Waits"</i>.
+ * If no tasks are available for assignment, C3PO assigns a speculative copy of a task that's already running on a different machine (Tango or Foxtrot) to
+ * Charlie. If any of a task's clones finish execution (including the original task), the execution of all other clones is cancelled. The selection policy for
+ * speculative copies of tasks is similar to that of regular tasks, as outlined in detail below. The main intend of C3PO's <b>Cloning</b> strategy is to speedup
+ * execution at computationally intensive bottlenecks within a workflow. The mantra of the <b>Cloning</b> strategy is <i>"Nobody Waits"</i>.
  * </p>
  * 
  * <p>
- * Assume however for the rest of this example that there are tasks of all three
- * jobs (Shake, Rattle, and Roll) available. Then, C3PO checks whether Charlie
- * has executed at least one of each kind of tasks (Shake, Rattle, and Roll).
- * Say if Charlie hadn't executed a Rattle task yet, it would now be assigned
- * one. This behavior is called the <b>Curiosity</b> principle: C3PO is curious
- * how well Charlie executes Rattle tasks, hence it simply tries it out. The
- * rationale behind the <b>Curiosity</b> principle is that in order to make good
- * decisions about which task to assign to which worker, C3PO needs to know how
- * adapt each worker is at executing each task. If there is no data available,
- * C3PO cannot make an educated decision.
+ * Assume however for the rest of this example that there are tasks of all three jobs (Shake, Rattle, and Roll) available. Then, C3PO checks whether Charlie has
+ * executed at least one of each kind of tasks (Shake, Rattle, and Roll). Say if Charlie hadn't executed a Rattle task yet, it would now be assigned one. This
+ * behavior is called the <b>Curiosity</b> principle: C3PO is curious how well Charlie executes Rattle tasks, hence it simply tries it out. The rationale behind
+ * the <b>Curiosity</b> principle is that in order to make good decisions about which task to assign to which worker, C3PO needs to know how adapt each worker
+ * is at executing each task. If there is no data available, C3PO cannot make an educated decision.
  * </p>
  * 
  * <p>
- * Let us assume that Charlie has executed at least one task of each job before
- * though. Hence, C3PO has gathered statistics on previous task executions.
- * These could look as follows:
+ * Let us assume that Charlie has executed at least one task of each job before though. Hence, C3PO has gathered statistics on previous task executions. These
+ * could look as follows:
  * </p>
  * 
  * <p>
@@ -129,15 +113,11 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * <td>30 (0.3)</td>
  * </tr>
  * </table>
- * <i>These runtime estimates are based on past runtime measurements. How
- * exactly the estimates are derived from measurements depends on the concrete
- * implementation of C3PO. In the default approach, the runtime of the last task
- * execution serves as the runtime estimate for the next task execution. The
- * values in brackets correspond to the normalized, task-specific runtime
- * estimates across all machines. These values serve as an indicator for how
- * well a task is suited to a machine, i.e., how well the machine fares at
- * executing this task in comparison to all other machines. For instance,
- * Charlie appears to be comparably good at running Shake and Roll tasks.</i>
+ * <i>These runtime estimates are based on past runtime measurements. How exactly the estimates are derived from measurements depends on the concrete
+ * implementation of C3PO. In the default approach, the runtime of the last task execution serves as the runtime estimate for the next task execution. The
+ * values in brackets correspond to the normalized, task-specific runtime estimates across all machines. These values serve as an indicator for how well a task
+ * is suited to a machine, i.e., how well the machine fares at executing this task in comparison to all other machines. For instance, Charlie appears to be
+ * comparably good at running Shake and Roll tasks.</i>
  * </p>
  * 
  * <p>
@@ -167,64 +147,45 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * <td>900 (0.45)</td>
  * </tr>
  * </table>
- * <i>The total runtime that each job (collection of similar tasks) contributes
- * to the remaining workflow execution time. The first row contains the average
- * runtime of a task across all machines. The number of remaining tasks of a
- * certain type can be found in the second row. The third row lists the product,
- * which can be used as an estimate of the combined runtime of all remaining
- * tasks of similar kind. The numbers in brackets correspond to the normalized
- * values, i.e., the relative share with which each job contributes to overall
- * estimated runtime.</i>
+ * <i>The total runtime that each job (collection of similar tasks) contributes to the remaining workflow execution time. The first row contains the average
+ * runtime of a task across all machines. The number of remaining tasks of a certain type can be found in the second row. The third row lists the product, which
+ * can be used as an estimate of the combined runtime of all remaining tasks of similar kind. The numbers in brackets correspond to the normalized values, i.e.,
+ * the relative share with which each job contributes to overall estimated runtime.</i>
  * </p>
  * 
  * <p>
  * These measurements provide C3PO with two important scheduling guidelines:
  * <ol>
- * <li><b>Conservatism</b>, measured as the suitability of each task for being
- * executed on each machine and inferred from its runtime estimates. According
- * the the mantra "<i>Do what you do best</i>", C3PO attempts to assign tasks to
- * machines which have proven to execute these tasks with above-average runtime.
- * </li>
- * <li><b>Outlook</b>: If tasks are assigned to machines based purely on the
- * notion of suitability, tasks which contribute strongest to overall workload
- * will be left over at the end. By favoring the assignments of these kinds of
- * tasks from the beginning C3PO is able to harness the benefits of worker
- * specialization until the end of workflow execution. This principle is also
- * called "<i>Business before Pleasure</i>".</li>
+ * <li><b>Conservatism</b>, measured as the suitability of each task for being executed on each machine and inferred from its runtime estimates. According the
+ * the mantra "<i>Do what you do best</i>", C3PO attempts to assign tasks to machines which have proven to execute these tasks with above-average runtime.</li>
+ * <li><b>Outlook</b>: If tasks are assigned to machines based purely on the notion of suitability, tasks which contribute strongest to overall workload will be
+ * left over at the end. By favoring the assignments of these kinds of tasks from the beginning C3PO is able to harness the benefits of worker specialization
+ * until the end of workflow execution. This principle is also called "<i>Business before Pleasure</i>".</li>
  * </ol>
- * Based on these two guidelines, C3PO selects an appropriate task via sampling.
- * For instance, Charlie would most likely &ndash; though not necessarily
- * &ndash; be assigned a Roll task: Judging from its past runtime estimates it
- * is highly suited to execute Roll tasks (<b>Conservatism</b>:
- * "<i>Do what you do best</i>") and Roll tasks contribute stronger to overall
- * remaining workload than the even better-suited Shake tasks (<b>Outlook</b>:
+ * Based on these two guidelines, C3PO selects an appropriate task via sampling. For instance, Charlie would most likely &ndash; though not necessarily &ndash;
+ * be assigned a Roll task: Judging from its past runtime estimates it is highly suited to execute Roll tasks (<b>Conservatism</b>:
+ * "<i>Do what you do best</i>") and Roll tasks contribute stronger to overall remaining workload than the even better-suited Shake tasks (<b>Outlook</b>:
  * "<i>Don't be greedy</i>").
  * </p>
  * 
  * <p>
- * The sampling part of the algorithm is important as it prevents C3PO of
- * getting stuck in local optima or never reconsidering task-machine assignments
- * due to distorted runtime measurements. Adapt users can choose how strong the
- * Conservatism and Outlook values affect the sampling. If high values are
- * chosen, C3PO will always chose the best (i.e., <b>Conservatism</b>- and/or
- * <b>Outlook</b>-optimizing) solution. For lower values, the behavior of C3PO
- * will be increasingly random.
+ * The sampling part of the algorithm is important as it prevents C3PO of getting stuck in local optima or never reconsidering task-machine assignments due to
+ * distorted runtime measurements. Adapt users can choose how strong the Conservatism and Outlook values affect the sampling. If high values are chosen, C3PO
+ * will always chose the best (i.e., <b>Conservatism</b>- and/or <b>Outlook</b>-optimizing) solution. For lower values, the behavior of C3PO will be
+ * increasingly random.
  * </p>
  * 
  * <p>
- * Once C3PO has chosen the right kind of task for a machine (e.g., a Roll task
- * for Charlie), it will attempt to find a concrete task, whose input data
- * already resides on the machine. This <b>Placement</b> awareness ensures that
- * unnecessary data transfer is minimized.
+ * Once C3PO has chosen the right kind of task for a machine (e.g., a Roll task for Charlie), it will attempt to find a concrete task, whose input data already
+ * resides on the machine. This <b>Placement</b> awareness ensures that unnecessary data transfer is minimized.
  * </p>
  */
 public class C3PO extends Scheduler {
 
 	/**
 	 * 
-	 * for each task category, remember two figures: (1) how many task instances
-	 * of this category have been successfully execute (2) how much time has
-	 * been spent in total for task instances of this category
+	 * for each task category, remember two figures: (1) how many task instances of this category have been successfully execute (2) how much time has been
+	 * spent in total for task instances of this category
 	 * 
 	 * @author Marc Bux
 	 * 
@@ -245,9 +206,6 @@ public class C3PO extends Scheduler {
 	protected Map<Long, PlacementAwarenessEstimate> dataLocalityStatistics;
 	private final DecimalFormat df;
 
-	/**
-	 * In order to gauge the
-	 */
 	protected Map<Long, OutlookEstimate> jobStatistics;
 
 	private int nClones = 0;
@@ -258,10 +216,7 @@ public class C3PO extends Scheduler {
 
 	private double placementAwarenessWeight = 1d;
 
-	/**
-	 * One queue of ready-to-execute tasks for each job, identified by its
-	 * unique job name.
-	 */
+	// One queue of ready-to-execute tasks for each job, identified by its unique job name.
 	protected Map<Long, Queue<TaskInstance>> readyTasks;
 
 	protected Map<Long, Queue<TaskInstance>> runningTasks;
@@ -323,13 +278,8 @@ public class C3PO extends Scheduler {
 		log.info("Added task " + task + " to queue " + task.getTaskName());
 	}
 
-	// Outlook: Zero probabiliy for tasks which are not currently ready (or - in
-	// the case of speculative execution -
-	// running)
-	// Equally high probability for tasks which have not been executed by any
-	// node;
-	// if no such tasks exist, assign higher probabilites to tasks which
-	// contribute stronger to overall runtime
+	/* Outlook: Zero probabiliy for tasks which are not currently ready (or - in the case of speculative execution - running) Equally high probability for tasks
+	 * which have not been executed by any node; if no such tasks exist, assign higher probabilites to tasks which contribute stronger to overall runtime */
 	private void computeJobStatisticsWeight(boolean replicate) {
 		for (long taskId : getTaskIds()) {
 			OutlookEstimate jobStatistic = jobStatistics.get(taskId);
@@ -358,18 +308,14 @@ public class C3PO extends Scheduler {
 			} else {
 				TaskInstance task = queue.peek();
 				try {
-					// in case of total data being zero (prevent division by
-					// zero if a container has no input data for ready tasks
-					// whatsoever)
+					/* in case of total data being zero (prevent division by zero if a container has no input data for ready tasks whatsoever) */
 					dataLocalityStatistic.localData = task.countAvailableLocalData(fs, container) + 1;
-					// in case of total data being zero (prevent division by
-					// zero)
+					/* in case of total data being zero (prevent division by zero) */
 					dataLocalityStatistic.totalData = task.countAvailableTotalData(fs) + 1;
 					dataLocalityStatistic.weight = ((double) (dataLocalityStatistic.localData)) / ((double) dataLocalityStatistic.totalData);
 				} catch (IOException e) {
 					log.info("Error during hdfs block location determination.");
-					logStackTrace(e);
-					System.exit(1);
+					HiWayConfiguration.onError(e, log);
 				}
 			}
 		}
@@ -377,10 +323,8 @@ public class C3PO extends Scheduler {
 		printPlacementAwarenessWeights(replicate);
 	}
 
-	// Conservatism: Equally high probability for tasks which this node has not
-	// executed yet;
-	// if no such tasks exist, assign higher probabilities to tasks which this
-	// node is good at
+	/* Conservatism: Equally high probability for tasks which this node has not executed yet; if no such tasks exist, assign higher probabilities to tasks which
+	 * this node is good at */
 	private void computeTaskStatisticsWeights() {
 		for (long taskId : getTaskIds()) {
 			Collection<RuntimeEstimate> taskStatistics = new ArrayList<>();

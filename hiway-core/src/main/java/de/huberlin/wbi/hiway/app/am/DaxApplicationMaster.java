@@ -29,7 +29,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app;
+package de.huberlin.wbi.hiway.app.am;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -51,6 +51,7 @@ import org.json.JSONObject;
 
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
+import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
@@ -125,6 +126,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 	public static void main(String[] args) {
 		ApplicationMaster.loop(new DaxApplicationMaster(), args);
 	}
+
 	private ADag dag;
 
 	private UUID runId;
@@ -211,7 +213,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
 									JsonReportEntry.KEY_INVOC_OUTPUT, new JSONObject().put("output", outputs)));
 				} catch (JSONException e) {
-					e.printStackTrace();
+					HiWayConfiguration.onError(e, log);
 				}
 			}
 
@@ -221,8 +223,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 					task.addParentTask(parentTask);
 					parentTask.addChildTask(task);
 				} catch (WorkflowStructureUnknownException e) {
-					e.printStackTrace();
-					System.exit(1);
+					HiWayConfiguration.onError(e, log);
 				}
 			}
 
@@ -244,8 +245,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 					}
 				}
 			} catch (WorkflowStructureUnknownException e) {
-				e.printStackTrace();
-				System.exit(1);
+				HiWayConfiguration.onError(e, log);
 			}
 
 			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
@@ -271,7 +271,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 					log.error(line);
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			HiWayConfiguration.onError(e, log);
 		}
 
 		try {
@@ -284,7 +284,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 					log.error(line);
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			HiWayConfiguration.onError(e, log);
 		}
 
 		log.error("[end]");
@@ -298,8 +298,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 					scheduler.addTaskToQueue(childTask);
 			}
 		} catch (WorkflowStructureUnknownException e) {
-			e.printStackTrace();
-			System.exit(1);
+			HiWayConfiguration.onError(e, log);
 		}
 		for (Data data : task.getOutputData()) {
 			Data.hdfsDirectoryMidfixes.put(data, containerId.toString());

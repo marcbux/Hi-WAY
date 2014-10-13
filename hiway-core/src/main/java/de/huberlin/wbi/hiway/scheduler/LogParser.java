@@ -47,6 +47,7 @@ import de.huberlin.hiwaydb.useDB.FileStat;
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
+import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 
 public class LogParser implements HiwayDBI {
 
@@ -188,7 +189,7 @@ public class LogParser implements HiwayDBI {
 				break;
 			}
 		} catch (JSONException e) {
-			e.printStackTrace();
+			HiWayConfiguration.onError(e, log);
 		}
 	}
 
