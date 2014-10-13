@@ -1228,7 +1228,7 @@ public abstract class AbstractApplicationMaster implements ApplicationMaster {
 		Writer writer = new StringWriter();
 		PrintWriter printWriter = new PrintWriter(writer);
 		e.printStackTrace(printWriter);
-		log.info(writer.toString());
+		log.error(writer.toString());
 	}
 
 }

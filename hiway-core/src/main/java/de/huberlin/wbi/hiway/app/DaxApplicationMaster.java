@@ -132,10 +132,10 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 				for (Data input : super.getInputData()) {
 					if (!input.isInput()) {
 						intermediateData.add(input);
-					} else {
+					} /*else {
 						writeEntryToLog(new JsonReportEntry(getWorkflowId(), getTaskId(), getTaskName(), getLanguageLabel(), getSignature(),
 								input.getLocalPath(), JsonReportEntry.KEY_FILE_SIZE_STAGEIN, Long.toString(fileSizes.get(input))));
-					}
+					}*/
 				}
 				return intermediateData;
 			}
@@ -272,7 +272,7 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 			}
 
 			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
-					JsonReportEntry.KEY_INVOC_EXEC, task.getCommand()));
+					JsonReportEntry.KEY_INVOC_SCRIPT, task.getCommand()));
 		}
 
 		scheduler.addTasks(tasks.values());

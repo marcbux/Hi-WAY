@@ -134,7 +134,7 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 			Ticket ticket = msg.getTicket();
 
-			// writeEntryToLog(ticket.getExecutableLogEntry());
+//			 writeEntryToLog(ticket.get());
 
 			Invocation invoc = Invocation.createInvocation(ticket);
 			TaskInstance task = new CuneiformTaskInstance(invoc);
@@ -157,9 +157,9 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			}
 
 			try {
-				String script = invoc.toScript();
-				task.setCommand(script);
-				writeEntryToLog(new JsonReportEntry(invoc, null, JsonReportEntry.KEY_INVOC_EXEC, script));
+				task.setCommand(invoc.toScript());
+				writeEntryToLog(invoc.getExecutableLogEntry());
+				writeEntryToLog(invoc.getScriptLogEntry());
 			} catch (NotBoundException | NotDerivableException e) {
 				e.printStackTrace();
 			}
