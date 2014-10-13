@@ -38,7 +38,10 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.io.StringReader;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -140,7 +143,7 @@ import de.huberlin.wbi.hiway.scheduler.StaticRoundRobin;
  * The Hi-WAY ApplicationMaster is based on Hadoop's DistributedShell.
  * </p>
  */
-public abstract class ApplicationMaster {
+public abstract class HiWay {
 
 	// an internal class that stores a task along with some additional information
 	private class HiWayInvocation {
@@ -207,18 +210,18 @@ public abstract class ApplicationMaster {
 				try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(script))) {
 					scriptWriter.write(task.getCommand());
 				} catch (IOException e) {
-					HiWayConfiguration.onError(e, log);
+					onError(e);
 				}
 				Data scriptData = new Data(script.getPath());
 				try {
 					scriptData.stageOut(fs, containerId);
 				} catch (IOException e) {
-					HiWayConfiguration.onError(e, log);
+					onError(e);
 				}
 				scriptData.addToLocalResourceMap(localResources, fs, containerId);
 			} catch (IOException e1) {
 				log.info("Error during Container startup. exiting");
-				HiWayConfiguration.onError(e1, log);
+				onError(e1);
 			}
 			ctx.setLocalResources(localResources);
 
@@ -270,10 +273,10 @@ public abstract class ApplicationMaster {
 
 	private class NMCallbackHandler implements NMClientAsync.CallbackHandler {
 
-		private final ApplicationMaster applicationMaster;
+		private final HiWay applicationMaster;
 		private ConcurrentMap<ContainerId, Container> containers = new ConcurrentHashMap<ContainerId, Container>();
 
-		public NMCallbackHandler(ApplicationMaster applicationMaster) {
+		public NMCallbackHandler(HiWay applicationMaster) {
 			this.applicationMaster = applicationMaster;
 		}
 
@@ -310,13 +313,13 @@ public abstract class ApplicationMaster {
 		@Override
 		public void onGetContainerStatusError(ContainerId containerId, Throwable t) {
 			log.error("Failed to query the status of Container " + containerId);
-			HiWayConfiguration.onError(t, log);
+			onError(t);
 		}
 
 		@Override
 		public void onStartContainerError(ContainerId containerId, Throwable t) {
 			log.error("Failed to start Container " + containerId);
-			HiWayConfiguration.onError(t, log);
+			onError(t);
 			containers.remove(containerId);
 			applicationMaster.numCompletedContainers.incrementAndGet();
 			applicationMaster.numFailedContainers.incrementAndGet();
@@ -325,7 +328,7 @@ public abstract class ApplicationMaster {
 		@Override
 		public void onStopContainerError(ContainerId containerId, Throwable t) {
 			log.error("Failed to stop Container " + containerId);
-			HiWayConfiguration.onError(t, log);
+			onError(t);
 			containers.remove(containerId);
 		}
 	}
@@ -386,7 +389,7 @@ public abstract class ApplicationMaster {
 					try {
 						obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 					} catch (JSONException e) {
-						HiWayConfiguration.onError(e, log);
+						onError(e);
 					}
 					task.getReport().add(
 							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
@@ -415,7 +418,7 @@ public abstract class ApplicationMaster {
 					value.put("vcores", container.getResource().getVirtualCores());
 					value.put("service", container.getContainerToken().getService());
 				} catch (JSONException e) {
-					HiWayConfiguration.onError(e, log);
+					onError(e);
 				}
 
 				writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
@@ -446,7 +449,7 @@ public abstract class ApplicationMaster {
 					value.put("exit-code", containerStatus.getExitStatus());
 					value.put("diagnostics", containerStatus.getDiagnostics());
 				} catch (JSONException e) {
-					HiWayConfiguration.onError(e, log);
+					onError(e);
 				}
 
 				log.info("Got container status for containerID=" + containerStatus.getContainerId() + ", state=" + containerStatus.getState() + ", exitStatus="
@@ -540,7 +543,7 @@ public abstract class ApplicationMaster {
 
 		@Override
 		public void onError(Throwable e) {
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 
 		@Override
@@ -555,7 +558,7 @@ public abstract class ApplicationMaster {
 	}
 
 	// a handle to the log, in which any events are recorded
-	private static final Log log = LogFactory.getLog(ApplicationMaster.class);
+	private static final Log log = LogFactory.getLog(HiWay.class);
 
 	protected static final Log statLog = LogFactory.getLog("statLogger");
 
@@ -565,7 +568,7 @@ public abstract class ApplicationMaster {
 	 * @param args
 	 *            Command line arguments passed to the ApplicationMaster.
 	 */
-	public static void loop(ApplicationMaster appMaster, String[] args) {
+	public static void loop(HiWay appMaster, String[] args) {
 		boolean result = false;
 		try {
 			log.info("Initializing ApplicationMaster");
@@ -576,7 +579,7 @@ public abstract class ApplicationMaster {
 			result = appMaster.run();
 		} catch (Throwable t) {
 			log.fatal("Error running ApplicationMaster", t);
-			HiWayConfiguration.onError(t, log);
+			onError(t);
 		}
 		if (result) {
 			log.info("Application Master completed successfully. exiting");
@@ -662,14 +665,14 @@ public abstract class ApplicationMaster {
 	protected String workflowPath;
 	private UUID runId;
 
-	public ApplicationMaster() {
+	public HiWay() {
 		conf = new YarnConfiguration();
 		conf.addResource("core-site.xml");
 		hiWayConf = new HiWayConfiguration();
 		try {
 			fs = FileSystem.get(conf);
 		} catch (IOException e) {
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 		runId = UUID.randomUUID();
 	}
@@ -701,7 +704,7 @@ public abstract class ApplicationMaster {
 			}
 			buf.close();
 		} catch (IOException | InterruptedException e) {
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 	}
 
@@ -755,7 +758,7 @@ public abstract class ApplicationMaster {
 
 		} catch (Exception e) {
 			log.info("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 	}
 
@@ -769,7 +772,7 @@ public abstract class ApplicationMaster {
 				launchThread.join(10000);
 			} catch (InterruptedException e) {
 				log.info("Exception thrown in thread join: " + e.getMessage());
-				HiWayConfiguration.onError(e, log);
+				onError(e);
 			}
 		}
 
@@ -820,7 +823,7 @@ public abstract class ApplicationMaster {
 						obj.put("stderr", stderr);
 						obj.put("statlog", statlog);
 					} catch (JSONException e) {
-						HiWayConfiguration.onError(e, log);
+						onError(e);
 					}
 					writer.write(obj.toString());
 				}
@@ -830,14 +833,14 @@ public abstract class ApplicationMaster {
 			}
 		} catch (IOException e) {
 			log.info("Error when attempting to stage out federated output log.");
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 
 		try {
 			amRMClient.unregisterApplicationMaster(appStatus, appMessage, null);
 		} catch (YarnException | IOException e) {
 			log.error("Failed to unregister application", e);
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 
 		amRMClient.stop();
@@ -1142,7 +1145,7 @@ public abstract class ApplicationMaster {
 			value.put("nodes", nodes);
 			value.put("priority", pri);
 		} catch (JSONException e) {
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 
 		log.info("Requested container ask: " + request.toString() + " Nodes" + Arrays.toString(nodes));
@@ -1179,7 +1182,7 @@ public abstract class ApplicationMaster {
 					log.error(line);
 			}
 		} catch (IOException e) {
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 
 		log.error("[end]");
@@ -1192,7 +1195,7 @@ public abstract class ApplicationMaster {
 					scheduler.addTaskToQueue(childTask);
 			}
 		} catch (WorkflowStructureUnknownException e) {
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 		for (Data data : task.getOutputData()) {
 			Data.hdfsDirectoryMidfixes.put(data, containerId.toString());
@@ -1208,5 +1211,13 @@ public abstract class ApplicationMaster {
 		}
 		scheduler.addEntryToDB(entry);
 	}
-
+	
+	public static void onError(Throwable t) {
+		Writer writer = new StringWriter();
+		PrintWriter printWriter = new PrintWriter(writer);
+		t.printStackTrace(printWriter);
+		log.error(writer.toString());
+		System.exit(-1);
+	}
+	
 }

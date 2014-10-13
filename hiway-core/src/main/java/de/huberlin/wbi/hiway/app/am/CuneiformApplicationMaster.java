@@ -65,7 +65,7 @@ import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
-public class CuneiformApplicationMaster extends ApplicationMaster {
+public class CuneiformApplicationMaster extends HiWay {
 
 	public class CuneiformTaskInstance extends TaskInstance {
 
@@ -150,7 +150,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 					task.addInputData(data);
 				}
 			} catch (NotDerivableException e) {
-				HiWayConfiguration.onError(e, log);
+				onError(e);
 			}
 
 			try {
@@ -158,7 +158,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 				writeEntryToLog(invoc.getExecutableLogEntry());
 				writeEntryToLog(invoc.getScriptLogEntry());
 			} catch (NotBoundException | NotDerivableException e) {
-				HiWayConfiguration.onError(e, log);
+				onError(e);
 			}
 
 			Collection<TaskInstance> tasks = new ArrayList<>();
@@ -200,7 +200,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 					}
 				}
 			} catch (NotDerivableException e) {
-				HiWayConfiguration.onError(e, log);
+				onError(e);
 			}
 		}
 
@@ -213,7 +213,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 	private static final Log log = LogFactory.getLog(CuneiformApplicationMaster.class);
 
 	public static void main(String[] args) {
-		ApplicationMaster.loop(new CuneiformApplicationMaster(), args);
+		HiWay.loop(new CuneiformApplicationMaster(), args);
 	}
 
 	private BaseCreActor creActor;
@@ -252,9 +252,9 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 				}
 			}
 		} catch (FileNotFoundException e) {
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		} catch (IOException e) {
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 		repl.interpret(buf.toString());
 	}
@@ -283,7 +283,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 				ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, task.getCommand(), stdOut, stdErr));
 			}			
 		} catch (IOException e) {
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 	}
 	
@@ -310,7 +310,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 
 		} catch (JSONException | NotDerivableException e) {
 			log.info("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
-			HiWayConfiguration.onError(e, log);
+			onError(e);
 		}
 	}
 	

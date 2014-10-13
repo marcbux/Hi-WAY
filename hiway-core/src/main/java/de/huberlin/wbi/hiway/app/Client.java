@@ -79,6 +79,8 @@ import org.apache.hadoop.yarn.util.Records;
 //import org.json.JSONException;
 //import org.json.JSONObject;
 
+
+import de.huberlin.wbi.hiway.app.am.HiWay;
 import de.huberlin.wbi.hiway.common.Data;
 
 /**
@@ -107,12 +109,12 @@ public class Client {
 				}
 			} catch (IllegalArgumentException e) {
 				client.printUsage();
-				HiWayConfiguration.onError(e, log);
+				HiWay.onError(e);
 			}
 			result = client.run();
 		} catch (Throwable t) {
 			log.fatal("Error running Client", t);
-			HiWayConfiguration.onError(t, log);
+			HiWay.onError(t);
 		}
 		if (result) {
 			log.info("Application completed successfully");
@@ -221,7 +223,7 @@ public class Client {
 			try {
 				summary = new Data((new File(summaryFile)).getCanonicalPath());
 			} catch (IOException e) {
-				HiWayConfiguration.onError(e, log);
+				HiWay.onError(e);
 			}
 		}
 
@@ -229,7 +231,7 @@ public class Client {
 		try {
 			workflow = new Data((new File(workflowPath)).getCanonicalPath());
 		} catch (IOException e) {
-			HiWayConfiguration.onError(e, log);
+			HiWay.onError(e);
 		}
 		workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.valueOf(cliParser.getOptionValue("language",
 				HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform.toString()));

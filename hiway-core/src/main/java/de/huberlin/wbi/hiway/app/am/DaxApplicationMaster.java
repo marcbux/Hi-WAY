@@ -46,7 +46,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
@@ -62,7 +61,7 @@ import edu.isi.pegasus.planner.parser.Parser;
 import edu.isi.pegasus.planner.parser.dax.DAX2CDAG;
 import edu.isi.pegasus.planner.parser.dax.DAXParser;
 
-public class DaxApplicationMaster extends ApplicationMaster {
+public class DaxApplicationMaster extends HiWay {
 
 	public class DaxTaskInstance extends TaskInstance {
 
@@ -119,7 +118,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 	private static final Log log = LogFactory.getLog(DaxApplicationMaster.class);
 
 	public static void main(String[] args) {
-		ApplicationMaster.loop(new DaxApplicationMaster(), args);
+		HiWay.loop(new DaxApplicationMaster(), args);
 	}
 
 	private ADag dag;
@@ -192,7 +191,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
 									JsonReportEntry.KEY_INVOC_OUTPUT, new JSONObject().put("output", outputs)));
 				} catch (JSONException e) {
-					HiWayConfiguration.onError(e, log);
+					onError(e);
 				}
 			}
 
@@ -202,7 +201,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 					task.addParentTask(parentTask);
 					parentTask.addChildTask(task);
 				} catch (WorkflowStructureUnknownException e) {
-					HiWayConfiguration.onError(e, log);
+					onError(e);
 				}
 			}
 
@@ -224,7 +223,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 					}
 				}
 			} catch (WorkflowStructureUnknownException e) {
-				HiWayConfiguration.onError(e, log);
+				onError(e);
 			}
 
 			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,

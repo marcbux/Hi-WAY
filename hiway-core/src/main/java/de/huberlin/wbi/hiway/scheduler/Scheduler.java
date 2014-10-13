@@ -62,6 +62,7 @@ import de.huberlin.hiwaydb.useDB.HiwayDBNoSQL;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.app.HiWayConfiguration;
+import de.huberlin.wbi.hiway.app.am.HiWay;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -260,7 +261,7 @@ public abstract class Scheduler {
 				}
 			}
 		} catch (IOException | JSONException e) {
-			HiWayConfiguration.onError(e, log);
+			HiWay.onError(e);
 		}
 	}
 

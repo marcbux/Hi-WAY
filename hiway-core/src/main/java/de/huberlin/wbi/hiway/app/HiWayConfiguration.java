@@ -31,11 +31,6 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.app;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.io.Writer;
-
-import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 
 public class HiWayConfiguration extends Configuration {
@@ -115,14 +110,6 @@ public class HiWayConfiguration extends Configuration {
 
 	public HiWayConfiguration(Configuration conf) {
 		super(conf);
-	}
-
-	public static void onError(Throwable t, Log log) {
-		Writer writer = new StringWriter();
-		PrintWriter printWriter = new PrintWriter(writer);
-		t.printStackTrace(printWriter);
-		log.error(writer.toString());
-		System.exit(-1);
 	}
 
 }

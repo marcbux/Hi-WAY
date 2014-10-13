@@ -53,6 +53,7 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.hiway.app.HiWayConfiguration;
+import de.huberlin.wbi.hiway.app.am.HiWay;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -315,7 +316,7 @@ public class C3PO extends Scheduler {
 					dataLocalityStatistic.weight = ((double) (dataLocalityStatistic.localData)) / ((double) dataLocalityStatistic.totalData);
 				} catch (IOException e) {
 					log.info("Error during hdfs block location determination.");
-					HiWayConfiguration.onError(e, log);
+					HiWay.onError(e);
 				}
 			}
 		}

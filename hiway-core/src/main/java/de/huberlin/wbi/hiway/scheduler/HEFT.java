@@ -45,6 +45,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 
 import de.huberlin.wbi.hiway.app.HiWayConfiguration;
+import de.huberlin.wbi.hiway.app.am.HiWay;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
@@ -135,7 +136,7 @@ public class HEFT extends StaticScheduler {
 				}
 			}
 		} catch (WorkflowStructureUnknownException e) {
-			HiWayConfiguration.onError(e, log);
+			HiWay.onError(e);
 		}
 
 		double timeslotStart = freeTimeSlotStartsPerNode.get(bestNode).floor(bestNodeFreeTimeSlotActualStart);
@@ -176,7 +177,7 @@ public class HEFT extends StaticScheduler {
 					}
 				}
 			} catch (WorkflowStructureUnknownException e) {
-				HiWayConfiguration.onError(e, log);
+				HiWay.onError(e);
 			}
 
 			double averageComputationCost = 0;
@@ -189,7 +190,7 @@ public class HEFT extends StaticScheduler {
 			try {
 				task.setUpwardRank(averageComputationCost + maxSuccessorRank);
 			} catch (WorkflowStructureUnknownException e) {
-				HiWayConfiguration.onError(e, log);
+				HiWay.onError(e);
 			}
 		}
 
