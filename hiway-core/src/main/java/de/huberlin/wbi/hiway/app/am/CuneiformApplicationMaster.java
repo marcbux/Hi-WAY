@@ -36,7 +36,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
@@ -73,7 +72,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 		private Invocation invocation;
 
 		public CuneiformTaskInstance(Invocation invocation) {
-			super(invocation.getRunId(), invocation.getTaskName(), invocation.getTaskId(), invocation.getLangLabel());
+			super(invocation.getTicketId(), invocation.getRunId(), invocation.getTaskName(), invocation.getTaskId(), invocation.getLangLabel());
 			this.invocation = invocation;
 		}
 
@@ -140,8 +139,6 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 			TaskInstance task = new CuneiformTaskInstance(invoc);
 
 			try {
-				task.setSignature(invoc.getTicketId());
-
 				for (String inputName : invoc.getStageInList()) {
 
 					if (!files.containsKey(inputName)) {
@@ -242,6 +239,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 
 	@Override
 	public void parseWorkflow() {
+		log.info("Parsing Cuneiform workflow " + workflowFile);
 		BaseRepl repl = new HiWayRepl(ticketSrc);
 
 		StringBuffer buf = new StringBuffer();
@@ -260,68 +258,35 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 		}
 		repl.interpret(buf.toString());
 	}
-
+	
 	@Override
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
+		super.taskFailure(task, containerId);
+		
 		String line;
-
-		Invocation invocation = ((CuneiformTaskInstance) task).getInvocation();
-		String script = "";
-		String stdOut = "";
-		String stdErr = "";
-
 		try {
-			script = invocation.toScript();
-			log.error("[script]");
-			try (BufferedReader reader = new BufferedReader(new StringReader(script))) {
-				int i = 0;
-				while ((line = reader.readLine()) != null)
-					log.error(String.format("%02d  %s", ++i, line));
-			}
-		} catch (NotBoundException | NotDerivableException | IOException e) {
-			HiWayConfiguration.onError(e, log);
-		}
-
-		try {
-			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
-			stdoutFile.stageIn(fs, containerId.toString());
 			StringBuffer buf = new StringBuffer();
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stdoutFile.getLocalPath())))) {
-
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(Invocation.STDOUT_FILENAME)))) {
 				while ((line = reader.readLine()) != null)
 					buf.append(line).append('\n');
 			}
-			stdOut = buf.toString();
-			log.error("[out]");
-			log.error(stdOut);
-		} catch (IOException e) {
-			HiWayConfiguration.onError(e, log);
-		}
-
-		try {
-			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
-			stderrFile.stageIn(fs, containerId.toString());
-			StringBuffer buf = new StringBuffer();
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stderrFile.getLocalPath())))) {
-
+			String stdOut = buf.toString();
+			
+			buf = new StringBuffer();
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(Invocation.STDERR_FILENAME)))) {
 				while ((line = reader.readLine()) != null)
 					buf.append(line).append('\n');
 			}
-			stdErr = buf.toString();
-			log.error("[err]");
-			log.error(stdErr);
+			String stdErr = buf.toString();
+			Invocation invocation = ((CuneiformTaskInstance) task).getInvocation();
+			if (!task.retry(hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
+				ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, task.getCommand(), stdOut, stdErr));
+			}			
 		} catch (IOException e) {
 			HiWayConfiguration.onError(e, log);
 		}
-
-		log.error("[end]");
-
-		if (!task.retry(hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
-			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, script, stdOut, stdErr));
-		}
-
 	}
-
+	
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
 		try {
@@ -330,7 +295,7 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 			ticketSrc.sendMsg(new TicketFinishedMsg(creActor, invocation.getTicket(), task.getReport()));
 			log.info("Message sent.");
 
-			// (b) set output files
+			// set output files
 			for (String outputName : invocation.getStageOutList()) {
 				if (!files.containsKey(outputName)) {
 					Data output = new Data(outputName);
@@ -348,4 +313,5 @@ public class CuneiformApplicationMaster extends ApplicationMaster {
 			HiWayConfiguration.onError(e, log);
 		}
 	}
+	
 }

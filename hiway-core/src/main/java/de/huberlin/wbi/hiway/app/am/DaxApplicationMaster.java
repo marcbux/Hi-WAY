@@ -31,9 +31,6 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.app.am;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -45,11 +42,9 @@ import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.Data;
@@ -129,22 +124,9 @@ public class DaxApplicationMaster extends ApplicationMaster {
 
 	private ADag dag;
 
-	private UUID runId;
-
-	public DaxApplicationMaster() {
-		super();
-		runId = UUID.randomUUID();
-	}
-
-	@Override
-	public UUID getRunId() {
-		return runId;
-	}
-
 	@Override
 	public void parseWorkflow() {
 		Map<Object, TaskInstance> tasks = new HashMap<>();
-
 		log.info("Parsing Pegasus DAX " + workflowFile);
 
 		PegasusProperties properties = PegasusProperties.nonSingletonInstance();
@@ -159,8 +141,6 @@ public class DaxApplicationMaster extends ApplicationMaster {
 		DAXParser daxParser = DAXParserFactory.loadDAXParser(bag, "DAX2CDAG", workflowFile.getLocalPath());
 		((Parser) daxParser).startParser(workflowFile.getLocalPath());
 		dag = (ADag) ((DAX2CDAG) daxParser.getDAXCallback()).getConstructedObject();
-
-		log.info("Generating Workflow " + dag.getAbstractWorkflowName());
 
 		Queue<String> jobQueue = new LinkedList<>();
 		for (Object rootNode : dag.getRootNodes()) {
@@ -178,7 +158,6 @@ public class DaxApplicationMaster extends ApplicationMaster {
 			DaxTaskInstance task = new DaxTaskInstance(getRunId(), taskName, Math.abs(taskName.hashCode()));
 			task.setRuntime(job.getRuntime());
 			taskToJob.put(task, job);
-			task.setSignature(Math.abs(taskId.hashCode()));
 			tasks.put(taskId, task);
 
 			for (Object input : job.getInputFiles()) {
@@ -210,7 +189,7 @@ public class DaxApplicationMaster extends ApplicationMaster {
 
 				try {
 					task.getReport().add(
-							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
+							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
 									JsonReportEntry.KEY_INVOC_OUTPUT, new JSONObject().put("output", outputs)));
 				} catch (JSONException e) {
 					HiWayConfiguration.onError(e, log);
@@ -248,64 +227,11 @@ public class DaxApplicationMaster extends ApplicationMaster {
 				HiWayConfiguration.onError(e, log);
 			}
 
-			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
+			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
 					JsonReportEntry.KEY_INVOC_SCRIPT, task.getCommand()));
 		}
 
 		scheduler.addTasks(tasks.values());
-	}
-
-	@Override
-	public void taskFailure(TaskInstance task, ContainerId containerId) {
-		log.error("[script]");
-		log.error(task.getCommand());
-		String line;
-
-		try {
-			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
-			stdoutFile.stageIn(fs, containerId.toString());
-
-			log.error("[out]");
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stdoutFile.getLocalPath())))) {
-				while ((line = reader.readLine()) != null)
-					log.error(line);
-			}
-		} catch (Exception e) {
-			HiWayConfiguration.onError(e, log);
-		}
-
-		try {
-			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
-			stderrFile.stageIn(fs, containerId.toString());
-
-			log.error("[err]");
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stderrFile.getLocalPath())))) {
-				while ((line = reader.readLine()) != null)
-					log.error(line);
-			}
-		} catch (Exception e) {
-			HiWayConfiguration.onError(e, log);
-		}
-
-		log.error("[end]");
-	}
-
-	@Override
-	public void taskSuccess(TaskInstance task, ContainerId containerId) {
-		try {
-			for (TaskInstance childTask : task.getChildTasks()) {
-				if (childTask.readyToExecute())
-					scheduler.addTaskToQueue(childTask);
-			}
-		} catch (WorkflowStructureUnknownException e) {
-			HiWayConfiguration.onError(e, log);
-		}
-		for (Data data : task.getOutputData()) {
-			Data.hdfsDirectoryMidfixes.put(data, containerId.toString());
-		}
-		if (scheduler.getNumberOfReadyTasks() == 0 && scheduler.getNumberOfRunningTasks() == 0) {
-			done = true;
-		}
 	}
 
 }

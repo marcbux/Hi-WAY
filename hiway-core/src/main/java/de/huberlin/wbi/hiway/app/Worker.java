@@ -81,7 +81,7 @@ public class Worker {
 	private String langLabel;
 
 	private Set<Data> outputFiles;
-	private long signature;
+	private long id;
 
 	private long taskId;
 	private String taskName;
@@ -126,7 +126,7 @@ public class Worker {
 		opts.addOption("taskId", true, "");
 		opts.addOption("taskName", true, "");
 		opts.addOption("langLabel", true, "");
-		opts.addOption("signature", true, "");
+		opts.addOption("id", true, "");
 		opts.addOption("input", true, "");
 		opts.addOption("output", true, "");
 		opts.addOption("size", false, "");
@@ -138,7 +138,7 @@ public class Worker {
 		taskId = Long.parseLong(cliParser.getOptionValue("taskId"));
 		taskName = cliParser.getOptionValue("taskName");
 		langLabel = cliParser.getOptionValue("langLabel");
-		signature = Long.parseLong(cliParser.getOptionValue("signature"));
+		id = Long.parseLong(cliParser.getOptionValue("id"));
 		if (cliParser.hasOption("input")) {
 			for (String inputList : cliParser.getOptionValues("input")) {
 				String[] inputElements = inputList.split(",");
@@ -176,14 +176,14 @@ public class Worker {
 		long toc = System.currentTimeMillis();
 		JSONObject obj = new JSONObject();
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, null, HiwayDBI.KEY_INVOC_TIME_STAGEIN, obj));
+		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEIN, obj));
 
 		tic = System.currentTimeMillis();
 		int exitValue = exec();
 		toc = System.currentTimeMillis();
 		obj = new JSONObject();
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, null, JsonReportEntry.KEY_INVOC_TIME, obj));
+		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, JsonReportEntry.KEY_INVOC_TIME, obj));
 
 		tic = System.currentTimeMillis();
 		new Data(Invocation.STDOUT_FILENAME).stageOut(fs, containerId);
@@ -195,7 +195,7 @@ public class Worker {
 		toc = System.currentTimeMillis();
 		obj = new JSONObject();
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT, obj));
+		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT, obj));
 
 		new Data(Invocation.REPORT_FILENAME).stageOut(fs, containerId);
 	}
@@ -207,10 +207,10 @@ public class Worker {
 			long toc = System.currentTimeMillis();
 			JSONObject obj = new JSONObject();
 			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, input.getLocalPath(), HiwayDBI.KEY_FILE_TIME_STAGEIN,
+			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, input.getLocalPath(), HiwayDBI.KEY_FILE_TIME_STAGEIN,
 					obj));
 			if (determineFileSizes) {
-				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, input.getLocalPath(),
+				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, input.getLocalPath(),
 						JsonReportEntry.KEY_FILE_SIZE_STAGEIN, Long.toString((new File(input.getLocalPath())).length())));
 			}
 
@@ -236,10 +236,10 @@ public class Worker {
 			long toc = System.currentTimeMillis();
 			JSONObject obj = new JSONObject();
 			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, output.getLocalPath(),
+			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, output.getLocalPath(),
 					HiwayDBI.KEY_FILE_TIME_STAGEOUT, obj));
 			if (determineFileSizes) {
-				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, signature, output.getLocalPath(),
+				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, output.getLocalPath(),
 						JsonReportEntry.KEY_FILE_SIZE_STAGEOUT, Long.toString((new File(output.getLocalPath())).length())));
 			}
 		}

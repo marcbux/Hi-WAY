@@ -92,7 +92,6 @@ public class TaskInstance implements Comparable<TaskInstance> {
 	// parent and child tasks (denotes the workflow structure)
 	private Set<TaskInstance> parentTasks;
 	private Set<JsonReportEntry> report;
-	private long signature;
 	private long taskId;
 	// the name and (internal) id of the task's executable (e.g. tar)
 	private String taskName;
@@ -108,7 +107,11 @@ public class TaskInstance implements Comparable<TaskInstance> {
 	}
 
 	public TaskInstance(UUID workflowId, String taskName, long taskId, String languageLabel) {
-		this.id = runningId++;
+		this(runningId++, workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);
+	}
+	
+	public TaskInstance(long id, UUID workflowId, String taskName, long taskId, String languageLabel) {
+		this.id = id;
 		this.workflowId = workflowId;
 		this.taskName = taskName;
 		this.taskId = taskId;
@@ -195,10 +198,6 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		return report;
 	}
 
-	public long getSignature() {
-		return signature;
-	}
-
 	public long getTaskId() {
 		return taskId;
 	}
@@ -254,10 +253,6 @@ public class TaskInstance implements Comparable<TaskInstance> {
 				child.setDepth(depth + 1);
 			}
 		}
-	}
-
-	public void setSignature(long signature) {
-		this.signature = signature;
 	}
 
 	public void setUpwardRank(double upwardRank) throws WorkflowStructureUnknownException {

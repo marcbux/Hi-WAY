@@ -106,9 +106,8 @@ public class Client {
 					System.exit(0);
 				}
 			} catch (IllegalArgumentException e) {
-				System.err.println(e.getLocalizedMessage());
 				client.printUsage();
-				System.exit(-1);
+				HiWayConfiguration.onError(e, log);
 			}
 			result = client.run();
 		} catch (Throwable t) {
@@ -166,7 +165,7 @@ public class Client {
 			workflowFormats += ", " + language.toString();
 		}
 		opts.addOption("l", "language", true, "The input file format. Valid arguments: " + workflowFormats.substring(2) + ". Default: "
-				+ HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM);
+				+ HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform);
 		opts.addOption("debug", false, "Dump out debug information");
 		opts.addOption("help", false, "Print usage");
 	}
@@ -393,9 +392,18 @@ public class Client {
 		// Set Xmx based on am memory size
 		vargs.add("-Xmx" + amMemory + "m");
 		// Set class name
-		if (workflowType.equals(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX)) {
+		
+		switch (workflowType) {
+		case dax:
 			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS);
-		} else {
+			break;
+		case log:
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_LOG_CLASS);
+			break;
+		case galaxy:
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_GALAXY_CLASS);
+			break;
+		default:
 			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS);
 		}
 

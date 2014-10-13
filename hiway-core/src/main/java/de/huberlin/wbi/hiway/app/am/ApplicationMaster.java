@@ -38,6 +38,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -107,6 +108,7 @@ import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.app.WFAppMetrics;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
+import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 import de.huberlin.wbi.hiway.scheduler.Scheduler;
 import de.huberlin.wbi.hiway.scheduler.C3PO;
 import de.huberlin.wbi.hiway.scheduler.GreedyQueue;
@@ -235,7 +237,7 @@ public abstract class ApplicationMaster {
 			vargs.add("--taskId " + task.getTaskId());
 			vargs.add("--taskName " + task.getTaskName());
 			vargs.add("--langLabel " + task.getLanguageLabel());
-			vargs.add("--signature " + task.getSignature());
+			vargs.add("--id " + task.getId());
 			for (Data inputData : task.getInputData()) {
 				vargs.add("--input " + inputData.getLocalPath() + "," + inputData.isInput() + "," + Data.hdfsDirectoryMidfixes.get(inputData));
 			}
@@ -387,10 +389,10 @@ public abstract class ApplicationMaster {
 						HiWayConfiguration.onError(e, log);
 					}
 					task.getReport().add(
-							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
+							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
 									HiwayDBI.KEY_INVOC_TIME_SCHED, obj));
 					task.getReport().add(
-							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getSignature(), null,
+							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
 									HiwayDBI.KEY_INVOC_HOST, allocatedContainer.getNodeId().getHost()));
 				}
 				launchTask(task, allocatedContainer);
@@ -658,6 +660,7 @@ public abstract class ApplicationMaster {
 	// the workflow to be executed along with its format and path in the file
 	// system
 	protected String workflowPath;
+	private UUID runId;
 
 	public ApplicationMaster() {
 		conf = new YarnConfiguration();
@@ -668,7 +671,9 @@ public abstract class ApplicationMaster {
 		} catch (IOException e) {
 			HiWayConfiguration.onError(e, log);
 		}
+		runId = UUID.randomUUID();
 	}
+	
 
 	/**
 	 * If the debug flag is set, dump out contents of current working directory and the environment to stdout for debugging.
@@ -730,7 +735,7 @@ public abstract class ApplicationMaster {
 				String s = sb.toString();
 				if (s.length() > 0) {
 					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
-							task.getSignature(), null, JsonReportEntry.KEY_INVOC_STDOUT, sb.toString());
+							task.getId(), null, JsonReportEntry.KEY_INVOC_STDOUT, sb.toString());
 					report.add(re);
 				}
 			}
@@ -743,7 +748,7 @@ public abstract class ApplicationMaster {
 				String s = sb.toString();
 				if (s.length() > 0) {
 					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
-							task.getSignature(), null, JsonReportEntry.KEY_INVOC_STDERR, sb.toString());
+							task.getId(), null, JsonReportEntry.KEY_INVOC_STDERR, sb.toString());
 					report.add(re);
 				}
 			}
@@ -850,7 +855,9 @@ public abstract class ApplicationMaster {
 		return outputFiles;
 	}
 
-	public abstract UUID getRunId();
+	public UUID getRunId() {
+		return runId;
+	}
 
 	public Scheduler getScheduler() {
 		return scheduler;
@@ -1142,11 +1149,59 @@ public abstract class ApplicationMaster {
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 		return request;
 	}
+	
+	public void taskFailure(TaskInstance task, ContainerId containerId) {
+		String line;
 
-	public abstract void taskFailure(TaskInstance task, ContainerId containerId);
+		try {
+			log.error("[script]");
+			try (BufferedReader reader = new BufferedReader(new StringReader(task.getCommand()))) {
+				int i = 0;
+				while ((line = reader.readLine()) != null)
+					log.error(String.format("%02d  %s", ++i, line));
+			}
 
-	public abstract void taskSuccess(TaskInstance task, ContainerId containerId);
+			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
+			stdoutFile.stageIn(fs, containerId.toString());
 
+			log.error("[out]");
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stdoutFile.getLocalPath())))) {
+				while ((line = reader.readLine()) != null)
+					log.error(line);
+			}
+
+			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
+			stderrFile.stageIn(fs, containerId.toString());
+
+			log.error("[err]");
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stderrFile.getLocalPath())))) {
+				while ((line = reader.readLine()) != null)
+					log.error(line);
+			}
+		} catch (IOException e) {
+			HiWayConfiguration.onError(e, log);
+		}
+
+		log.error("[end]");
+	}
+	
+	public void taskSuccess(TaskInstance task, ContainerId containerId) {
+		try {
+			for (TaskInstance childTask : task.getChildTasks()) {
+				if (childTask.readyToExecute())
+					scheduler.addTaskToQueue(childTask);
+			}
+		} catch (WorkflowStructureUnknownException e) {
+			HiWayConfiguration.onError(e, log);
+		}
+		for (Data data : task.getOutputData()) {
+			Data.hdfsDirectoryMidfixes.put(data, containerId.toString());
+		}
+		if (scheduler.getNumberOfReadyTasks() == 0 && scheduler.getNumberOfRunningTasks() == 0) {
+			done = true;
+		}
+	}
+	
 	public void writeEntryToLog(JsonReportEntry entry) {
 		if (statLog.isDebugEnabled()) {
 			statLog.debug(entry.toString());
