@@ -44,13 +44,6 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 @Metrics(about = "Workflow Application Master Metrics", context = "hiway")
 public class WFAppMetrics {
 
-	// @Metric
-	// MutableGaugeInt workflowsSubmitted;
-	// @Metric
-	// MutableCounterInt workflowsCompleted;
-	// @Metric
-	// MutableCounterInt workflowsFailed;
-
 	public static WFAppMetrics create() {
 		return create(DefaultMetricsSystem.instance());
 	}
@@ -68,24 +61,10 @@ public class WFAppMetrics {
 	MutableCounterInt tasksKilled;
 	@Metric
 	MutableCounterInt tasksLaunched;
-
 	@Metric
 	MutableGaugeInt tasksRunning;
-
 	@Metric
 	MutableGaugeInt tasksWaiting;
-
-	// public void submittedWorkflow(UUID runId) {
-	// workflowsSubmitted.incr();
-	// }
-	//
-	// public void completedWorkflow(UUID runId) {
-	// workflowsCompleted.incr();
-	// }
-	//
-	// public void failedWorkflow(UUID runId) {
-	// workflowsFailed.incr();
-	// }
 
 	public void completedTask(TaskInstance task) {
 		tasksCompleted.incr();

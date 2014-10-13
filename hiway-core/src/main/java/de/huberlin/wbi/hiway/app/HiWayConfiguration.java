@@ -34,12 +34,14 @@ package de.huberlin.wbi.hiway.app;
 import org.apache.hadoop.conf.Configuration;
 
 public class HiWayConfiguration extends Configuration {
-	
+
 	// allowed types: local, SQL, NoSQL
 	public static final String HIWAY_DB_TYPE = "hiway.db.type";
+
 	public static enum HIWAY_DB_TYPE_OPTS {
 		local, SQL, NoSQL
 	}
+
 	public static final HIWAY_DB_TYPE_OPTS HIWAY_DB_TYPE_DEFAULT = HIWAY_DB_TYPE_OPTS.local;
 	public static final String HIWAY_DB_STAT_LOG = "hiway.stat.log";
 	public static final String HIWAY_DB_STAT_LOG_DEFAULT = "stat.log";
@@ -49,21 +51,24 @@ public class HiWayConfiguration extends Configuration {
 	public static final String HIWAY_DB_NOSQL_URLS = "hiway.db.nosql.urls";
 	public static final String HIWAY_DB_NOSQL_BUCKET = "hiway.db.nosql.bucket";
 	public static final String HIWAY_DB_NOSQL_PASSWORD = "hiway.db.nosql.password";
-	
+
 	public static final String HIWAY_SCHEDULER = "hiway.scheduler";
+
 	public static enum HIWAY_SCHEDULER_OPTS {
 		c3po, cloning, conservative, greedyQueue, heft, outlooking, placementAware, staticRoundRobin
 	}
+
 	public static final HIWAY_SCHEDULER_OPTS HIWAY_SCHEDULER_DEFAULT = HIWAY_SCHEDULER_OPTS.c3po;
-	
+
 	public static enum HIWAY_WORKFLOW_LANGUAGE_OPTS {
 		cuneiform, dax
 	}
+
 	public static final HIWAY_WORKFLOW_LANGUAGE_OPTS HIWAY_WORKFLOW_LANGUAGE_DAX = HIWAY_WORKFLOW_LANGUAGE_OPTS.dax;
 	public static final String HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS = "de.huberlin.wbi.hiway.app.DaxApplicationMaster";
 	public static final HIWAY_WORKFLOW_LANGUAGE_OPTS HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM = HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform;
 	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS = "de.huberlin.wbi.hiway.app.CuneiformApplicationMaster";
-	
+
 	public static final String HIWAY_AM_APPLICATION_TYPE = "hiway.am.application.type";
 	public static final String HIWAY_AM_APPLICATION_TYPE_DEFAULT = "Hi-WAY";
 	public static final String HIWAY_AM_SANDBOX_DIRECTORY = "hiway.am.sandbox.directory";
@@ -78,7 +83,7 @@ public class HiWayConfiguration extends Configuration {
 	public static final int HIWAY_AM_PRIORITY_DEFAULT = 0;
 	public static final String HIWAY_AM_QUEUE = "hiway.am.queue";
 	public static final String HIWAY_AM_QUEUE_DEFAULT = "default";
-	
+
 	public static final String HIWAY_WORKER_CLASS = "de.huberlin.wbi.hiway.app.Worker";
 	public static final String HIWAY_WORKER_MEMORY = "hiway.worker.memory";
 	public static final int HIWAY_WORKER_MEMORY_DEFAULT = 1024;
@@ -89,17 +94,12 @@ public class HiWayConfiguration extends Configuration {
 	// Environment for shell script. Specified as env_key=env_val pairs
 	public static final String HIWAY_WORKER_SHELL_ENV = "hiway.worker.shell.env";
 	public static final String HIWAY_WORKER_SHELL_ENV_DEFAULT = "";
-	
-//	public static final String HIWAY_CLIENT_OUTPUT = "hiway.client.output";
-//	public static final boolean HIWAY_CLIENT_OUTPUT_DEFAULT = false;
-//	public static final String HIWAY_CLIENT_OUTPUT_JSON = "hiway.client.output.json";
-//	public static final String HIWAY_CLIENT_OUTPUT_JSON_DEFAULT = "output.json";
+
 	public static final String HIWAY_CLIENT_TIMEOUT = "hiway.am.timeout";
 	public static final int HIWAY_CLIENT_TIMEOUT_DEFAULT = 86400;
-	
-//	public static final String BASH_SHEBANG = "#!/usr/bin/env bash\n";
+
 	public static final String HIWAY_SITE_XML = "hiway-site.xml";
-	
+
 	static {
 		addDefaultResource(HIWAY_SITE_XML);
 	}

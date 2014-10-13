@@ -50,7 +50,7 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * @author Marc Bux
  * 
  */
-public class GreedyQueue extends AbstractScheduler {
+public class GreedyQueue extends Scheduler {
 
 	private static final Log log = LogFactory.getLog(GreedyQueue.class);
 
@@ -80,9 +80,7 @@ public class GreedyQueue extends AbstractScheduler {
 		super.getNextTask(container);
 		TaskInstance task = queue.remove();
 
-		log.info("Assigned task " + task + " to container "
-				+ container.getId().getId() + " on node "
-				+ container.getNodeId().getHost());
+		log.info("Assigned task " + task + " to container " + container.getId().getId() + " on node " + container.getNodeId().getHost());
 		task.incTries();
 		return task;
 	}

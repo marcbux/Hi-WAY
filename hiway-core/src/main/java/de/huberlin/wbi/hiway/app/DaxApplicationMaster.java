@@ -66,27 +66,7 @@ import edu.isi.pegasus.planner.parser.Parser;
 import edu.isi.pegasus.planner.parser.dax.DAX2CDAG;
 import edu.isi.pegasus.planner.parser.dax.DAXParser;
 
-public class DaxApplicationMaster extends AbstractApplicationMaster {
-
-	// protected class DaxRMCallbackHandler extends RMCallbackHandler {
-	//
-	// @Override
-	// public void onContainersCompleted(
-	// List<ContainerStatus> completedContainers) {
-	// super.onContainersCompleted(completedContainers);
-	//
-	// else {
-	// // ask for more containers if new tasks are available or containers have
-	// failed
-	// while (scheduler.hasNextNodeRequest()) {
-	// numRequestedContainers.incrementAndGet();
-	// ContainerRequest containerAsk =
-	// setupContainerAskForRM(scheduler.getNextNodeRequest());
-	// amRMClient.addContainerRequest(containerAsk);
-	// }
-	// }
-	// }
-	// }
+public class DaxApplicationMaster extends ApplicationMaster {
 
 	public class DaxTaskInstance extends TaskInstance {
 
@@ -132,10 +112,7 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 				for (Data input : super.getInputData()) {
 					if (!input.isInput()) {
 						intermediateData.add(input);
-					} /*else {
-						writeEntryToLog(new JsonReportEntry(getWorkflowId(), getTaskId(), getTaskName(), getLanguageLabel(), getSignature(),
-								input.getLocalPath(), JsonReportEntry.KEY_FILE_SIZE_STAGEIN, Long.toString(fileSizes.get(input))));
-					}*/
+					}
 				}
 				return intermediateData;
 			}
@@ -159,7 +136,7 @@ public class DaxApplicationMaster extends AbstractApplicationMaster {
 	}
 
 	public static void main(String[] args) {
-		AbstractApplicationMaster.loop(new DaxApplicationMaster(), args);
+		ApplicationMaster.loop(new DaxApplicationMaster(), args);
 	}
 
 	@Override

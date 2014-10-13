@@ -64,8 +64,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 			@Override
 			public int compare(TaskInstance task1, TaskInstance task2) {
 				try {
-					return -Double.compare(task1.getUpwardRank(),
-							task2.getUpwardRank());
+					return -Double.compare(task1.getUpwardRank(), task2.getUpwardRank());
 				} catch (WorkflowStructureUnknownException e) {
 					e.printStackTrace();
 					System.exit(1);
@@ -102,14 +101,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 	private Set<TaskInstance> parentTasks;
 	private Set<JsonReportEntry> report;
 
-	// the scripts associated with this task
-	// private Data superScript;
-	// private Set<Data> scripts;
-
 	private long signature;
-
-	// HEFT parameters
-	// the depth of the task in the workflow (input tasks have depth 0)
 
 	private long taskId;
 
@@ -127,9 +119,8 @@ public class TaskInstance implements Comparable<TaskInstance> {
 	public TaskInstance(UUID workflowId, String taskName, long taskId) {
 		this(workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);
 	}
-	
-	public TaskInstance(UUID workflowId, String taskName, long taskId,
-			String languageLabel) {
+
+	public TaskInstance(UUID workflowId, String taskName, long taskId, String languageLabel) {
 		this.id = runningId++;
 		this.workflowId = workflowId;
 		this.taskName = taskName;
@@ -137,7 +128,6 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		this.languageLabel = languageLabel;
 
 		this.completed = false;
-		// scripts = new CopyOnWriteArraySet<>();
 		this.inputData = new HashSet<>();
 		this.outputData = new HashSet<>();
 		this.report = new HashSet<>();
@@ -145,8 +135,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		this.childTasks = new HashSet<>();
 	}
 
-	public void addChildTask(TaskInstance childTask)
-			throws WorkflowStructureUnknownException {
+	public void addChildTask(TaskInstance childTask) throws WorkflowStructureUnknownException {
 		childTasks.add(childTask);
 	}
 
@@ -158,23 +147,16 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		outputData.add(data);
 	}
 
-	public void addParentTask(TaskInstance parentTask)
-			throws WorkflowStructureUnknownException {
+	public void addParentTask(TaskInstance parentTask) throws WorkflowStructureUnknownException {
 		parentTasks.add(parentTask);
 		this.setDepth(parentTask.getDepth() + 1);
 	}
-
-	// @Override
-	// public void addScript(Data script) {
-	// scripts.add(script);
-	// }
 
 	public int compareTo(TaskInstance other) {
 		return Long.compare(this.getId(), other.getId());
 	}
 
-	public long countAvailableLocalData(FileSystem fs, Container container)
-			throws IOException {
+	public long countAvailableLocalData(FileSystem fs, Container container) throws IOException {
 		long sum = 0;
 		for (Data input : getInputData()) {
 			sum += input.countAvailableLocalData(fs, container);
@@ -190,8 +172,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		return sum;
 	}
 
-	public Set<TaskInstance> getChildTasks()
-			throws WorkflowStructureUnknownException {
+	public Set<TaskInstance> getChildTasks() throws WorkflowStructureUnknownException {
 		return childTasks;
 	}
 
@@ -219,19 +200,13 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		return outputData;
 	}
 
-	public Set<TaskInstance> getParentTasks()
-			throws WorkflowStructureUnknownException {
+	public Set<TaskInstance> getParentTasks() throws WorkflowStructureUnknownException {
 		return parentTasks;
 	}
 
 	public Set<JsonReportEntry> getReport() {
 		return report;
 	}
-
-	// @Override
-	// public Set<Data> getScripts() {
-	// return scripts;
-	// }
 
 	public long getSignature() {
 		return signature;
@@ -298,8 +273,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		this.signature = signature;
 	}
 
-	public void setUpwardRank(double upwardRank)
-			throws WorkflowStructureUnknownException {
+	public void setUpwardRank(double upwardRank) throws WorkflowStructureUnknownException {
 		this.upwardRank = upwardRank;
 	}
 

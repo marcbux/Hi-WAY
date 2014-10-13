@@ -52,7 +52,7 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * @author Marc Bux
  * 
  */
-public abstract class StaticScheduler extends AbstractScheduler {
+public abstract class StaticScheduler extends Scheduler {
 
 	private static final Log log = LogFactory.getLog(StaticScheduler.class);
 
@@ -88,14 +88,12 @@ public abstract class StaticScheduler extends AbstractScheduler {
 		super.getNextTask(container);
 		String node = container.getNodeId().getHost();
 
-		log.info("Looking for task on container " + container.getId().getId()
-				+ " on node " + node);
+		log.info("Looking for task on container " + container.getId().getId() + " on node " + node);
 		log.info("Queue: " + queues.get(node).toString());
 
 		TaskInstance task = queues.get(node).remove();
 
-		log.info("Assigned task " + task + " to container "
-				+ container.getId().getId() + " on node " + node);
+		log.info("Assigned task " + task + " to container " + container.getId().getId() + " on node " + node);
 		task.incTries();
 
 		return task;

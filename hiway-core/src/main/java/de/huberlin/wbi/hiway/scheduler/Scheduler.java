@@ -31,62 +31,321 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.scheduler;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
+import de.huberlin.hiwaydb.useDB.HiwayDB;
+import de.huberlin.hiwaydb.useDB.HiwayDBI;
+import de.huberlin.hiwaydb.useDB.HiwayDBNoSQL;
+import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
+import de.huberlin.wbi.hiway.app.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
+//import de.huberlin.wbi.hiway.scheduler.C3PO.ConservatismEstimate;
+//import de.huberlin.wbi.hiway.scheduler.C3PO.Estimate;
 
 /**
- * The interface implemented by schedulers in Hi-WAY.
+ * An abstract implementation of a workflow scheduler.
  * 
  * @author Marc Bux
  * 
  */
-public interface Scheduler {
-	
-	public void initialize();
-	
-	public void updateRuntimeEstimates(String runId);
+public abstract class Scheduler {
 
-	public void addEntryToDB(JsonReportEntry entry);
+	public abstract int getNumberOfReadyTasks();
 
-	// protected void addTask(TaskInstance task);
+	protected class Estimate {
+		String taskName;
+		double weight = 1d;
+	}
 
-	public void addTasks(Collection<TaskInstance> tasks);
+	protected class RuntimeEstimate extends Estimate {
+		long averageRuntime;
+		int finishedTasks;
+		long timeSpent;
+	}
 
-	// all schedulers have an internal queue in which they store tasks that are
-	// ready to execute
-	public void addTaskToQueue(TaskInstance task);
+	private static final Log log = LogFactory.getLog(Scheduler.class);
 
-	public String[] getNextNodeRequest();
+	protected HiwayDBI dbInterface;
 
-	public TaskInstance getNextTask(Container container);
+	protected Map<String, Long> maxTimestampPerHost;
 
-	public int getNumberOfFinishedTasks();
+	protected int numberOfPreviousRunTasks = 0;
+	protected int numberOfFinishedTasks = 0;
+	protected int numberOfRemainingTasks = 0;
+	protected int numberOfRunningTasks = 0;
 
-	public int getNumberOfReadyTasks();
+	protected final FileSystem fs;
 
-	public int getNumberOfRunningTasks();
+	protected int maxRetries = 0;
+	protected Set<Long> taskIds;
+	protected Map<String, Map<Long, RuntimeEstimate>> runtimeEstimatesPerNode;
 
-	public int getNumberOfTotalTasks();
+	// a queue of nodes on which containers are to be requested
+	protected Queue<String[]> unissuedNodeRequests;
+	protected String workflowName;
+	protected HiWayConfiguration hiWayConf;
 
-	public boolean hasNextNodeRequest();
+	public Scheduler(String workflowName, HiWayConfiguration conf, FileSystem fs) {
+		this.workflowName = workflowName;
 
-	public boolean nothingToSchedule();
+		this.hiWayConf = conf;
+		this.fs = fs;
+		unissuedNodeRequests = new LinkedList<>();
 
-	// determines whether container requests are tied to specific worker nodes
-	public boolean relaxLocality();
+		taskIds = new HashSet<>();
+		runtimeEstimatesPerNode = new HashMap<>();
+		maxTimestampPerHost = new HashMap<>();
+	}
 
-	public Collection<ContainerId> taskCompleted(TaskInstance task,
-			ContainerStatus containerStatus, long runtimeInMs);
+	public void initialize() {
+		maxRetries = hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT);
 
-	public Collection<ContainerId> taskFailed(TaskInstance task,
-			ContainerStatus containerStatus);
+		HiWayConfiguration.HIWAY_DB_TYPE_OPTS dbType = HiWayConfiguration.HIWAY_DB_TYPE_OPTS.valueOf(hiWayConf.get(HiWayConfiguration.HIWAY_DB_TYPE,
+				HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT.toString()));
+		switch (dbType) {
+		case SQL:
+			String sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			String sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			String sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+			dbInterface = new HiwayDB(sqlUser, sqlPassword, sqlURL);
+			break;
+		case NoSQL:
+			sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+			String noSqlBucket = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
+			String noSqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
+			String noSqlURIs = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
+			List<URI> noSqlURIList = new ArrayList<>();
+			for (String uri : noSqlURIs.split(",")) {
+				noSqlURIList.add(URI.create(uri));
+			}
+			dbInterface = new HiwayDBNoSQL(noSqlBucket, noSqlPassword, noSqlURIList, sqlUser, sqlPassword, sqlURL);
+			break;
+		default:
+			dbInterface = new LogParser();
+			parseLogs(fs);
+		}
+	}
 
-	// public void addTaskToQueue(TaskInstance task);
+	public void addEntryToDB(JsonReportEntry entry) {
+		log.info("HiwayDB: Adding entry " + entry + " to database.");
+		dbInterface.logToDB(entry);
+		log.info("HiwayDB: Added entry to database.");
+	}
 
+	protected void addTask(TaskInstance task) {
+		numberOfRemainingTasks++;
+	}
+
+	public void addTasks(Collection<TaskInstance> tasks) {
+		for (TaskInstance task : tasks) {
+			addTask(task);
+		}
+	}
+
+	public void addTaskToQueue(TaskInstance task) {
+		unissuedNodeRequests.add(new String[0]);
+	}
+
+	public String[] getNextNodeRequest() {
+		return unissuedNodeRequests.remove();
+	}
+
+	public TaskInstance getNextTask(Container container) {
+		numberOfRemainingTasks--;
+		numberOfRunningTasks++;
+		return null;
+	}
+
+	protected Set<String> getNodeIds() {
+		return new HashSet<>(runtimeEstimatesPerNode.keySet());
+	}
+
+	public int getNumberOfFinishedTasks() {
+		return numberOfFinishedTasks - numberOfPreviousRunTasks;
+	}
+
+	public int getNumberOfRunningTasks() {
+		return numberOfRunningTasks;
+	}
+
+	public int getNumberOfTotalTasks() {
+		int fin = getNumberOfFinishedTasks();
+		int run = getNumberOfRunningTasks();
+		int rem = numberOfRemainingTasks;
+
+		log.info("Scheduled Containers Finished: " + fin);
+		log.info("Scheduled Containers Running: " + run);
+		log.info("Scheduled Containers Remaining: " + rem);
+
+		return fin + run + rem;
+	}
+
+	protected Set<Long> getTaskIds() {
+		return new HashSet<>(taskIds);
+	}
+
+	public boolean hasNextNodeRequest() {
+		return !unissuedNodeRequests.isEmpty();
+	}
+
+	protected void newHost(String nodeId) {
+		Map<Long, RuntimeEstimate> runtimeEstimates = new HashMap<>();
+		for (long taskId : getTaskIds()) {
+			runtimeEstimates.put(taskId, new RuntimeEstimate());
+		}
+		runtimeEstimatesPerNode.put(nodeId, runtimeEstimates);
+		maxTimestampPerHost.put(nodeId, 0l);
+	}
+
+	protected void newTask(long taskId) {
+		taskIds.add(taskId);
+		for (Map<Long, RuntimeEstimate> runtimeEstimates : runtimeEstimatesPerNode.values()) {
+			runtimeEstimates.put(taskId, new RuntimeEstimate());
+		}
+	}
+
+	public boolean nothingToSchedule() {
+		return getNumberOfReadyTasks() == 0;
+	}
+
+	protected void parseLogs(FileSystem fs) {
+		Path hiwayDir = new Path(fs.getHomeDirectory(), hiWayConf.get(HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY,
+				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT));
+		try {
+			for (FileStatus appDirStatus : fs.listStatus(hiwayDir)) {
+				if (appDirStatus.isDirectory()) {
+					Path appDir = appDirStatus.getPath();
+					for (FileStatus srcStatus : fs.listStatus(appDir)) {
+						Path src = srcStatus.getPath();
+						String srcName = src.getName();
+						if (srcName.equals(hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT))) {
+							Path dest = new Path(appDir.getName());
+							log.info("Parsing log " + dest.toString());
+							fs.copyToLocalFile(false, src, dest);
+
+							try (BufferedReader reader = new BufferedReader(new FileReader(new File(dest.toString())))) {
+								String line;
+								while ((line = reader.readLine()) != null) {
+									JsonReportEntry entry = new JsonReportEntry(line);
+									addEntryToDB(entry);
+								}
+							}
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public boolean relaxLocality() {
+		return true;
+	}
+
+	public Collection<ContainerId> taskCompleted(TaskInstance task, ContainerStatus containerStatus, long runtimeInMs) {
+
+		numberOfRunningTasks--;
+		numberOfFinishedTasks++;
+
+		log.info("Task " + task + " in container " + containerStatus.getContainerId().getId() + " finished after " + runtimeInMs + " ms");
+
+		return new ArrayList<>();
+	}
+
+	public Collection<ContainerId> taskFailed(TaskInstance task, ContainerStatus containerStatus) {
+		numberOfRunningTasks--;
+
+		log.info("Task " + task + " on container " + containerStatus.getContainerId().getId() + " failed");
+		if (task.retry(maxRetries)) {
+			log.info("Retrying task " + task + ".");
+			addTask(task);
+		} else {
+			log.info("Task " + task + " has exceeded maximum number of allowed retries. Aborting task.");
+		}
+
+		return new ArrayList<>();
+	}
+
+	protected void updateRuntimeEstimate(InvocStat stat) {
+		log.debug("Updating Runtime Estimate for stat " + stat.toString());
+		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostName()).get(stat.getTaskId());
+		re.finishedTasks += 1;
+		re.timeSpent += stat.getRealTime().longValue();
+		re.weight = re.averageRuntime = re.timeSpent / re.finishedTasks;
+	}
+
+	public void updateRuntimeEstimates(String runId) {
+		log.info("Updating Runtime Estimates.");
+
+		log.info("HiwayDB: Querying Host Names from database.");
+		Collection<String> newHostIds = dbInterface.getHostNames();
+		log.info("HiwayDB: Retrieved Host Names " + newHostIds.toString() + " from database.");
+		newHostIds.removeAll(getNodeIds());
+		for (String newHostId : newHostIds) {
+			newHost(newHostId);
+		}
+		log.info("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
+		Collection<Long> newTaskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
+		log.info("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
+
+		newTaskIds.removeAll(getTaskIds());
+		for (long newTaskId : newTaskIds) {
+			newTask(newTaskId);
+		}
+
+		for (String hostName : getNodeIds()) {
+			long oldMaxTimestamp = maxTimestampPerHost.get(hostName);
+			long newMaxTimestamp = oldMaxTimestamp;
+			for (long taskId : getTaskIds()) {
+				log.info("HiwayDB: Querying InvocStats for task id " + taskId + " on host " + hostName + " since timestamp " + oldMaxTimestamp
+						+ " from database.");
+				Collection<InvocStat> invocStats = dbInterface.getLogEntriesForTaskOnHostSince(taskId, hostName, oldMaxTimestamp);
+				log.info("HiwayDB: Retrieved InvocStats " + invocStats.toString() + " from database.");
+				for (InvocStat stat : invocStats) {
+					newMaxTimestamp = Math.max(newMaxTimestamp, stat.getTimestamp());
+					updateRuntimeEstimate(stat);
+					if (!runId.equals(stat.getRunId())) {
+						numberOfPreviousRunTasks++;
+						numberOfFinishedTasks++;
+					}
+				}
+			}
+			maxTimestampPerHost.put(hostName, newMaxTimestamp);
+		}
+	}
+
+	public void logStackTrace(Throwable t) {
+		Writer writer = new StringWriter();
+		PrintWriter printWriter = new PrintWriter(writer);
+		t.printStackTrace(printWriter);
+		log.error(writer.toString());
+	}
 }

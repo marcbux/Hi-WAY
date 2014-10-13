@@ -52,7 +52,6 @@ import org.junit.Test;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.C3PO;
 import de.huberlin.wbi.hiway.scheduler.GreedyQueue;
-import de.huberlin.wbi.hiway.scheduler.Scheduler;
 
 public class TestScheduler {
 

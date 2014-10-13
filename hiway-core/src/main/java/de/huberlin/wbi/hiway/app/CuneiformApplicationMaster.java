@@ -64,7 +64,7 @@ import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
-public class CuneiformApplicationMaster extends AbstractApplicationMaster {
+public class CuneiformApplicationMaster extends ApplicationMaster {
 
 	public class CuneiformTaskInstance extends TaskInstance {
 
@@ -134,8 +134,6 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 			Ticket ticket = msg.getTicket();
 
-//			 writeEntryToLog(ticket.get());
-
 			Invocation invoc = Invocation.createInvocation(ticket);
 			TaskInstance task = new CuneiformTaskInstance(invoc);
 
@@ -167,7 +165,6 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 			Collection<TaskInstance> tasks = new ArrayList<>();
 			tasks.add(task);
 			scheduler.addTasks(tasks);
-			// scheduler.addTaskToQueue(task);
 		}
 
 		@Override
@@ -214,13 +211,10 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 
 	}
 
-	// public static final String CUNEIFORM_SCRIPT_FILENAME =
-	// "__cuneiform_script__";
-
 	private static final Log log = LogFactory.getLog(CuneiformApplicationMaster.class);
 
 	public static void main(String[] args) {
-		AbstractApplicationMaster.loop(new CuneiformApplicationMaster(), args);
+		ApplicationMaster.loop(new CuneiformApplicationMaster(), args);
 	}
 
 	private BaseCreActor creActor;
@@ -237,90 +231,12 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		ticketSrc = new TicketSrcActor(creActor);
 		executor.submit(ticketSrc);
 		executor.shutdown();
-		// taskToInvocation = new HashMap<>();
-		// fileToProducer = new HashMap<>();
 	}
-
-	// private Map<Data, CuneiformTaskInstance> fileToProducer;
-
-	// private Map<CuneiformTaskInstance, Invocation> taskToInvocation;
 
 	@Override
 	public UUID getRunId() {
 		return (ticketSrc.getRunId());
 	}
-
-	// @Override
-	// protected void buildPostScript(TaskInstance task, Container container)
-	// throws IOException {
-	// File postScript = new File(Constant.POST_SCRIPT_FILENAME);
-	// BufferedWriter postScriptWriter = new BufferedWriter(new FileWriter(
-	// postScript));
-	// postScriptWriter.write(Constant.BASH_SHEBANG);
-	// String[] containerFiles = { Constant.SUPER_SCRIPT_FILENAME,
-	// Constant.PRE_SCRIPT_FILENAME, CUNEIFORM_SCRIPT_FILENAME,
-	// Constant.POST_SCRIPT_FILENAME };
-	//
-	// postScriptWriter
-	// .write("for file in $( find * -type l \\( ! -path 'tmp/*'");
-	// for (String containerFile : containerFiles) {
-	// postScriptWriter.write(" -a ! -path '" + containerFile + "'");
-	// }
-	// // for (Data data : task.getInputData()) {
-	// // postScriptWriter.write(" -a ! -path '" + data.getLocalPath() + "'");
-	// // }
-	// postScriptWriter.write(" \\) )\ndo\n");
-	//
-	// String timeString = generateTimeString(task,
-	// Constant.KEY_FILE_TIME_STAGEOUT)
-	// + "hdfs dfs -copyFromLocal -f $file "
-	// + Data.getHdfsDirectoryPrefix()
-	// + "/"
-	// + container.getId().toString() + "/$file &";
-	// postScriptWriter
-	// .write("\tif [ `dirname $file` != '.' ]\n\tthen\n\t\thdfs dfs -mkdir -p "
-	// + Data.getHdfsDirectoryPrefix()
-	// + "/"
-	// + container.getId().toString()
-	// + "/`dirname $file` && "
-	// + timeString
-	// + "\n\telse\n\t\t"
-	// + timeString
-	// + "\n\tfi\n");
-	//
-	// postScriptWriter
-	// .write("\twhile [ $(jobs -l | grep -c Running) -ge "
-	// + hdfsInstancesPerContainer
-	// + " ]\n\tdo\n\t\tsleep 1\n\tdone\n");
-	//
-	// postScriptWriter.write("done\n");
-	//
-	// postScriptWriter.write("for job in `jobs -p`\ndo\n\twait $job\ndone\n");
-	// postScriptWriter.close();
-	// task.addScript(new Data(postScript.getPath()));
-	// }
-
-	// @Override
-	// protected void buildSuperScript(TaskInstance task, Container container)
-	// throws IOException {
-	// super.buildSuperScript(task, container);
-	// File cuneiformScript = new File(CUNEIFORM_SCRIPT_FILENAME);
-	// BufferedWriter cuneiformScriptWriter = new BufferedWriter(
-	// new FileWriter(cuneiformScript));
-	// try {
-	// cuneiformScriptWriter.write(((CuneiformTaskInstance) task)
-	// .getInvocation().toScript());
-	// } catch (Exception e) {
-	// log.info("Error when attempting to write Cuneiform script for task "
-	// + task.toString() + " to file. exiting");
-	// e.printStackTrace();
-	// System.exit(1);
-	// }
-	// cuneiformScriptWriter.close();
-	// Data script = new Data(cuneiformScript.getPath());
-	// // task.setSuperScript(script);
-	// task.addScript(script);
-	// }
 
 	@Override
 	public void parseWorkflow() {
@@ -399,8 +315,6 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 		log.error("[end]");
 
 		if (!task.retry(hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
-			// ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation
-			// .getTicket(), script, stdOut, stdErr));
 			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, script, stdOut, stdErr));
 		}
 
@@ -419,16 +333,12 @@ public class CuneiformApplicationMaster extends AbstractApplicationMaster {
 				if (!files.containsKey(outputName)) {
 					Data output = new Data(outputName);
 					files.put(outputName, output);
-					// fileToProducer.put(output, task);
 				}
 				Data output = files.get(outputName);
 				Data.hdfsDirectoryMidfixes.put(output, containerId.toString());
 
 				task.addOutputData(output);
 				output.setInput(false);
-				// if (terminalTaskNodes.contains(invocation.getTaskNode())) {
-				// output.setOutput(true);
-				// }
 			}
 
 		} catch (Exception e) {

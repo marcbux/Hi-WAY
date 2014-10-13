@@ -218,7 +218,7 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * unnecessary data transfer is minimized.
  * </p>
  */
-public class C3PO extends AbstractScheduler {
+public class C3PO extends Scheduler {
 
 	/**
 	 * 
@@ -239,10 +239,6 @@ public class C3PO extends AbstractScheduler {
 		long localData;
 		long totalData;
 	}
-
-	// protected class ConservatismEstimate extends Estimate {
-	// long lastRuntime;
-	// }
 
 	private static final Log log = LogFactory.getLog(C3PO.class);
 	private double conservatismWeight = 1d;
@@ -272,14 +268,6 @@ public class C3PO extends AbstractScheduler {
 
 	protected Map<Long, String> taskIdToName;
 
-	/**
-	 * For each machine, remember the last execution time of each type of task.
-	 * These values are used as runtime estimates for future scheduling
-	 * decisions.
-	 */
-	// protected Map<NodeId, Map<String, ConservatismEstimate>>
-	// taskStatisticsPerNode;
-
 	protected Map<TaskInstance, List<Container>> taskToContainers;
 
 	public C3PO(String workflowName, HiWayConfiguration conf) {
@@ -296,7 +284,6 @@ public class C3PO extends AbstractScheduler {
 		runningTasks = new HashMap<>();
 		taskIdToName = new HashMap<>();
 		taskToContainers = new HashMap<>();
-		// taskStatisticsPerNode = new HashMap<>();
 		jobStatistics = new HashMap<>();
 		dataLocalityStatistics = new HashMap<>();
 		numGen = new Random(seed);
@@ -393,10 +380,6 @@ public class C3PO extends AbstractScheduler {
 					// in case of total data being zero (prevent division by
 					// zero)
 					dataLocalityStatistic.totalData = task.countAvailableTotalData(fs) + 1;
-					// dataLocalityStatistic.weight = (double)
-					// (dataLocalityStatistic.localData +
-					// dataLocalityStatistic.totalData) / (2 *
-					// dataLocalityStatistic.totalData);
 					dataLocalityStatistic.weight = ((double) (dataLocalityStatistic.localData)) / ((double) dataLocalityStatistic.totalData);
 				} catch (IOException e) {
 					log.info("Error during hdfs block location determination.");
@@ -493,14 +476,6 @@ public class C3PO extends AbstractScheduler {
 		return task;
 	}
 
-	// @Override
-	// public int getNumberOfFinishedTasks() {
-	// int finishedTasks = 0;
-	// for (OutlookEstimate jobStatistic : jobStatistics.values())
-	// finishedTasks += jobStatistic.finishedTasks;
-	// return finishedTasks - numberOfPreviousRunTasks;
-	// }
-
 	@Override
 	public int getNumberOfReadyTasks() {
 		int nReadyTasks = 0;
@@ -560,14 +535,6 @@ public class C3PO extends AbstractScheduler {
 
 	@Override
 	public boolean nothingToSchedule() {
-		// log.info("fin:\t" + getNumberOfFinishedTasks());
-		// log.info("run:\t" + getNumberOfRunningTasks());
-		// log.info("rdy:\t" + getNumberOfReadyTasks());
-		// log.info("cln:\t" + nClones);
-
-		// if (getNumberOfFinishedTasks() == getNumberOfTotalTasks()) {
-		// return true;
-		// } else
 		if (nClones > 0 && getNumberOfRunningTasks() > 0) {
 			return false;
 		}
@@ -617,7 +584,6 @@ public class C3PO extends AbstractScheduler {
 		log.info(row);
 
 		for (String nodeId : getNodeIds()) {
-			// String nodeName = nodeId.getHost();
 			String nodeName7 = (nodeId.length() > 7) ? nodeId.substring(nodeId.length() - 7) : nodeId;
 
 			row = "";
@@ -675,9 +641,6 @@ public class C3PO extends AbstractScheduler {
 		// kill speculative copies
 		for (Container container : taskToContainers.get(task)) {
 			if (!container.getId().equals(containerStatus.getContainerId())) {
-				// taskStatisticsPerNode.get(container.getNodeId()).get(jobName).lastRuntime
-				// = runtimeInMs;
-				// } else {
 				toBeReleasedContainers.add(container.getId());
 				unissuedNodeRequests.add(new String[0]);
 			}
