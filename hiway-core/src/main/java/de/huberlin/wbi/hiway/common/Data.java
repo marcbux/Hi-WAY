@@ -84,6 +84,7 @@ public class Data implements Comparable<Data> {
 	private boolean output;
 
 	public Data(String path) {
+		path = path.replaceAll("[\\[\\]:]", "_");
 		input = false;
 		output = false;
 
