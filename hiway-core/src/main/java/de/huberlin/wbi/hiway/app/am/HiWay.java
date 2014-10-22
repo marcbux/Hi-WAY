@@ -560,8 +560,6 @@ public abstract class HiWay {
 	// a handle to the log, in which any events are recorded
 	private static final Log log = LogFactory.getLog(HiWay.class);
 
-	protected static final Log statLog = LogFactory.getLog("statLogger");
-
 	/**
 	 * The main routine.
 	 * 
@@ -663,6 +661,7 @@ public abstract class HiWay {
 	// the workflow to be executed along with its format and path in the file
 	// system
 	protected String workflowPath;
+	protected BufferedWriter statLog;;
 	private UUID runId;
 
 	public HiWay() {
@@ -670,6 +669,7 @@ public abstract class HiWay {
 		conf.addResource("core-site.xml");
 		hiWayConf = new HiWayConfiguration();
 		try {
+			statLog = new BufferedWriter(new FileWriter(hiWayConf.get(HiWayConfiguration.HIWAY_AM_STATLOG, HiWayConfiguration.HIWAY_AM_STATLOG_DEFAULT)));
 			fs = FileSystem.get(conf);
 		} catch (IOException e) {
 			onError(e);
@@ -804,6 +804,7 @@ public abstract class HiWay {
 		}
 
 		try {
+			statLog.close();
 			federatedReport.stageOut(fs, "");
 			if (summaryFile != null) {
 				String stdout = fs.getHomeDirectory().toString() + "/" + sandboxDir + "/" + appId + "/AppMaster.stdout";
@@ -1206,8 +1207,12 @@ public abstract class HiWay {
 	}
 	
 	public void writeEntryToLog(JsonReportEntry entry) {
-		if (statLog.isDebugEnabled()) {
-			statLog.debug(entry.toString());
+		try {
+			statLog.write(entry.toString());
+			statLog.newLine();
+			statLog.flush();
+		} catch (IOException e) {
+			onError(e);
 		}
 		scheduler.addEntryToDB(entry);
 	}

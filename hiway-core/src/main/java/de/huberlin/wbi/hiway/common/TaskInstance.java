@@ -75,7 +75,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 
 	}
 
-	private static int runningId = 0;
+	private static int runningId = 1;
 	private Set<TaskInstance> childTasks;
 	// the command to be executed
 	private String command;

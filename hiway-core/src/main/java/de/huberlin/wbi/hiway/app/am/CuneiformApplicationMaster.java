@@ -53,7 +53,6 @@ import de.huberlin.wbi.cuneiform.core.cre.TicketReadyMsg;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.repl.BaseRepl;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.CompoundExpr;
-import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotBoundException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.Ticket;
@@ -176,11 +175,7 @@ public class CuneiformApplicationMaster extends HiWay {
 	public class HiWayRepl extends BaseRepl {
 
 		public HiWayRepl(TicketSrcActor ticketSrc) {
-			super(ticketSrc);
-		}
-
-		@Override
-		protected void flushStatLog(Set<JsonReportEntry> reportEntrySet) {
+			super(ticketSrc, null);
 		}
 
 		@Override

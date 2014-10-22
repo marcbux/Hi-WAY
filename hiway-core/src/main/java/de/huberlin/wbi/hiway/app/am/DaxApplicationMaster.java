@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
-import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -68,8 +67,8 @@ public class DaxApplicationMaster extends HiWay {
 		Map<Data, Long> fileSizes;
 		double runtime;
 
-		public DaxTaskInstance(UUID workflowId, String taskName, long taskId) {
-			super(workflowId, taskName, taskId);
+		public DaxTaskInstance(String taskName) {
+			super(getRunId(), taskName, Math.abs(taskName.hashCode()));
 			fileSizes = new HashMap<>();
 			determineFileSizes = true;
 		}
@@ -154,7 +153,7 @@ public class DaxApplicationMaster extends HiWay {
 			String taskId = job.getID();
 
 			String taskName = job.getTXName();
-			DaxTaskInstance task = new DaxTaskInstance(getRunId(), taskName, Math.abs(taskName.hashCode()));
+			DaxTaskInstance task = new DaxTaskInstance(taskName);
 			task.setRuntime(job.getRuntime());
 			taskToJob.put(task, job);
 			tasks.put(taskId, task);
@@ -226,7 +225,7 @@ public class DaxApplicationMaster extends HiWay {
 				onError(e);
 			}
 
-			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
+			task.getReport().add(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
 					JsonReportEntry.KEY_INVOC_SCRIPT, task.getCommand()));
 		}
 
