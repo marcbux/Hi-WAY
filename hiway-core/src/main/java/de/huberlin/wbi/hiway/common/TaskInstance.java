@@ -75,32 +75,32 @@ public class TaskInstance implements Comparable<TaskInstance> {
 
 	}
 
-	private static int runningId = 1;
-	private Set<TaskInstance> childTasks;
+	protected static int runningId = 1;
+	protected Set<TaskInstance> childTasks;
 	// the command to be executed
-	private String command;
+	protected String command;
 	// whether this task is completed yet
-	private boolean completed;
-	private int depth = 0;
+	protected boolean completed;
+	protected int depth = 0;
 	// this task instance's id
-	private final long id;
+	protected final long id;
 	// input and output data
-	private Set<Data> inputData;
+	protected Set<Data> inputData;
 	// the programming language of this task (default: bash)
-	private String languageLabel;
-	private Set<Data> outputData;
+	protected String languageLabel;
+	protected Set<Data> outputData;
 	// parent and child tasks (denotes the workflow structure)
-	private Set<TaskInstance> parentTasks;
-	private Set<JsonReportEntry> report;
-	private long taskId;
+	protected Set<TaskInstance> parentTasks;
+	protected Set<JsonReportEntry> report;
+	protected long taskId;
 	// the name and (internal) id of the task's executable (e.g. tar)
-	private String taskName;
+	protected String taskName;
 	// the number of times this task has been attempted
-	private int tries = 0;
+	protected int tries = 0;
 	// the upward rank of tasks in the workflow
-	private double upwardRank = 0d;
+	protected double upwardRank = 0d;
 	// the id of the workflow this task instance belongs to
-	private UUID workflowId;
+	protected UUID workflowId;
 
 	public TaskInstance(UUID workflowId, String taskName, long taskId) {
 		this(workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);

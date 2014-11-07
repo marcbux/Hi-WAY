@@ -55,16 +55,12 @@ public class HiWayConfiguration extends Configuration {
 	public static final int HIWAY_AM_PRIORITY_DEFAULT = 0;
 	public static final String HIWAY_AM_QUEUE = "hiway.am.queue";
 	public static final String HIWAY_AM_QUEUE_DEFAULT = "default";
-
 	public static final String HIWAY_AM_SANDBOX_DIRECTORY = "hiway.am.sandbox.directory";
 	public static final String HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT = "hiway";
-	
 	public static final String HIWAY_AM_STATLOG = "hiway.am.statlog";
 	public static final String HIWAY_AM_STATLOG_DEFAULT = "stat.log";
-
 	public static final String HIWAY_AM_TASK_RETRIES = "hiway.am.task.retries";
 	public static final int HIWAY_AM_TASK_RETRIES_DEFAULT = 1;
-
 	public static final String HIWAY_AM_VCORES = "hiway.am.vcores";
 	public static final int HIWAY_AM_VCORES_DEFAULT = 1;
 	public static final String HIWAY_CLIENT_TIMEOUT = "hiway.am.timeout";
@@ -78,19 +74,23 @@ public class HiWayConfiguration extends Configuration {
 	public static final String HIWAY_DB_SQL_USER = "hiway.db.sql.user";
 	public static final String HIWAY_DB_STAT_LOG = "hiway.stat.log";
 	public static final String HIWAY_DB_STAT_LOG_DEFAULT = "stat.log";
-	// allowed types: local, SQL, NoSQL
 	public static final String HIWAY_DB_TYPE = "hiway.db.type";
 	public static final HIWAY_DB_TYPE_OPTS HIWAY_DB_TYPE_DEFAULT = HIWAY_DB_TYPE_OPTS.local;
+	
+	public static final String HIWAY_GALAXY_PYTHONPATH = "hiway.galaxy.pythonpath";
+	public static final String HIWAY_GALAXY_TOOLS = "hiway.galaxy.tools";
+	public static final String HIWAY_GALAXY_DATATYPES = "hiway.galaxy.datatypes";
+	
 	public static final String HIWAY_SCHEDULER = "hiway.scheduler";
 	public static final HIWAY_SCHEDULER_OPTS HIWAY_SCHEDULER_DEFAULT = HIWAY_SCHEDULER_OPTS.c3po;
+	
 	public static final String HIWAY_SITE_XML = "hiway-site.xml";
+	
 	public static final String HIWAY_WORKER_CLASS = "de.huberlin.wbi.hiway.app.Worker";
-
 	public static final String HIWAY_WORKER_MEMORY = "hiway.worker.memory";
 	public static final int HIWAY_WORKER_MEMORY_DEFAULT = 1024;
 	public static final String HIWAY_WORKER_PRIORITY = "hiway.worker.priority";
 	public static final int HIWAY_WORKER_PRIORITY_DEFAULT = 0;
-	// Environment for shell script. Specified as env_key=env_val pairs
 	public static final String HIWAY_WORKER_SHELL_ENV = "hiway.worker.shell.env";
 	public static final String HIWAY_WORKER_SHELL_ENV_DEFAULT = "";
 	public static final String HIWAY_WORKER_VCORES = "hiway.worker.vcores";
