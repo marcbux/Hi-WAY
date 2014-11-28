@@ -165,6 +165,10 @@ public class GalaxyApplicationMaster extends HiWay {
 			return dataTypes.get(inputName);
 		}
 
+		public Map<String, Set<GalaxyDataType>> getDataTypes() {
+			return dataTypes;
+		}
+		
 //		public Set<GalaxyDataType> getOutputTypes(String outputName) {
 //			return outputTypes.get(outputName);
 //		}
@@ -298,6 +302,10 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 		
 		public void addFileName(String name, String value) {
+			System.out.print(galaxyTool.getName() + " ");
+			System.out.print(name + " ");
+			System.out.print(value + " ");
+			System.out.println();
 			pickleScript.append(", ");
 			addParameter(name, value);
 			for (GalaxyDataType type : galaxyTool.getDataTypes(name)) {
@@ -387,7 +395,8 @@ public class GalaxyApplicationMaster extends HiWay {
 		} catch (ParserConfigurationException | FactoryConfigurationError e) {
 			e.printStackTrace();
 		}
-		parseWorkflow("galaxy101.ga");
+//		parseWorkflow("galaxy101.ga");
+		parseWorkflow("RNAseq.ga");
 	}
 
 	private static boolean processDataTypeDir(File dir) {
@@ -546,9 +555,13 @@ public class GalaxyApplicationMaster extends HiWay {
 								Element dataEl = (Element) dataNds.item(i);
 								String outputName = dataEl.getAttribute("name");
 								String format = dataEl.getAttribute("format");
-								String metadata_source = dataEl.getAttribute("metadata_source");
 								if (format.equals("input")) {
-									tool.addDataTypes(outputName, tool.getDataTypes(metadata_source));
+									String metadata_source = dataEl.getAttribute("metadata_source");
+									if (metadata_source != null && metadata_source.length() > 0) {
+										tool.addDataTypes(outputName, tool.getDataTypes(metadata_source));
+									} else {
+										tool.addDataTypes(outputName, tool.getDataTypes().values().iterator().next());
+									}
 								} else {
 									String[] splitFormat = format.split(",");
 									tool.addDataTypes(outputName, splitFormat);
