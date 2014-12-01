@@ -72,18 +72,12 @@ public class LogParser implements HiwayDBI {
 		return new HashSet<>(hostNames);
 	}
 
-	@Override
-	public Collection<InvocStat> getLogEntriesForTask(long taskId) {
+	private Collection<InvocStat> getLogEntriesForTask(long taskId) {
 		Collection<InvocStat> stats = new LinkedList<>();
 		for (String hostName : getHostNames()) {
 			stats.addAll(getLogEntriesForTaskOnHostSince(taskId, hostName, 0l));
 		}
 		return stats;
-	}
-
-	@Override
-	public Collection<InvocStat> getLogEntriesForTaskOnHost(long taskId, String hostName) {
-		return getLogEntriesForTaskOnHostSince(taskId, hostName, 0l);
 	}
 
 	@Override
