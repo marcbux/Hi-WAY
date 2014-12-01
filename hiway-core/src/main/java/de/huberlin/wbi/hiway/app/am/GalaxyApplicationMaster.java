@@ -323,11 +323,24 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 
 		public void addToolState(String toolState) {
-			toolState = toolState.replaceAll("\\\\", "").replaceAll("\"\"", "\"").replaceAll("\"\\{", "\\{").replaceAll("\\}\"", "\\}")
-					.replaceAll("\"\\[", "\\[").replaceAll("\\]\"", "\\]")
-					.replaceAll("\\{\"__class__\":[^\"]*\"UnvalidatedValue\",[^\"]*\"value\":[^\"](\"[^\"]*\")\\}", "$1").replaceAll("\"null\"", "null");
+			String toolState_json = toolState;
+			// replace "{ }" "[ ]" with { } [ ]
+			toolState_json = toolState_json.replaceAll("\"\\{", "\\{");
+			toolState_json = toolState_json.replaceAll("\\}\"", "\\}");
+			toolState_json = toolState_json.replaceAll("\"\\[", "\\[");
+			toolState_json = toolState_json.replaceAll("\\]\"", "\\]");
+			// remove \
+			toolState_json = toolState_json.replaceAll("\\\\", "");
+			// replace "" with "
+			toolState_json = toolState_json.replaceAll("\"\"", "\"");
+			// replace : ", with : "",
+			toolState_json = toolState_json.replaceAll(": ?\",", ": \"\",");
+			// replace UnvalidatedValue with their actual value
+			toolState_json = toolState_json.replaceAll("\\{\"__class__\":[^\"]*\"UnvalidatedValue\",[^\"]*\"value\":[^\"](\"[^\"]*\")\\}", "$1");
+			// replace "null" with null
+			toolState_json = toolState_json.replaceAll("\"null\"", "null");
 			try {
-				JSONObject j = new JSONObject(toolState);
+				JSONObject j = new JSONObject(toolState_json);
 				for (Iterator<?> it = j.keys(); it.hasNext();) {
 					String name = (String) it.next();
 					addParam(name, j.get(name));
@@ -339,6 +352,9 @@ public class GalaxyApplicationMaster extends HiWay {
 
 		public void addFileName(String name, String value) {
 			addParam(name, value);
+			if (galaxyTool.getDataTypes(name) == null) {
+				System.out.println();
+			}
 			for (GalaxyDataType type : galaxyTool.getDataTypes(name))
 				addParam(name + "_metadata", type.getMetadata());
 		}
@@ -432,8 +448,8 @@ public class GalaxyApplicationMaster extends HiWay {
 		} catch (ParserConfigurationException | FactoryConfigurationError e) {
 			e.printStackTrace();
 		}
-		parseWorkflow("galaxy101.ga");
-		// parseWorkflow("RNAseq.ga");
+		// parseWorkflow("galaxy101.ga");
+		parseWorkflow("RNAseq.ga");
 	}
 
 	private static boolean processDataTypeDir(File dir) {
@@ -528,6 +544,28 @@ public class GalaxyApplicationMaster extends HiWay {
 		return false;
 	}
 
+	private static Map<Element, String> getParams(Element inputsEl, String prefix) {
+		Map<Element, String> params = new HashMap<>();
+
+		NodeList paramNds = inputsEl.getElementsByTagName("param");
+		for (int i = 0; i < paramNds.getLength(); i++) {
+			Element paramEl = (Element) paramNds.item(i);
+			if (!params.containsKey(paramEl) || params.get(paramEl).length() < prefix.length())
+				params.put(paramEl, prefix);
+		}
+
+		NodeList conditionalNds = inputsEl.getElementsByTagName("conditional");
+		for (int i = 0; i < conditionalNds.getLength(); i++) {
+			Element conditionalEl = (Element) conditionalNds.item(i);
+			Map<Element, String> newParams = getParams(conditionalEl, prefix + conditionalEl.getAttribute("name") + "|");
+			for (Element paramEl : newParams.keySet())
+				if (!params.containsKey(paramEl) || params.get(paramEl).length() < newParams.get(paramEl).length())
+					params.put(paramEl, newParams.get(paramEl));
+		}
+
+		return params;
+	}
+
 	private static boolean processToolDir(File dir, DocumentBuilder builder) {
 		for (File file : dir.listFiles()) {
 			if (file.isDirectory()) {
@@ -559,11 +597,10 @@ public class GalaxyApplicationMaster extends HiWay {
 
 						Element inputsEl = (Element) rootEl.getElementsByTagName("inputs").item(0);
 						if (inputsEl != null) {
-							NodeList paramNds = inputsEl.getElementsByTagName("param");
-							for (int i = 0; i < paramNds.getLength(); i++) {
-								Element paramEl = (Element) paramNds.item(i);
+							Map<Element, String> params = getParams(inputsEl, "");
+							for (Element paramEl : params.keySet()) {
 								String type = paramEl.getAttribute("type");
-								String paramName = paramEl.getAttribute("name");
+								String paramName = params.get(paramEl) + paramEl.getAttribute("name");
 								GalaxyParam param = new GalaxyParam(paramName);
 								tool.addParam(param);
 								switch (type) {
