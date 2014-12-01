@@ -11,7 +11,7 @@ remote_file "#{Chef::Config[:file_cache_path]}/hiway-dist-#{node[:hiway][:versio
   action :create_if_missing
 end
 
-installed_hiway = "/tmp/.hiway_installed_#{node[:hiway][:version]}"
+installed_hiway = "/tmp/.installed_hiway_#{node[:hiway][:version]}"
 bash "install_hiway" do
   user node[:hiway][:user]
   group node[:hiway][:group]

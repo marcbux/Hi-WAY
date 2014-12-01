@@ -17,22 +17,24 @@ template "#{node[:hiway][:home]}/wordcount/gronemeyer.txt" do
   source "wordcount.gronemeyer.txt.erb"
 end
 
-bash "setup_word_count" do
+prepared_wordcount = "/tmp/.prepared_wordcount_#{node[:hiway][:version]}"
+bash "prepare_wordcount" do
   user "#{node[:hiway][:user]}"
   code <<-EOF
   set -e && set -o pipefail
   #{node[:hadoop][:home]}/bin/hdfs dfs -put #{node[:hiway][:home]}/wordcount
-  touch #{node[:hiway][:home]}/.setup_word_count
+  touch #{prepared_wordcount}
   EOF
-     not_if { ::File.exists?( "#{node[:hiway][:home]}/.setup_word_count" ) }
+    not_if { ::File.exists?( "#{prepared_wordcount}" ) }
 end
 
-bash "run_word_count" do
+ran_wordcount = "/tmp/.ran_wordcount_#{node[:hiway][:version]}"
+bash "run_wordcount" do
   user "#{node[:hiway][:user]}"
   code <<-EOF
   set -e && set -o pipefail
-  #{node[:hadoop][:home]}/bin/yarn jar #{node[:hiway][:home]}/hiway-core-0.2.0-SNAPSHOT.jar -w #{node[:hiway][:home]}/wordcount.cf
-  touch #{node[:hiway][:home]}/.run_word_count
+  #{node[:hadoop][:home]}/bin/yarn jar #{node[:hiway][:home]}/hiway-core-#{node[:hiway][:version]}.jar -w #{node[:hiway][:home]}/wordcount.cf
+  touch #{ran_wordcount}
   EOF
-     not_if { ::File.exists?( "#{node[:hiway][:home]}/.run_word_count" ) }
+    not_if { ::File.exists?( "#{ran_wordcount}" ) }
 end
