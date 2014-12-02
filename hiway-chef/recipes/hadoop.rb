@@ -1,4 +1,4 @@
-configured_hadoop_for_hiway = "/tmp/.configured_hadoop_for_hiway_#{node[:hiway][:version]}"
+configured_hadoop_for_hiway = "/tmp/.configured_hadoop_for_hiway"
 bash "configure_hadoop_for_hiway" do
   user node[:hiway][:user]
   group node[:hiway][:group]

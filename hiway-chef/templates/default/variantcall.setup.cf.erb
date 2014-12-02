@@ -71,11 +71,11 @@ deftask split( <out(File)> : file(File) lines ) in bash *{
     fi
 }*
 
-// 25 splits (splitsize-reference ~= 23511 / desired dop (rounded up)
-splitsize-reference = '941';
+// 2 splits (splitsize-reference ~= 23511 / desired dop (rounded up)
+splitsize-reference = '11756';
 
 // 10281156 Byte - Number of (paired) read files to download and align (about 800 MB per File)
-n-reads = '2';
+n-reads = '1';
 
 db ref = annovar-downdb(
     query    : 'refGene'

@@ -2,7 +2,7 @@ node.default['java']['jdk_version'] = 7
 node.default['java']['install_flavor'] = "openjdk"
 include_recipe "java"
 
-remote_file "#{Chef::Config[:file_cache_path]}/hiway-dist-#{node[:hiway][:version]}.tar.gz" do
+remote_file "#{Chef::Config[:file_cache_path]}/#{node[:hiway][:targz]}" do
   source node[:hiway][:url]
   checksum node[:hiway][:checksum]
   owner node[:hiway][:user]
@@ -11,14 +11,14 @@ remote_file "#{Chef::Config[:file_cache_path]}/hiway-dist-#{node[:hiway][:versio
   action :create_if_missing
 end
 
-installed_hiway = "/tmp/.installed_hiway_#{node[:hiway][:version]}"
+installed_hiway = "/tmp/.installed_hiway"
 bash "install_hiway" do
   user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail
   #{node[:hadoop][:home]}/bin/hdfs dfs -mkdir -p /user/#{node[:hiway][:user]}
-  tar xfz #{Chef::Config[:file_cache_path]}/hiway-dist-#{node[:hiway][:version]}.tar.gz -C #{node[:hiway][:dir]}
+  tar xfz #{Chef::Config[:file_cache_path]}/#{node[:hiway][:targz]} -C #{node[:hiway][:dir]}
   touch #{installed_hiway}
   EOF
     not_if { ::File.exists?( "#{installed_hiway}" ) }

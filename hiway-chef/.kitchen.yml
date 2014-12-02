@@ -25,15 +25,15 @@ suites:
       - recipe[hadoop::rm]
       - recipe[hadoop::nm]
       - recipe[hadoop::jhs]
-#     - recipe[hadoop::ps]
       - recipe[hiway::hadoop]
       - recipe[hiway::install]
+      - recipe[hiway::galaxy]
       - recipe[hiway::wordcount.cf]
       - recipe[hiway::variantcall.cf]
-#     - recipe[hiway::Montage_25_synthetic.dax]
-#     - recipe[hiway::Montage_12_m17.dax]
-#     - recipe[hiway::galaxy101.ga]
-#     - recipe[hiway::RNASeq.ga]
+      - recipe[hiway::montage_synthetic.dax]
+      - recipe[hiway::montage_m17_4.dax]
+      - recipe[hiway::galaxy101.ga]
+#      - recipe[hiway::RNASeq.ga]
 
     attributes:
          hadoop:
