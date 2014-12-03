@@ -2,12 +2,14 @@ template "#{node[:hiway][:home]}/#{node[:hiway][:variantcall][:setupworkflow]}" 
   user node[:hiway][:user]
   group node[:hiway][:group]
   source "#{node[:hiway][:variantcall][:setupworkflow]}.erb"
+  mode "0774"
 end
 
 template "#{node[:hiway][:home]}/#{node[:hiway][:variantcall][:workflow]}" do
   user node[:hiway][:user]
   group node[:hiway][:group]
   source "#{node[:hiway][:variantcall][:workflow]}.erb"
+  mode "0774"
 end
 
 remote_file "#{Chef::Config[:file_cache_path]}/#{node[:hiway][:variantcall][:bowtie2][:zip]}" do

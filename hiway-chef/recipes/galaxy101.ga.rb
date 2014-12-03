@@ -2,18 +2,21 @@ template "#{node[:hiway][:home]}/#{node[:hiway][:galaxy101][:workflow]}" do
   user node[:hiway][:user]
   group node[:hiway][:group]
   source "#{node[:hiway][:galaxy101][:workflow]}.erb"
+  mode "0774"
 end
 
 template "#{node[:hiway][:home]}/Exons.bed" do
   user node[:hiway][:user]
   group node[:hiway][:group]
   source "galaxy101.Exons.bed.erb"
+  mode "0774"
 end
 
 template "#{node[:hiway][:home]}/SNPs.bed" do
   user node[:hiway][:user]
   group node[:hiway][:group]
   source "galaxy101.SNPs.bed.erb"
+  mode "0774"
 end
 
 installed_dependencies_for_galaxy101 = "/tmp/.installed_dependencies_for_galaxy101"

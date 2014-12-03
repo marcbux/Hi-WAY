@@ -2,12 +2,14 @@ template "#{node[:hiway][:home]}/#{node[:hiway][:RNASeq][:workflow]}" do
   user node[:hiway][:user]
   group node[:hiway][:group]
   source "#{node[:hiway][:RNASeq][:workflow]}.erb"
+  mode "0774"
 end
 
 template "#{node[:hiway][:home]}/mm9_ref_annotation.gtf.tar.gz" do
   user node[:hiway][:user]
   group node[:hiway][:group]
   source "RNASeq.mm9_ref_annotation.gtf.tar.gz.erb"
+  mode "0774"
 end
 
 remote_file "#{Chef::Config[:file_cache_path]}/GSM1533014_MD_O1_WT_Colon.fastq" do
