@@ -29,10 +29,10 @@ suites:
       - recipe[hiway::install]
       - recipe[hiway::galaxy]
       - recipe[hiway::wordcount.cf]
-      - recipe[hiway::variantcall.cf]
-      - recipe[hiway::montage_synthetic.dax]
-      - recipe[hiway::montage_m17_4.dax]
-      - recipe[hiway::galaxy101.ga]
+#      - recipe[hiway::variantcall.cf]
+#      - recipe[hiway::montage_synthetic.dax]
+#      - recipe[hiway::montage_m17_4.dax]
+#      - recipe[hiway::galaxy101.ga]
 #      - recipe[hiway::RNASeq.ga]
 
     attributes:

@@ -18,7 +18,7 @@ end
 
 installed_dependencies_for_galaxy101 = "/tmp/.installed_dependencies_for_galaxy101"
 bash "install_dependencies_for_galaxy101" do
-  user "#{node[:hiway][:user]}"
+  user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail
@@ -30,7 +30,7 @@ end
 
 prepared_galaxy101 = "/tmp/.prepared_galaxy101"
 bash "prepare_galaxy101" do
-  user "#{node[:hiway][:user]}"
+  user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail
@@ -43,7 +43,7 @@ end
 
 #ran_galaxy101 = "/tmp/.ran_galaxy101"
 #bash "run_galaxy101" do
-#  user "#{node[:hiway][:user]}"
+#  user node[:hiway][:user]
 #  group node[:hiway][:group]
 #  code <<-EOF
 #  set -e && set -o pipefail

@@ -21,7 +21,7 @@ end
 
 prepared_montage_m17_4 = "/tmp/.prepared_montage_m17_4"
 bash "prepare_montage_m17_4" do
-  user "#{node[:hiway][:user]}"
+  user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail
@@ -33,7 +33,7 @@ end
 
 #ran_montage_m17_4 = "/tmp/.ran_montage_m17_4"
 #bash "run_montage_m17_4" do
-#  user "#{node[:hiway][:user]}"
+#  user node[:hiway][:user]
 #  group node[:hiway][:group]
 #  code <<-EOF
 #  set -e && set -o pipefail

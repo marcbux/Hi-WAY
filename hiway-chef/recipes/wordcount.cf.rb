@@ -23,7 +23,7 @@ end
 
 prepared_wordcount = "/tmp/.prepared_wordcount"
 bash "prepare_wordcount" do
-  user "#{node[:hiway][:user]}"
+  user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail
@@ -35,7 +35,7 @@ end
 
 ran_wordcount = "/tmp/.ran_wordcount"
 bash "run_wordcount" do
-  user "#{node[:hiway][:user]}"
+  user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail

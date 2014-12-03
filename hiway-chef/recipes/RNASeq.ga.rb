@@ -60,7 +60,7 @@ end
 
 installed_dependencies_for_RNASeq = "/tmp/.installed_dependencies_for_RNASeq"
 bash "install_dependencies_for_RNASeq" do
-  user "#{node[:hiway][:user]}"
+  user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail
@@ -81,7 +81,7 @@ end
 
 prepared_RNASeq = "/tmp/.prepared_RNASeq"
 bash "prepare_RNASeq" do
-  user "#{node[:hiway][:user]}"
+  user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail
@@ -100,7 +100,7 @@ end
 
 #ran_RNASeq = "/tmp/.ran_RNASeq"
 #bash "run_RNASeq" do
-#  user "#{node[:hiway][:user]}"
+#  user node[:hiway][:user]
 #  group node[:hiway][:group]
 #  code <<-EOF
 #  set -e && set -o pipefail

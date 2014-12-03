@@ -23,7 +23,7 @@ end
 
 installed_galaxy = "/tmp/.prepared_wordcount"
 bash "install_galaxy" do
-  user "#{node[:hiway][:user]}"
+  user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   hg clone #{node[:hiway][:galaxy][:repository]} #{node[:hiway][:galaxy][:home]}

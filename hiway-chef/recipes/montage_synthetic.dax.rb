@@ -8,7 +8,7 @@ end
 
 ran_montage_synthetic = "/tmp/.ran_montage_synthetic"
 bash "run_montage_synthetic" do
-  user "#{node[:hiway][:user]}"
+  user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail

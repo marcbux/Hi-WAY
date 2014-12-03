@@ -94,7 +94,7 @@ end
 
 #prepared_variantcall = "/tmp/.prepared_variantcall"
 #bash "prepare_variantcall" do
-#  user "#{node[:hiway][:user]}"
+#  user node[:hiway][:user]
 #  group node[:hiway][:group]
 #  code <<-EOF
 #  set -e && set -o pipefail
@@ -106,7 +106,7 @@ end
 
 #ran_variantcall = "/tmp/.ran_variantcall"
 #bash "run_variantcall" do
-#  user "#{node[:hiway][:user]}"
+#  user node[:hiway][:user]
 #  group node[:hiway][:group]
 #  code <<-EOF
 #  set -e && set -o pipefail
