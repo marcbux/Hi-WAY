@@ -27,16 +27,14 @@ template "#{node[:hiway][:home]}/wordcount/gronemeyer.txt" do
   mode "0774"
 end
 
-prepared_wordcount = "/tmp/.prepared_wordcount"
 bash "prepare_wordcount" do
   user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail
   #{node[:hadoop][:home]}/bin/hdfs dfs -put #{node[:hiway][:home]}/wordcount
-  touch #{prepared_wordcount}
   EOF
-    not_if { ::File.exists?( "#{prepared_wordcount}" ) }
+    not_if "#{node[:hadoop][:home]}/bin/hdfs dfs -test -e /user/#{node[:hiway][:user]}/wordcount/gronemeyer.txt"
 end
 
 ran_wordcount = "/tmp/.ran_wordcount"

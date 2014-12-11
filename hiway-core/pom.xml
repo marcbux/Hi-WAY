@@ -15,7 +15,7 @@
 	<url>https://github.com/marcbux/Hi-WAY</url>
 
 	<properties>
-		<hadoop.version>2.4.0</hadoop.version>
+		<hadoop.version>2.6.0</hadoop.version>
 		<cuneiform.version>2.0.0-SNAPSHOT</cuneiform.version>
 		<hiwayDB.version>0.0.1-SNAPSHOT</hiwayDB.version>
 		<client.class>de.huberlin.wbi.hiway.app.Client</client.class>

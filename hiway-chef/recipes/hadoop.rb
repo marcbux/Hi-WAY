@@ -1,3 +1,11 @@
+# metadata.rb
+# better test: grep etc.
+# standalone github repository
+# service for galaxy (sysv / systemd)
+# finish recipes
+# update install instructions
+# upload logo
+# not_if ". #{node[:hadoop][:home]}/sbin/set-env.sh && #{node[:hadoop][:home]}/bin/hdfs dfs -test -d #{new_resource.name}"
 configured_hadoop_for_hiway = "/tmp/.configured_hadoop_for_hiway"
 bash "configure_hadoop_for_hiway" do
   user node[:hiway][:user]
@@ -15,22 +23,10 @@ bash "configure_hadoop_for_hiway" do
     not_if { ::File.exists?( "#{configured_hadoop_for_hiway}" ) }
 end
 
-service "namenode" do
-  action :start
-end
-
 service "resourcemanager" do
-  action :start
-end
-
-service "historyserver" do
-  action :start
-end
-
-service "datanode" do
-  action :start
+  action :restart
 end
 
 service "nodemanager" do
-  action :start
+  action :restart
 end

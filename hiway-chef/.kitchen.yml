@@ -27,7 +27,7 @@ suites:
       - recipe[hadoop::jhs]
       - recipe[hiway::hadoop]
       - recipe[hiway::install]
-#      - recipe[hiway::galaxy]
+      - recipe[hiway::galaxy]
       - recipe[hiway::wordcount.cf]
 #      - recipe[hiway::variantcall.cf]
 #      - recipe[hiway::montage_synthetic.dax]

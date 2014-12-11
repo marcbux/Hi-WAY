@@ -14,11 +14,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.FactoryConfigurationError;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
@@ -40,13 +46,96 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 public class GalaxyApplicationMaster extends HiWay {
 
-	public static class GalaxyParam {
-		private final String name;
-		private String defaultValue;
-		private Map<Object, Object> mappings;
+	public static class GalaxyData extends Data {
+		String extension;
+		GalaxyDataType dataType;
+
+		public GalaxyData(String path) {
+			super(path);
+		}
+
+		public void setDataType(GalaxyDataType dataType) {
+			this.dataType = dataType;
+		}
+
+		public GalaxyDataType getDataType() {
+			return dataType;
+		}
+
+		public boolean hasDataType() {
+			return dataType != null;
+		}
+	}
+
+	public static abstract class GalaxyParam {
+		protected final String name;
 
 		public GalaxyParam(String name) {
 			this.name = name;
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		public abstract Set<GalaxyParamValue> getParamValues();
+	}
+
+	public static class GalaxyConditional extends GalaxyParam {
+		GalaxyParamValue condition;
+		Map<String, Set<GalaxyParam>> conditionalParams;
+
+		public GalaxyConditional(String name) {
+			super(name);
+			conditionalParams = new HashMap<>();
+		}
+
+		public void setCondition(GalaxyParamValue condition) {
+			this.condition = condition;
+		}
+
+		public void setConditionalParams(String conditionValue, Set<GalaxyParam> params) {
+			conditionalParams.put(conditionValue, params);
+		}
+
+		@Override
+		public Set<GalaxyParamValue> getParamValues() {
+			Set<GalaxyParamValue> paramValues = new HashSet<>();
+			paramValues.add(condition);
+			for (Set<GalaxyParam> params : conditionalParams.values())
+				for (GalaxyParam param : params)
+					paramValues.addAll(param.getParamValues());
+			return paramValues;
+		}
+	}
+
+	public static class GalaxyRepeat extends GalaxyParam {
+		Set<GalaxyParam> params;
+
+		public GalaxyRepeat(String name) {
+			super(name);
+		}
+
+		public void setParams(Set<GalaxyParam> params) {
+			this.params = params;
+		}
+
+		@Override
+		public Set<GalaxyParamValue> getParamValues() {
+			Set<GalaxyParamValue> paramValues = new HashSet<>();
+			for (GalaxyParam param : params)
+				paramValues.addAll(param.getParamValues());
+			return paramValues;
+		}
+	}
+
+	public static class GalaxyParamValue extends GalaxyParam {
+		private String defaultValue;
+		private Map<Object, Object> mappings;
+		String dataType;
+
+		public GalaxyParamValue(String name) {
+			super(name);
 			mappings = new HashMap<>();
 		}
 
@@ -63,44 +152,74 @@ public class GalaxyApplicationMaster extends HiWay {
 			return mappings.get(from);
 		}
 
-		//
-		// public Map<String, String> getMappings() {
-		// return mappings;
-		// }
-
-		public void setDefaultValue(String defaultValue) {
-			this.defaultValue = defaultValue;
-			mappings.put("null", defaultValue);
+		public void setDefaultValue(String value) {
+			this.defaultValue = value;
+			mappings.put("null", value);
 		}
 
 		public boolean hasDefaultValue() {
-			return defaultValue != null && defaultValue.length() > 0;
+			return defaultValue != null && defaultValue.length() > 0 && !defaultValue.equals("null");
 		}
 
 		public String getDefaultValue() {
 			return defaultValue;
 		}
 
-		public String getName() {
-			return name;
+		// public void addDataTypes(String[] typeNames) {
+		// for (String typeName : typeNames)
+		// dataTypes.add(galaxyDataTypes.get(typeName));
+		// }
+
+		// public void addDataTypes(Set<GalaxyDataType> dataTypes) {
+		// this.dataTypes.addAll(dataTypes);
+		// }
+
+		public String getDataType() {
+			return dataType;
 		}
 
+		public void setDataType(String dataType) {
+			this.dataType = dataType;
+		}
+
+		@Override
+		public Set<GalaxyParamValue> getParamValues() {
+			Set<GalaxyParamValue> paramValues = new HashSet<>();
+			paramValues.add(this);
+			return paramValues;
+		}
+
+		// public Set<GalaxyDataType> getDataTypes() {
+		// return dataTypes;
+		// }
 	}
 
 	public static class GalaxyTool {
 		private final String name;
 		private String template;
-		private Map<String, GalaxyParam> params;
-		private Map<String, Set<GalaxyDataType>> dataTypes;
-
-		// private Map<String, Set<GalaxyDataType>> outputTypes;
+		private Set<GalaxyParam> params;
 
 		public GalaxyTool(String name) {
 			this.name = name;
-			params = new HashMap<>();
-			dataTypes = new HashMap<>();
-			// outputTypes = new HashMap<>();
+			params = new HashSet<>();
 		}
+
+		public GalaxyParamValue getFirstMatchingParamByName(String name) {
+			for (GalaxyParam param : params)
+				for (GalaxyParamValue paramValue : param.getParamValues())
+					if (paramValue.getName().equals(name))
+						return paramValue;
+			return null;
+		}
+
+		// public Set<GalaxyParamValue> getDataParams() {
+		// Set<GalaxyParamValue> dataParams = new HashSet<>();
+		// for (GalaxyParam param : params)
+		// for (GalaxyParamValue paramValue : param.getParamValues())
+		// if (paramValue.getDataTypes().size() > 0)
+		// dataParams.add(paramValue);
+		// return dataParams;
+		// }
 
 		@Override
 		public String toString() {
@@ -124,67 +243,117 @@ public class GalaxyApplicationMaster extends HiWay {
 			this.template = template;
 		}
 
-		public void addParam(GalaxyParam param) {
-			params.put(param.getName(), param);
+		private void mapParams(JSONObject jo) throws JSONException {
+			for (String name : JSONObject.getNames(jo)) {
+				Object value = jo.get(name);
+				if (value instanceof JSONObject) {
+					mapParams((JSONObject) value);
+				} else {
+					GalaxyParamValue paramValue = getFirstMatchingParamByName(name);
+					if (paramValue != null && paramValue.hasMapping(value)) {
+						jo.put(name, paramValue.getMapping(value));
+					} else if (value.equals(JSONObject.NULL)) {
+						jo.remove(name);
+					}
+				}
+			}
 		}
 
-		public void addDataTypes(String inputName, String[] typeNames) {
-			Set<GalaxyDataType> newDataTypes = new HashSet<>();
-			for (String typeName : typeNames)
-				newDataTypes.add(galaxyDataTypes.get(typeName));
-			dataTypes.put(inputName, newDataTypes);
+		public void populateToolState(JSONObject toolState) throws JSONException {
+			// ??? (1) go through tool parameters and add default values to the toolstate
+
+			// (2) go through toolstate and map parameters (if a mapping exists)
+			mapParams(toolState);
+
+			// (3) append Metadata
+			// for (GalaxyParamValue dataParam : getDataParams()) {
+			// Map<String, String> metadata = new HashMap<>();
+			// for (GalaxyDataType type : dataParam.getDataTypes()) {
+			// metadata.putAll(type.getMetadata());
+			// String extension = type.getExtension();
+			// if (extension != null && extension.length() > 0)
+			// toolState.put(dataParam.getName() + "_extension", extension);
+			// }
+			// toolState.put(dataParam.getName() + "_metadata", metadata);
+			// }
 		}
 
-		// public void addOutputTypes(String outputName, String[] typeNames) {
-		// Set<GalaxyDataType> dataTypes = new HashSet<>();
-		// for (String typeName : typeNames)
-		// dataTypes.add(galaxyDataTypes.get(typeName));
-		// outputTypes.put(outputName, dataTypes);
-		// }
+		public void addFile(String name, GalaxyData data, JSONObject jo) {
+			try {
+				Pattern p = Pattern.compile("(_[0-9]*)?\\|");
+				Matcher m = p.matcher(name);
+				if (m.find()) {
+					String prefix = name.substring(0, m.start());
+					String suffix = name.substring(m.end());
+					if (m.end() - m.start() > 2) {
+						int index = Integer.parseInt(name.substring(m.start() + 1, m.end() - 1));
+						JSONArray repeatJa = jo.getJSONArray(prefix);
+						for (int i = 0; i < repeatJa.length(); i++) {
+							JSONObject repeatJo = repeatJa.getJSONObject(i);
+							if (repeatJo.getInt("__index__") == index) {
+								addFile(suffix, data, repeatJo);
+								break;
+							}
+						}
+					} else {
+						addFile(suffix, data, jo.getJSONObject(prefix));
+					}
+				} else {
+					template = template.replaceAll("(\\$[^ ]*)" + name + "([^.]|$)", "$1" + name + ".name$2");
+					String fileName = data.getName();
+					JSONObject fileJo = new JSONObject();
+					fileJo.putOpt("name", fileName);
+					fileJo.putOpt("files_path", data.getLocalDirectory());
 
-		public void addDataTypes(String outputName, Set<GalaxyDataType> newDataTypes) {
-			dataTypes.put(outputName, newDataTypes);
+					if (data.hasDataType()) {
+						GalaxyDataType dataType = data.getDataType();
+						if (dataType.hasExtension()) {
+							String fileExt = dataType.getExtension();
+							fileJo.putOpt("extension", fileExt);
+							fileJo.putOpt("ext", fileExt);
+						}
+					}
+
+					if (data.hasDataType())
+						fileJo.putOpt("metadata", new JSONObject(data.getDataType().getMetadata()));
+
+					jo.putOpt(name, fileJo);
+				}
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
 		}
 
-		// public boolean hasDefaultParameter(String paramName) {
-		// return defaultParams.containsKey(paramName);
-		// }
+		public void setParams(Set<GalaxyParam> params) {
+			this.params = params;
+		}
 
-		// public boolean hasInputTypes(String inputName) {
-		// return inputTypes.containsKey(inputName);
+		public void addParam(String name, GalaxyParam param) {
+			params.add(param);
+		}
+
+		//
+
+		//
+		// public Set<GalaxyDataType> getDataTypes(String inputName) {
+		// return dataTypes.get(inputName);
 		// }
 		//
-		// public boolean hasOutputTypes(String outputName) {
-		// return outputTypes.containsKey(outputName);
+		// public Map<String, Set<GalaxyDataType>> getDataTypes() {
+		// return dataTypes;
 		// }
 
-		// public String getDefaultParameter(String paramName) {
-		// return defaultParams.get(paramName);
+		// public boolean hasParam(String name) {
+		// return params.containsKey(name);
 		// }
-
-		public Set<GalaxyDataType> getDataTypes(String inputName) {
-			return dataTypes.get(inputName);
-		}
-
-		public Map<String, Set<GalaxyDataType>> getDataTypes() {
-			return dataTypes;
-		}
-
-		// public Set<GalaxyDataType> getOutputTypes(String outputName) {
-		// return outputTypes.get(outputName);
+		//
+		// public GalaxyParam getParam(String name) {
+		// return params.get(name);
 		// }
-
-		public boolean hasParam(String name) {
-			return params.containsKey(name);
-		}
-
-		public GalaxyParam getParam(String name) {
-			return params.get(name);
-		}
-
-		public Map<String, GalaxyParam> getParams() {
-			return params;
-		}
+		//
+		// public Map<String, GalaxyParam> getParams() {
+		// return params;
+		// }
 	}
 
 	public static class GalaxyDataType {
@@ -230,24 +399,6 @@ public class GalaxyApplicationMaster extends HiWay {
 			metadata.put(name, value);
 		}
 
-		// public boolean hasMetadata(String name) {
-		// if (metadata.containsKey(name)) {
-		// return true;
-		// } else if (parent != null) {
-		// return parent.hasMetadata(name);
-		// }
-		// return false;
-		// }
-		//
-		// public String getMetadata(String name) {
-		// if (metadata.containsKey(name)) {
-		// return metadata.get(name);
-		// } else if (parent != null) {
-		// return parent.getMetadata(name);
-		// }
-		// return null;
-		// }
-
 		public Map<String, String> getMetadata() {
 			Map<String, String> allMetadata = new HashMap<>();
 			if (parent != null) {
@@ -260,63 +411,16 @@ public class GalaxyApplicationMaster extends HiWay {
 	}
 
 	public static class GalaxyTaskInstance extends TaskInstance {
-		// private Map<String, Data> nameToData;
 		private GalaxyTool galaxyTool;
 		private StringBuilder pickleScript;
-		private JSONObject assignments;
+		private JSONObject toolState;
 
 		public GalaxyTaskInstance(long id, String taskName, GalaxyTool galaxyTool) {
-			// super(id, getRunId(), taskName, Math.abs(taskName.hashCode()), ForeignLambdaExpr.LANGID_BASH);
 			super(id, UUID.randomUUID(), taskName, Math.abs(taskName.hashCode()), ForeignLambdaExpr.LANGID_BASH);
-			// nameToData = new HashMap<>();
-			assignments = new JSONObject();
 			this.galaxyTool = galaxyTool;
 			pickleScript = new StringBuilder("import cPickle as pickle\ntool_state = ");
-			for (GalaxyParam param : galaxyTool.getParams().values()) {
-				String defaultValue = param.getDefaultValue();
-				if (param.hasDefaultValue())
-					addParam(param.getName(), defaultValue);
-			}
+			toolState = new JSONObject();
 		}
-
-		private void addParam(String name, Object value) {
-
-			// for (GalaxyParam param : galaxyTool.getParams().values()) {
-			// Map<String, String> mappings = param.getMappings();
-			// for (String from : mappings.keySet()) {
-			// String to = mappings.get(from);
-			// pickleString = pickleString.replaceAll("\"" + param.getName() + "\": \"?" + from + "\"?", "\"" + param.getName() + "\": \"" + to + "\"");
-			// }
-			// }
-
-			try {
-				if (value != JSONObject.NULL) {
-					if (galaxyTool.hasParam(name)) {
-						GalaxyParam param = galaxyTool.getParam(name);
-						if (param.hasMapping(value)) {
-							value = param.getMapping(value);
-						}
-					}
-					assignments.putOpt(name, value);
-				}
-			} catch (JSONException e) {
-				e.printStackTrace();
-			}
-		}
-
-		// public void addInputData(String name, Data data) {
-		// nameToData.put(name, data);
-		// super.addInputData(data);
-		// }
-		//
-		// public void addOutputData(String name, Data data) {
-		// nameToData.put(name, data);
-		// super.addOutputData(data);
-		// }
-		//
-		// public Data getDataByName(String name) {
-		// return nameToData.get(name);
-		// }
 
 		public GalaxyTool getGalaxyTool() {
 			return galaxyTool;
@@ -340,66 +444,26 @@ public class GalaxyApplicationMaster extends HiWay {
 			// replace "null" with null
 			toolState_json = toolState_json.replaceAll("\"null\"", "null");
 			try {
-				JSONObject j = new JSONObject(toolState_json);
-				for (Iterator<?> it = j.keys(); it.hasNext();) {
-					String name = (String) it.next();
-					addParam(name, j.get(name));
-				}
+				this.toolState = new JSONObject(toolState_json);
 			} catch (JSONException e) {
 				e.printStackTrace();
 			}
 		}
 
-		public void addFileName(String name, String value) {
-			addParam(name, value);
-			if (galaxyTool.getDataTypes(name) == null) {
-				System.out.println();
-			}
-			for (GalaxyDataType type : galaxyTool.getDataTypes(name))
-				addParam(name + "_metadata", type.getMetadata());
+		public void addFile(String name, GalaxyData data) {
+			galaxyTool.addFile(name, data, toolState);
 		}
 
-		public void buildPickleScript() {
-			// for (String name : assignments.keySet()) {
-			// Object value = assignments.get(name);
-			// evaluate
-			// }
-			pickleScript.append(assignments.toString());
+		public void buildPickleScript() throws JSONException {
+			galaxyTool.populateToolState(toolState);
+			pickleScript.append(toolState.toString());
 			pickleScript.append("\npickle.dump(tool_state, open(\"" + id + ".p\", \"wb\"))\n");
-			// String pickleString = pickleScript.toString();
-			// for (GalaxyParam param : galaxyTool.getParams().values()) {
-			// Map<String, String> mappings = param.getMappings();
-			// for (String from : mappings.keySet()) {
-			// String to = mappings.get(from);
-			// pickleString = pickleString.replaceAll("\"" + param.getName() + "\": \"?" + from + "\"?", "\"" + param.getName() + "\": \"" + to + "\"");
-			// }
-			// }
 			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter("params_" + id + ".py"))) {
 				scriptWriter.write(pickleScript.toString());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-
-		// private void evaluateAssignments(Map<?, ?> assignments) {
-		// for (Iterator<?> name_it = assignments.keySet().iterator(); name_it.hasNext(); ) {
-		// String name = (String) name_it.next();
-		// pickleScript.append("\"" + name + "\": ");
-		// Object value = assignments.get(name);
-		// if (value instanceof String) {
-		// pickleScript.append("\"" + (String) value + "\"");
-		// } else if (value instanceof Map<?, ?>) {
-		// pickleScript.append("{");
-		// Map<?, ?> value_map = (Map<?, ?>) value;
-		// evaluateAssignments(value_map);
-		// pickleScript.append("}");
-		// }
-		// if (name_it.hasNext()) {
-		// pickleScript.append(", ");
-		// }
-		// }
-		//
-		// }
 
 		public void buildTemplate() {
 			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter("template_" + id + ".tmpl"))) {
@@ -473,7 +537,9 @@ public class GalaxyApplicationMaster extends HiWay {
 							GalaxyDataType parentType = addAndGetDataType(splitSplit[0]);
 							dataType.setParent(parentType);
 						} else if (line.startsWith("    file_ext = ")) {
-							dataType.setExtension(line.replace("    file_ext = ", "").replaceAll("[\\\"']", ""));
+							String extension = line.replace("    file_ext = ", "").replaceAll("[\\\"']", "");
+							dataType.setExtension(extension);
+							galaxyDataTypes.put(extension, dataType);
 						} else if (line.startsWith("    MetadataElement(")) {
 							line = line.replace("MetadataElement(", "").replace(")", "").trim();
 							splitLine = line.split(", ");
@@ -544,23 +610,73 @@ public class GalaxyApplicationMaster extends HiWay {
 		return false;
 	}
 
-	private static Map<Element, String> getParams(Element inputsEl, String prefix) {
-		Map<Element, String> params = new HashMap<>();
+	private static Set<GalaxyParam> getParams(Element el) throws XPathExpressionException {
+		Set<GalaxyParam> params = new HashSet<>();
+		XPathFactory xpathFactory = XPathFactory.newInstance();
+		XPath xpath = xpathFactory.newXPath();
+		NodeList paramNds = (NodeList) xpath.evaluate("param", el, XPathConstants.NODESET);
+		NodeList conditionalNds = (NodeList) xpath.evaluate("conditional", el, XPathConstants.NODESET);
+		NodeList repeatNds = (NodeList) xpath.evaluate("repeat", el, XPathConstants.NODESET);
 
-		NodeList paramNds = inputsEl.getElementsByTagName("param");
 		for (int i = 0; i < paramNds.getLength(); i++) {
 			Element paramEl = (Element) paramNds.item(i);
-			if (!params.containsKey(paramEl) || params.get(paramEl).length() < prefix.length())
-				params.put(paramEl, prefix);
+			String name = paramEl.getAttribute("name");
+			GalaxyParamValue param = new GalaxyParamValue(name);
+			params.add(param);
+
+			String type = paramEl.getAttribute("type");
+			switch (type) {
+			case "data":
+				String format = paramEl.getAttribute("format");
+				String[] splitFormat = format.split(",");
+				// param.addDataTypes(splitFormat);
+				break;
+			case "boolean":
+				String trueValue = paramEl.getAttribute("truevalue");
+				param.addMapping("True", trueValue);
+				String falseValue = paramEl.getAttribute("falsevalue");
+				param.addMapping("False", falseValue);
+			case "select":
+				param.addMapping(JSONObject.NULL, "None");
+				// param.setDefaultValue("None");
+			default:
+				String defaultValue = paramEl.getAttribute("value");
+				if (defaultValue != null && defaultValue.length() > 0)
+					param.setDefaultValue(defaultValue);
+			}
 		}
 
-		NodeList conditionalNds = inputsEl.getElementsByTagName("conditional");
 		for (int i = 0; i < conditionalNds.getLength(); i++) {
 			Element conditionalEl = (Element) conditionalNds.item(i);
-			Map<Element, String> newParams = getParams(conditionalEl, prefix + conditionalEl.getAttribute("name") + "|");
-			for (Element paramEl : newParams.keySet())
-				if (!params.containsKey(paramEl) || params.get(paramEl).length() < newParams.get(paramEl).length())
-					params.put(paramEl, newParams.get(paramEl));
+			String name = conditionalEl.getAttribute("name");
+			GalaxyConditional conditional = new GalaxyConditional(name);
+
+			NodeList conditionNds = (NodeList) xpath.evaluate("param", conditionalEl, XPathConstants.NODESET);
+			NodeList whenNds = (NodeList) xpath.evaluate("when", conditionalEl, XPathConstants.NODESET);
+			if (conditionNds.getLength() == 0 || whenNds.getLength() == 0)
+				continue;
+
+			Element conditionEl = (Element) conditionNds.item(0);
+			name = conditionEl.getAttribute("name");
+			GalaxyParamValue condition = new GalaxyParamValue(name);
+			conditional.setCondition(condition);
+
+			for (int j = 0; j < whenNds.getLength(); j++) {
+				Element whenEl = (Element) whenNds.item(j);
+				String conditionValue = whenEl.getAttribute("value");
+				conditional.setConditionalParams(conditionValue, getParams(whenEl));
+			}
+
+			params.add(conditional);
+		}
+
+		for (int i = 0; i < repeatNds.getLength(); i++) {
+			Element repeatEl = (Element) repeatNds.item(i);
+			String name = repeatEl.getAttribute("name");
+			GalaxyRepeat repeat = new GalaxyRepeat(name);
+			params.add(repeat);
+
+			repeat.setParams(getParams(repeatEl));
 		}
 
 		return params;
@@ -585,7 +701,10 @@ public class GalaxyApplicationMaster extends HiWay {
 							String interpreter = commandEl.getAttribute("interpreter");
 							if (interpreter.length() > 0)
 								command = interpreter + " " + command;
-							command = command.replaceAll("\\.metadata\\.", "_metadata.").replace(script, dir.getCanonicalPath() + "/" + script);
+							// command = command.replaceAll("\\.metadata\\.", "_metadata.");
+							// command = command.replaceAll("\\.extension", "_extension");
+							command = command.replaceAll("\\.value", "");
+							command = command.replace(script, dir.getCanonicalPath() + "/" + script);
 							// ???
 							command = command.replace("D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603\\tools/",
 									"/home/hiway/software/shed_tools/toolshed.g2.bx.psu.edu/repos/devteam/join/de21bdbb8d28/join/");
@@ -596,62 +715,34 @@ public class GalaxyApplicationMaster extends HiWay {
 						}
 
 						Element inputsEl = (Element) rootEl.getElementsByTagName("inputs").item(0);
-						if (inputsEl != null) {
-							Map<Element, String> params = getParams(inputsEl, "");
-							for (Element paramEl : params.keySet()) {
-								String type = paramEl.getAttribute("type");
-								String paramName = params.get(paramEl) + paramEl.getAttribute("name");
-								GalaxyParam param = new GalaxyParam(paramName);
-								tool.addParam(param);
-								switch (type) {
-								case "data":
-									String format = paramEl.getAttribute("format");
-									String[] splitFormat = format.split(",");
-									tool.addDataTypes(paramName, splitFormat);
-									break;
-								case "boolean":
-									String trueValue = paramEl.getAttribute("truevalue");
-									param.addMapping("True", trueValue);
-									String falseValue = paramEl.getAttribute("falsevalue");
-									param.addMapping("False", falseValue);
-								case "select":
-									param.setDefaultValue("None");
-								default:
-									String defaultValue = paramEl.getAttribute("value");
-									if (defaultValue != null && defaultValue.length() > 0)
-										param.setDefaultValue(defaultValue);
-								}
-							}
-						}
+						if (inputsEl != null)
+							tool.setParams(getParams(inputsEl));
 
 						Element outputsEl = (Element) rootEl.getElementsByTagName("outputs").item(0);
 						if (outputsEl != null) {
 							NodeList dataNds = outputsEl.getElementsByTagName("data");
 							for (int i = 0; i < dataNds.getLength(); i++) {
 								Element dataEl = (Element) dataNds.item(i);
-								String outputName = dataEl.getAttribute("name");
+								String name = dataEl.getAttribute("name");
+								GalaxyParamValue param = new GalaxyParamValue(name);
+								tool.addParam(name, param);
+
 								String format = dataEl.getAttribute("format");
-								if (format.equals("input")) {
-									String metadata_source = dataEl.getAttribute("metadata_source");
-									if (metadata_source != null && metadata_source.length() > 0) {
-										tool.addDataTypes(outputName, tool.getDataTypes(metadata_source));
-									} else {
-										tool.addDataTypes(outputName, tool.getDataTypes().values().iterator().next());
-									}
+								String metadata_source = dataEl.getAttribute("metadata_source");
+								if (format.equals("input") && metadata_source != null && metadata_source.length() > 0) {
+									param.setDataType(metadata_source);
 								} else {
-									String[] splitFormat = format.split(",");
-									tool.addDataTypes(outputName, splitFormat);
+									param.setDataType(format);
 								}
 							}
 						}
 
 						if (tool.getTemplate() != null) {
-							// System.out.println(file + ":" + tool.getName() /* + " " + tool.getCommand() */);
 							galaxyTools.put(tool.getName(), tool);
 						}
 
 					}
-				} catch (SAXException | IOException e) {
+				} catch (SAXException | IOException | XPathExpressionException e) {
 					e.printStackTrace();
 					return false;
 				}
@@ -675,7 +766,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	}
 
 	public static void parseWorkflow(String _fileName) {
-		Map<String, Data> files = new HashMap<>();
+		Map<String, GalaxyData> files = new HashMap<>();
 
 		// log.info("Parsing Galaxy workflow " + workflowFile);
 		Map<Long, GalaxyTaskInstance> tasks = new HashMap<>();
@@ -700,9 +791,16 @@ public class GalaxyApplicationMaster extends HiWay {
 					for (int j = 0; j < inputs.length(); j++) {
 						JSONObject input = inputs.getJSONObject(j);
 						String name = input.getString("name");
-						String fileName = name;
+						GalaxyData data = new GalaxyData(name);
+
+						if (name.contains(".")) {
+							String extension = name.substring(name.indexOf(".") + 1);
+							if (galaxyDataTypes.containsKey(extension)) {
+								data.setDataType(galaxyDataTypes.get(extension));
+							}
+						}
+
 						String idName = id + "_output";
-						Data data = new Data(fileName);
 						data.setInput(true);
 						files.put(idName, data);
 					}
@@ -738,26 +836,49 @@ public class GalaxyApplicationMaster extends HiWay {
 
 					task.addToolState(step.getString("tool_state"));
 
+					Map<String, String> inputNameToIdName = new HashMap<>();
+					JSONObject input_connections = step.getJSONObject("input_connections");
+					for (String input_name : JSONObject.getNames(input_connections)) {
+						JSONObject input_connection = input_connections.getJSONObject(input_name);
+						inputNameToIdName.put(input_name, input_connection.getString("id") + "_" + input_connection.getString("output_name"));
+					}
+
 					JSONArray outputs = step.getJSONArray("outputs");
 					List<String> outputFiles = new LinkedList<>();
 					for (int j = 0; j < outputs.length(); j++) {
 						JSONObject output = outputs.getJSONObject(j);
 						String outputName = output.getString("name");
-						Set<GalaxyDataType> outputTypes = tool.getDataTypes(outputName);
+
 						String fileName = id + "_" + outputName;
-						for (GalaxyDataType outputType : outputTypes)
-							if (outputType.hasExtension())
-								fileName = fileName + "." + outputType.getExtension();
+						GalaxyDataType dataType = null;
+
+						String outputTypeString = tool.getFirstMatchingParamByName(outputName).getDataType();
+						if (galaxyDataTypes.containsKey(outputTypeString)) {
+							dataType = galaxyDataTypes.get(outputTypeString);
+						} else if (inputNameToIdName.containsKey(outputTypeString)) {
+							dataType = files.get(inputNameToIdName.get(outputTypeString)).getDataType();
+						} else if (outputTypeString.equals("input")) {
+							dataType = files.get(inputNameToIdName.values().iterator().next()).getDataType();
+						}
+
+						if (dataType != null) {
+							String extension = dataType.getExtension();
+							if (extension != null && extension.length() > 0) {
+								fileName = fileName + "." + extension;
+							}
+						}
 						if (renameOutputs.containsKey(outputName))
 							fileName = renameOutputs.get(outputName);
+						GalaxyData data = new GalaxyData(fileName);
+						data.setDataType(dataType);
+
 						String idName = id + "_" + outputName;
-						Data data = new Data(fileName);
 						if (!hideOutputs.contains(outputName)) {
 							data.setOutput(true);
 						}
 						files.put(idName, data);
 						task.addOutputData(data);
-						task.addFileName(outputName, data.getLocalPath());
+						task.addFile(outputName, data);
 						outputFiles.add(fileName);
 					}
 
@@ -788,7 +909,7 @@ public class GalaxyApplicationMaster extends HiWay {
 							parentTask.addChildTask(task);
 						}
 						task.addInputData(files.get(idName));
-						task.addFileName(input_connection_key, files.get(idName).getLocalPath());
+						task.addFile(input_connection_key, files.get(idName));
 						continue;
 					}
 

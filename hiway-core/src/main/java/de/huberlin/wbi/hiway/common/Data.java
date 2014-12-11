@@ -61,8 +61,8 @@ public class Data implements Comparable<Data> {
 	public static Map<Data, String> hdfsDirectoryMidfixes = new HashMap<>();
 
 	// The hdfs directory prefix (usually the Hi-WAY sandbox folder) for non-input files
-	private static String hdfsDirectoryPrefix = "";
-	private static final Log log = LogFactory.getLog(Data.class);
+	protected static String hdfsDirectoryPrefix = "";
+	protected static final Log log = LogFactory.getLog(Data.class);
 
 	public static String getHdfsDirectoryPrefix() {
 		return hdfsDirectoryPrefix;
@@ -72,16 +72,16 @@ public class Data implements Comparable<Data> {
 		Data.hdfsDirectoryPrefix = hdfsDirectoryPrefixDefault;
 	}
 
-	private String absoluteLocalDirectoryPrefix = "";
+	protected String absoluteLocalDirectoryPrefix = "";
 
 	// The local directory and name of the file. The local directory is also the suffix of the directoy in HDFS.
-	private String directorySuffix = "";
+	protected String directorySuffix = "";
 	// is the file input or output of the workflow (otherwise, its an intermediate and possibly temporary file product)
-	private boolean input;
+	protected boolean input;
 
-	private String name;
+	protected String name;
 
-	private boolean output;
+	protected boolean output;
 
 	public Data(String path) {
 		path = path.replaceAll("[\\[\\]:]", "_");
