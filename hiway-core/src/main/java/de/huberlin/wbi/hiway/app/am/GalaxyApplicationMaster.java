@@ -154,11 +154,13 @@ public class GalaxyApplicationMaster extends HiWay {
 
 		public void setDefaultValue(String value) {
 			this.defaultValue = value;
-			mappings.put("null", value);
+			addMapping("", value);
+//			addMapping("null", value);
+//			addMapping(null, value);
 		}
 
 		public boolean hasDefaultValue() {
-			return defaultValue != null && defaultValue.length() > 0 && !defaultValue.equals("null");
+			return defaultValue != null && defaultValue.length() > 0 && !defaultValue.equals("");
 		}
 
 		public String getDefaultValue() {
@@ -195,12 +197,14 @@ public class GalaxyApplicationMaster extends HiWay {
 	}
 
 	public static class GalaxyTool {
-		private final String name;
+		private final String id;
+		private final String version;
 		private String template;
 		private Set<GalaxyParam> params;
 
-		public GalaxyTool(String name) {
-			this.name = name;
+		public GalaxyTool(String id, String version) {
+			this.id = id;
+			this.version = version;
 			params = new HashSet<>();
 		}
 
@@ -231,8 +235,16 @@ public class GalaxyApplicationMaster extends HiWay {
 			return getName().hashCode();
 		}
 
-		public String getName() {
-			return name;
+		private String getName() {
+			return getId() + "/" + getVersion();
+		}
+		
+		public String getId() {
+			return id;
+		}
+		
+		public String getVersion() {
+			return version;
 		}
 
 		public String getTemplate() {
@@ -441,8 +453,8 @@ public class GalaxyApplicationMaster extends HiWay {
 			toolState_json = toolState_json.replaceAll(": ?\",", ": \"\",");
 			// replace UnvalidatedValue with their actual value
 			toolState_json = toolState_json.replaceAll("\\{\"__class__\":[^\"]*\"UnvalidatedValue\",[^\"]*\"value\":[^\"](\"[^\"]*\")\\}", "$1");
-			// replace "null" with null
-			toolState_json = toolState_json.replaceAll("\"null\"", "null");
+			// replace "null" with ""
+			toolState_json = toolState_json.replaceAll("\"null\"", "\"\"");
 			try {
 				this.toolState = new JSONObject(toolState_json);
 			} catch (JSONException e) {
@@ -512,8 +524,8 @@ public class GalaxyApplicationMaster extends HiWay {
 		} catch (ParserConfigurationException | FactoryConfigurationError e) {
 			e.printStackTrace();
 		}
-		// parseWorkflow("galaxy101.ga");
-		parseWorkflow("RNAseq.ga");
+		 parseWorkflow("galaxy101.ga");
+//		parseWorkflow("RNAseq.ga");
 	}
 
 	private static boolean processDataTypeDir(File dir) {
@@ -637,7 +649,7 @@ public class GalaxyApplicationMaster extends HiWay {
 				String falseValue = paramEl.getAttribute("falsevalue");
 				param.addMapping("False", falseValue);
 			case "select":
-				param.addMapping(JSONObject.NULL, "None");
+				param.addMapping("", "None");
 				// param.setDefaultValue("None");
 			default:
 				String defaultValue = paramEl.getAttribute("value");
@@ -691,8 +703,9 @@ public class GalaxyApplicationMaster extends HiWay {
 					Document doc = builder.parse(file);
 					Element rootEl = doc.getDocumentElement();
 					if (rootEl.getNodeName() == "tool") {
-						String toolName = rootEl.getAttribute("name");
-						GalaxyTool tool = new GalaxyTool(toolName);
+						String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
+						String id = rootEl.getAttribute("id");
+						GalaxyTool tool = new GalaxyTool(id, version);
 
 						Element commandEl = (Element) rootEl.getElementsByTagName("command").item(0);
 						if (commandEl != null) {
@@ -704,6 +717,7 @@ public class GalaxyApplicationMaster extends HiWay {
 							// command = command.replaceAll("\\.metadata\\.", "_metadata.");
 							// command = command.replaceAll("\\.extension", "_extension");
 							command = command.replaceAll("\\.value", "");
+							command = command.replaceAll("\\.dataset", "");
 							command = command.replace(script, dir.getCanonicalPath() + "/" + script);
 							// ???
 							command = command.replace("D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603\\tools/",
@@ -738,7 +752,8 @@ public class GalaxyApplicationMaster extends HiWay {
 						}
 
 						if (tool.getTemplate() != null) {
-							galaxyTools.put(tool.getName(), tool);
+							Map<String, GalaxyTool> toolMap = addAndGetToolMap(id);
+							toolMap.put(version, tool);
 						}
 
 					}
@@ -750,10 +765,18 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 		return true;
 	}
+	
+	private static Map<String, GalaxyTool> addAndGetToolMap(String id) {
+		if (!galaxyTools.containsKey(id)) {
+			Map<String, GalaxyTool> toolMap = new HashMap<>();
+			galaxyTools.put(id, toolMap);
+		}
+		return galaxyTools.get(id);
+	}
 
 	// private String pythonPath;
 	// private static String path;
-	private static Map<String, GalaxyTool> galaxyTools;
+	private static Map<String, Map<String, GalaxyTool>> galaxyTools;
 	private static Map<String, GalaxyDataType> galaxyDataTypes;
 
 	public GalaxyApplicationMaster() {
@@ -805,14 +828,19 @@ public class GalaxyApplicationMaster extends HiWay {
 						files.put(idName, data);
 					}
 				} else if (type.equals("tool")) {
-					String name = step.getString("name");
-					GalaxyTool tool = galaxyTools.get(name);
+					String toolVersion = step.getString("tool_version");
+					String toolId = step.getString("tool_id");
+					String[] splitId = toolId.split("/");
+					if (splitId.length > 2)
+						toolId = splitId[splitId.length - 2];
+					GalaxyTool tool = galaxyTools.get(toolId).get(toolVersion);
 					if (tool == null) {
-						log.error("Tool " + name + " could not be located in local Galaxy installation.");
-						// onError(new RuntimeException());
+						System.err.println("Tool " + toolId + "/" + toolVersion + " could not be located in local Galaxy installation.");
+//						onError(new RuntimeException());
+						System.exit(-1);
 					}
 
-					GalaxyTaskInstance task = new GalaxyTaskInstance(id, name, tool);
+					GalaxyTaskInstance task = new GalaxyTaskInstance(id, tool.getName(), tool);
 					tasks.put(id, task);
 
 					Map<String, String> renameOutputs = new HashMap<>();

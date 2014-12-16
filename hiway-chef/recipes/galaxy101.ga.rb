@@ -25,7 +25,7 @@ bash "install_dependencies_for_galaxy101" do
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail
-  #{node[:hiway][:galaxy][:home]}/scripts/api/install_tool_shed_repositories.py -u http://toolshed.g2.bx.psu.edu/ -a `echo #{node[:hiway][:galaxy][:home]}/api` -l http://localhost:8080/ -n join -o devteam --repository-deps --tool-deps --panel-section-name galaxy101
+  #{node[:hiway][:galaxy][:home]}/scripts/api/install_tool_shed_repositories.py --url http://toolshed.g2.bx.psu.edu/ --api `echo #{node[:hiway][:galaxy][:home]}/api` --local http://localhost:8080/ --name join --owner devteam --revision de21bdbb8d28 --repository-deps --tool-deps --panel-section-name galaxy101
   touch #{installed_dependencies_for_galaxy101}
   EOF
     not_if { ::File.exists?( "#{installed_dependencies_for_galaxy101}" ) }
