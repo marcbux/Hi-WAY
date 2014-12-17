@@ -2,10 +2,13 @@ package de.huberlin.wbi.hiway.app.am;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -21,6 +24,13 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.FactoryConfigurationError;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
@@ -35,7 +45,9 @@ import org.json.JSONObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import org.znerd.xmlenc.XMLOutputter;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.ForeignLambdaExpr;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
@@ -155,8 +167,8 @@ public class GalaxyApplicationMaster extends HiWay {
 		public void setDefaultValue(String value) {
 			this.defaultValue = value;
 			addMapping("", value);
-//			addMapping("null", value);
-//			addMapping(null, value);
+			// addMapping("null", value);
+			// addMapping(null, value);
 		}
 
 		public boolean hasDefaultValue() {
@@ -238,11 +250,11 @@ public class GalaxyApplicationMaster extends HiWay {
 		private String getName() {
 			return getId() + "/" + getVersion();
 		}
-		
+
 		public String getId() {
 			return id;
 		}
-		
+
 		public String getVersion() {
 			return version;
 		}
@@ -505,8 +517,8 @@ public class GalaxyApplicationMaster extends HiWay {
 		try {
 			builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			for (String toolDir : hiWayConf.get(HiWayConfiguration.HIWAY_GALAXY_TOOLS).split(",")) {
-				if (!processToolDir(new File(toolDir.trim()), builder))
-					return false;
+				// if (!processToolDir(new File(toolDir.trim()), builder))
+				// return false;
 			}
 		} catch (ParserConfigurationException | FactoryConfigurationError e) {
 			e.printStackTrace();
@@ -520,12 +532,13 @@ public class GalaxyApplicationMaster extends HiWay {
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			galaxyTools = new HashMap<>();
-			processToolDir(new File("galaxy-galaxy-dist-5123ed7f1603/tools"), builder);
+			parseToolDir(new File("galaxy-galaxy-dist-5123ed7f1603/tools"), builder);
+			processTools(builder);
 		} catch (ParserConfigurationException | FactoryConfigurationError e) {
 			e.printStackTrace();
 		}
-		 parseWorkflow("galaxy101.ga");
-//		parseWorkflow("RNAseq.ga");
+//		parseWorkflow("galaxy101.ga");
+		 parseWorkflow("RNAseq.ga");
 	}
 
 	private static boolean processDataTypeDir(File dir) {
@@ -624,8 +637,7 @@ public class GalaxyApplicationMaster extends HiWay {
 
 	private static Set<GalaxyParam> getParams(Element el) throws XPathExpressionException {
 		Set<GalaxyParam> params = new HashSet<>();
-		XPathFactory xpathFactory = XPathFactory.newInstance();
-		XPath xpath = xpathFactory.newXPath();
+		XPath xpath = XPathFactory.newInstance().newXPath();
 		NodeList paramNds = (NodeList) xpath.evaluate("param", el, XPathConstants.NODESET);
 		NodeList conditionalNds = (NodeList) xpath.evaluate("conditional", el, XPathConstants.NODESET);
 		NodeList repeatNds = (NodeList) xpath.evaluate("repeat", el, XPathConstants.NODESET);
@@ -694,78 +706,127 @@ public class GalaxyApplicationMaster extends HiWay {
 		return params;
 	}
 
-	private static boolean processToolDir(File dir, DocumentBuilder builder) {
+	private static Map<String, String> toolDescriptionToDir = new HashMap<>();
+	private static Map<String, String> macrosByName = new HashMap<>();
+
+	private static boolean parseToolDir(File dir, DocumentBuilder builder) {
 		for (File file : dir.listFiles()) {
 			if (file.isDirectory()) {
-				processToolDir(file, builder);
+				parseToolDir(file, builder);
 			} else if (file.getName().endsWith(".xml")) {
-				try {
+				try (BufferedReader br = new BufferedReader(new FileReader(file))) {
 					Document doc = builder.parse(file);
 					Element rootEl = doc.getDocumentElement();
 					if (rootEl.getNodeName() == "tool") {
-						String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
-						String id = rootEl.getAttribute("id");
-						GalaxyTool tool = new GalaxyTool(id, version);
-
-						Element commandEl = (Element) rootEl.getElementsByTagName("command").item(0);
-						if (commandEl != null) {
-							String command = commandEl.getChildNodes().item(0).getNodeValue().trim();
-							String script = command.split(" ")[0];
-							String interpreter = commandEl.getAttribute("interpreter");
-							if (interpreter.length() > 0)
-								command = interpreter + " " + command;
-							// command = command.replaceAll("\\.metadata\\.", "_metadata.");
-							// command = command.replaceAll("\\.extension", "_extension");
-							command = command.replaceAll("\\.value", "");
-							command = command.replaceAll("\\.dataset", "");
-							command = command.replace(script, dir.getCanonicalPath() + "/" + script);
-							// ???
-							command = command.replace("D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603\\tools/",
-									"/home/hiway/software/shed_tools/toolshed.g2.bx.psu.edu/repos/devteam/join/de21bdbb8d28/join/");
-							command = command.replace("D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603\\tools\\",
-									"/home/hiway/software/galaxy/tools/");
-
-							tool.setTemplate(command);
-						}
-
-						Element inputsEl = (Element) rootEl.getElementsByTagName("inputs").item(0);
-						if (inputsEl != null)
-							tool.setParams(getParams(inputsEl));
-
-						Element outputsEl = (Element) rootEl.getElementsByTagName("outputs").item(0);
-						if (outputsEl != null) {
-							NodeList dataNds = outputsEl.getElementsByTagName("data");
-							for (int i = 0; i < dataNds.getLength(); i++) {
-								Element dataEl = (Element) dataNds.item(i);
-								String name = dataEl.getAttribute("name");
-								GalaxyParamValue param = new GalaxyParamValue(name);
-								tool.addParam(name, param);
-
-								String format = dataEl.getAttribute("format");
-								String metadata_source = dataEl.getAttribute("metadata_source");
-								if (format.equals("input") && metadata_source != null && metadata_source.length() > 0) {
-									param.setDataType(metadata_source);
-								} else {
-									param.setDataType(format);
-								}
-							}
-						}
-
-						if (tool.getTemplate() != null) {
-							Map<String, GalaxyTool> toolMap = addAndGetToolMap(id);
-							toolMap.put(version, tool);
-						}
-
+						Transformer transformer = TransformerFactory.newInstance().newTransformer();
+						transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+						StreamResult result = new StreamResult(new StringWriter());
+						DOMSource source = new DOMSource(rootEl);
+						transformer.transform(source, result);
+						toolDescriptionToDir.put(result.getWriter().toString(), dir.getCanonicalPath());
 					}
-				} catch (SAXException | IOException | XPathExpressionException e) {
-					e.printStackTrace();
+
+					NodeList macroNds = (NodeList) rootEl.getElementsByTagName("macro");
+					for (int i = 0; i < macroNds.getLength(); i++) {
+						Element macroEl = (Element) macroNds.item(i);
+						String name = macroEl.getAttribute("name");
+
+						Transformer transformer = TransformerFactory.newInstance().newTransformer();
+						transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+						StreamResult result = new StreamResult(new StringWriter());
+						DOMSource source = new DOMSource(macroEl);
+						transformer.transform(source, result);
+						String macro = result.getWriter().toString();
+						macro = macro.substring(macro.indexOf('\n') + 1, macro.lastIndexOf('\n') - 1);
+						macrosByName.put(name, macro);
+					}
+				} catch (SAXException | IOException | TransformerException e) {
 					return false;
 				}
 			}
 		}
 		return true;
 	}
-	
+
+	private static boolean processTools(DocumentBuilder builder) {
+		for (String toolDescription : toolDescriptionToDir.keySet()) {
+			String dir = toolDescriptionToDir.get(toolDescription);
+			Pattern p = Pattern.compile("<expand macro=\"([^\"]*)\"(>.*?</expand>|/>)", Pattern.DOTALL);
+			Matcher m = p.matcher(toolDescription);
+			while (m.find()) {
+				String name = m.group(1);
+				String replace = m.group(0);
+				String with = macrosByName.get(name);
+				System.out.println(replace);
+				if (with != null)
+					toolDescription.replace(replace, with);
+			}
+			try {
+				Document doc = builder.parse(new InputSource(new StringReader(toolDescription)));
+				Element rootEl = doc.getDocumentElement();
+				if (rootEl.getNodeName() == "tool") {
+					String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
+					String id = rootEl.getAttribute("id");
+					GalaxyTool tool = new GalaxyTool(id, version);
+
+					Element commandEl = (Element) rootEl.getElementsByTagName("command").item(0);
+					if (commandEl != null) {
+						String command = commandEl.getChildNodes().item(0).getNodeValue().trim();
+						String script = command.split(" ")[0];
+						String interpreter = commandEl.getAttribute("interpreter");
+						if (interpreter.length() > 0)
+							command = interpreter + " " + command;
+						// command = command.replaceAll("\\.metadata\\.", "_metadata.");
+						// command = command.replaceAll("\\.extension", "_extension");
+						command = command.replaceAll("\\.value", "");
+						command = command.replaceAll("\\.dataset", "");
+						command = command.replace(script, dir + "/" + script);
+						// ???
+						command = command.replace("D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603\\tools/",
+								"/home/hiway/software/shed_tools/toolshed.g2.bx.psu.edu/repos/devteam/join/de21bdbb8d28/join/");
+						command = command.replace("D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603\\tools\\",
+								"/home/hiway/software/galaxy/tools/");
+
+						tool.setTemplate(command);
+					}
+
+					Element inputsEl = (Element) rootEl.getElementsByTagName("inputs").item(0);
+					if (inputsEl != null)
+						tool.setParams(getParams(inputsEl));
+
+					Element outputsEl = (Element) rootEl.getElementsByTagName("outputs").item(0);
+					if (outputsEl != null) {
+						NodeList dataNds = outputsEl.getElementsByTagName("data");
+						for (int i = 0; i < dataNds.getLength(); i++) {
+							Element dataEl = (Element) dataNds.item(i);
+							String name = dataEl.getAttribute("name");
+							GalaxyParamValue param = new GalaxyParamValue(name);
+							tool.addParam(name, param);
+
+							String format = dataEl.getAttribute("format");
+							String metadata_source = dataEl.getAttribute("metadata_source");
+							if (format.equals("input") && metadata_source != null && metadata_source.length() > 0) {
+								param.setDataType(metadata_source);
+							} else {
+								param.setDataType(format);
+							}
+						}
+					}
+
+					if (tool.getTemplate() != null) {
+						Map<String, GalaxyTool> toolMap = addAndGetToolMap(id);
+						toolMap.put(version, tool);
+					}
+
+				}
+			} catch (SAXException | IOException | XPathExpressionException e) {
+				e.printStackTrace();
+				return false;
+			}
+		}
+		return true;
+	}
+
 	private static Map<String, GalaxyTool> addAndGetToolMap(String id) {
 		if (!galaxyTools.containsKey(id)) {
 			Map<String, GalaxyTool> toolMap = new HashMap<>();
@@ -836,7 +897,7 @@ public class GalaxyApplicationMaster extends HiWay {
 					GalaxyTool tool = galaxyTools.get(toolId).get(toolVersion);
 					if (tool == null) {
 						System.err.println("Tool " + toolId + "/" + toolVersion + " could not be located in local Galaxy installation.");
-//						onError(new RuntimeException());
+						// onError(new RuntimeException());
 						System.exit(-1);
 					}
 
