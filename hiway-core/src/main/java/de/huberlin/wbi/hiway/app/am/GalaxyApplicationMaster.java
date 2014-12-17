@@ -264,7 +264,7 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 
 		public void setTemplate(String template) {
-			this.template = template;
+			this.template = template.endsWith("\n") ? template : template + "\n";
 		}
 
 		private void mapParams(JSONObject jo) throws JSONException {
@@ -300,6 +300,9 @@ public class GalaxyApplicationMaster extends HiWay {
 			// }
 			// toolState.put(dataParam.getName() + "_metadata", metadata);
 			// }
+			
+			// (4) add obligatory parameters
+			toolState.put("__new_file_path__", ".");
 		}
 
 		public void addFile(String name, GalaxyData data, JSONObject jo) {
@@ -323,7 +326,17 @@ public class GalaxyApplicationMaster extends HiWay {
 						addFile(suffix, data, jo.getJSONObject(prefix));
 					}
 				} else {
-					template = template.replaceAll("(\\$[^ ]*)" + name + "([^.]|$)", "$1" + name + ".name$2");
+					template = template.replaceAll("(\\$[^\\s]*)" + name + "([\\}'\"\\s]+)($|[^i]|i[^n]|in[^\\s])", "$1" + name + ".name$2$3");
+//					String temp = template;
+//					p = Pattern.compile("(\\$[^\\s]*)" + name + "([\\}'\"\\s]+)");
+//					m = p.matcher(template);
+//					while (m.find()) {
+//						if (!template.substring(m.end()).startsWith(" in ")) {
+//							
+//						}
+//					}
+					
+					
 					String fileName = data.getName();
 					JSONObject fileJo = new JSONObject();
 					fileJo.putOpt("name", fileName);
@@ -650,11 +663,11 @@ public class GalaxyApplicationMaster extends HiWay {
 
 			String type = paramEl.getAttribute("type");
 			switch (type) {
-			case "data":
-				String format = paramEl.getAttribute("format");
-				String[] splitFormat = format.split(",");
+//			case "data":
+//				String format = paramEl.getAttribute("format");
+//				String[] splitFormat = format.split(",");
 				// param.addDataTypes(splitFormat);
-				break;
+//				break;
 			case "boolean":
 				String trueValue = paramEl.getAttribute("truevalue");
 				param.addMapping("True", trueValue);
@@ -757,7 +770,7 @@ public class GalaxyApplicationMaster extends HiWay {
 				String name = m.group(1);
 				String replace = m.group(0);
 				String with = macrosByName.get(name);
-				System.out.println(replace);
+//				System.out.println(replace);
 				if (with != null)
 					toolDescription.replace(replace, with);
 			}
@@ -780,6 +793,7 @@ public class GalaxyApplicationMaster extends HiWay {
 						// command = command.replaceAll("\\.extension", "_extension");
 						command = command.replaceAll("\\.value", "");
 						command = command.replaceAll("\\.dataset", "");
+						command = command.replaceAll("\\.fields\\.path", "");
 						command = command.replace(script, dir + "/" + script);
 						// ???
 						command = command.replace("D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603\\tools/",
