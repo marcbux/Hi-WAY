@@ -6,14 +6,12 @@ remote_file "#{node[:hiway][:home]}/#{node[:hiway][:montage_synthetic][:workflow
   action :create_if_missing
 end
 
-ran_montage_synthetic = "/tmp/.ran_montage_synthetic"
 bash "run_montage_synthetic" do
   user node[:hiway][:user]
   group node[:hiway][:group]
   code <<-EOF
   set -e && set -o pipefail
-  #{node[:hadoop][:home]}/bin/yarn jar #{node[:hiway][:home]}/hiway-core-#{node[:hiway][:version]}.jar -w #{node[:hiway][:home]}/#{node[:hiway][:montage_synthetic][:workflow]} -l dax
-  touch #{ran_montage_synthetic}
+  #{node[:hadoop][:home]}/bin/yarn jar #{node[:hiway][:home]}/hiway-core-#{node[:hiway][:version]}.jar -w #{node[:hiway][:home]}/#{node[:hiway][:montage_synthetic][:workflow]} -l dax -s #{node[:hiway][:home]}/montage_synthetic_summary.json
   EOF
-    not_if { ::File.exists?( "#{ran_montage_synthetic}" ) }
+    not_if { ::File.exists?("#{node[:hiway][:home]}/montage_synthetic_summary.json") }
 end

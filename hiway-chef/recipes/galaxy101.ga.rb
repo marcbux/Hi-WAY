@@ -19,18 +19,6 @@ template "#{node[:hiway][:home]}/SNPs.bed" do
   mode "0774"
 end
 
-installed_dependencies_for_galaxy101 = "/tmp/.installed_dependencies_for_galaxy101"
-bash "install_dependencies_for_galaxy101" do
-  user node[:hiway][:user]
-  group node[:hiway][:group]
-  code <<-EOF
-  set -e && set -o pipefail
-  #{node[:hiway][:galaxy][:home]}/scripts/api/install_tool_shed_repositories.py --url http://toolshed.g2.bx.psu.edu/ --api `echo #{node[:hiway][:galaxy][:home]}/api` --local http://localhost:8080/ --name join --owner devteam --revision de21bdbb8d28 --repository-deps --tool-deps --panel-section-name galaxy101
-  touch #{installed_dependencies_for_galaxy101}
-  EOF
-    not_if { ::File.exists?( "#{installed_dependencies_for_galaxy101}" ) }
-end
-
 prepared_galaxy101 = "/tmp/.prepared_galaxy101"
 bash "prepare_galaxy101" do
   user node[:hiway][:user]

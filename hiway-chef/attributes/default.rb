@@ -7,7 +7,6 @@ default[:hiway][:version]                           = "0.2.0-SNAPSHOT"
 default[:hiway][:targz]                             = "hiway-dist-#{node[:hiway][:version]}.tar.gz"
 default[:hiway][:home]                              = "#{default[:hiway][:dir]}/hiway-#{default[:hiway][:version]}"
 default[:hiway][:url]                               = "https://github.com/marcbux/Hi-WAY/releases/download/#{node[:hiway][:version]}/#{node[:hiway][:targz]}"
-default[:hiway][:checksum]                          = ""
 
 default[:hiway][:galaxy][:repository]               = "https://bitbucket.org/galaxy/galaxy-dist/"
 default[:hiway][:galaxy][:home]                     = "#{default[:hiway][:dir]}/galaxy" 

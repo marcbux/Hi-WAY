@@ -19,7 +19,7 @@ deftask groupby( result( File ) : <csv( File )> )in bash *{
     }' > $result
 }*
 
-txt( File ) = 'wordcount/gronemeyer.txt' 'wordcount/benzko.txt';
+txt( File ) = <%= node[:hiway][:wordcount][:input] %>;
 
 csv = wc( txt: txt );
 
