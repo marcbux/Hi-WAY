@@ -337,7 +337,7 @@ public class GalaxyApplicationMaster extends HiWay {
 						addFile(suffix, data, jo.getJSONObject(prefix));
 					}
 				} else {
-					template = template.replaceAll("(\\$[^\\s]*)" + name + "([\\}'\"\\s]+)($|[^i]|i[^n]|in[^\\s])", "$1" + name + ".name$2$3");
+					template = template.replaceAll("(\\$[^\\s]*)" + name + "([\\}'\"\\s]+)($|[^i]|i[^n]|in[^\\s])", "$1" + name + ".path$2$3");
 					// String temp = template;
 					// p = Pattern.compile("(\\$[^\\s]*)" + name + "([\\}'\"\\s]+)");
 					// m = p.matcher(template);
@@ -349,7 +349,8 @@ public class GalaxyApplicationMaster extends HiWay {
 
 					String fileName = data.getName();
 					JSONObject fileJo = new JSONObject();
-					fileJo.putOpt("name", fileName);
+					fileJo.putOpt("path", fileName);
+					fileJo.putOpt("name", fileName.split("\\.(?=[^\\.]+$)")[0]);
 					fileJo.putOpt("files_path", data.getLocalDirectory());
 
 					if (data.hasDataType()) {

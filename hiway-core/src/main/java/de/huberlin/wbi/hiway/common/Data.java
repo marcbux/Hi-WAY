@@ -176,12 +176,11 @@ public class Data implements Comparable<Data> {
 	}
 
 	public String getLocalDirectory() {
-		return directorySuffix;
+		return directorySuffix.length() == 0 ? "." : directorySuffix;
 	}
 
 	public String getLocalPath() {
-		String localDirectory = getLocalDirectory();
-		return (localDirectory.length() == 0) ? name : localDirectory + "/" + name;
+		return (directorySuffix.length() == 0) ? name : directorySuffix + "/" + name;
 	}
 
 	public String getName() {
@@ -213,7 +212,7 @@ public class Data implements Comparable<Data> {
 		Path src = new Path(fs.getHomeDirectory(), getHdfsPath(hdfsDirectoryMidfix));
 		Path dest = new Path(absoluteLocalDirectoryPrefix.length() > 0 ? absoluteLocalDirectoryPrefix + "/" + name : getLocalPath());
 		log.debug("Staging in: " + src + " -> " + dest);
-		if (!getLocalDirectory().isEmpty()) {
+		if (!getLocalDirectory().equals(".")) {
 			Path dir = new Path(getLocalDirectory());
 			fs.mkdirs(dir);
 		}
