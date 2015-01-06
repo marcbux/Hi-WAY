@@ -58,6 +58,11 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 public class GalaxyApplicationMaster extends HiWay {
 
+	public static final String galaxyPath = "D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603";
+	public static final String toolShedPath = "D:\\Documents\\Workspace2\\hiway\\hiway-core\\shed_tools";
+//	public static final String workflowPath = "galaxy101.ga";
+	public static final String workflowPath = "RNAseq.ga";
+
 	public static class GalaxyData extends Data {
 		String extension;
 		GalaxyDataType dataType;
@@ -213,11 +218,13 @@ public class GalaxyApplicationMaster extends HiWay {
 		private final String version;
 		private String template;
 		private Set<GalaxyParam> params;
+		private final String env;
 
-		public GalaxyTool(String id, String version) {
+		public GalaxyTool(String id, String version, String env) {
 			this.id = id;
 			this.version = version;
 			params = new HashSet<>();
+			this.env = "PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n" + (env.endsWith("\n") ? env : env + "\n");
 		}
 
 		public GalaxyParamValue getFirstMatchingParamByName(String name) {
@@ -226,6 +233,10 @@ public class GalaxyApplicationMaster extends HiWay {
 					if (paramValue.getName().equals(name))
 						return paramValue;
 			return null;
+		}
+
+		public String getEnv() {
+			return env;
 		}
 
 		// public Set<GalaxyParamValue> getDataParams() {
@@ -300,7 +311,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			// }
 			// toolState.put(dataParam.getName() + "_metadata", metadata);
 			// }
-			
+
 			// (4) add obligatory parameters
 			toolState.put("__new_file_path__", ".");
 		}
@@ -327,16 +338,15 @@ public class GalaxyApplicationMaster extends HiWay {
 					}
 				} else {
 					template = template.replaceAll("(\\$[^\\s]*)" + name + "([\\}'\"\\s]+)($|[^i]|i[^n]|in[^\\s])", "$1" + name + ".name$2$3");
-//					String temp = template;
-//					p = Pattern.compile("(\\$[^\\s]*)" + name + "([\\}'\"\\s]+)");
-//					m = p.matcher(template);
-//					while (m.find()) {
-//						if (!template.substring(m.end()).startsWith(" in ")) {
-//							
-//						}
-//					}
-					
-					
+					// String temp = template;
+					// p = Pattern.compile("(\\$[^\\s]*)" + name + "([\\}'\"\\s]+)");
+					// m = p.matcher(template);
+					// while (m.find()) {
+					// if (!template.substring(m.end()).startsWith(" in ")) {
+					//
+					// }
+					// }
+
 					String fileName = data.getName();
 					JSONObject fileJo = new JSONObject();
 					fileJo.putOpt("name", fileName);
@@ -494,8 +504,8 @@ public class GalaxyApplicationMaster extends HiWay {
 		public void buildPickleScript() throws JSONException {
 			galaxyTool.populateToolState(toolState);
 			pickleScript.append(toolState.toString());
-			pickleScript.append("\npickle.dump(tool_state, open(\"" + id + ".p\", \"wb\"))\n");
-			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter("params_" + id + ".py"))) {
+			pickleScript.append("\npickle.dump(tool_state, open(\"" + workflowPath + "." + id + ".pickle.p\", \"wb\"))\n");
+			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(workflowPath + "." + id + ".params.py"))) {
 				scriptWriter.write(pickleScript.toString());
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -503,8 +513,21 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 
 		public void buildTemplate() {
-			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter("template_" + id + ".tmpl"))) {
-				scriptWriter.write(getGalaxyTool().getTemplate());
+			String env = galaxyTool.getEnv();
+			String template = galaxyTool.getTemplate();
+
+			// ???
+			env = env.replaceAll(toolShedPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/shed_tools");
+			env = env.replaceAll(galaxyPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/galaxy");
+
+			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(workflowPath + "." + id + ".env.sh"))) {
+				scriptWriter.write(env);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(workflowPath + "." + id + ".template.tmpl"))) {
+				scriptWriter.write(template);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -541,17 +564,17 @@ public class GalaxyApplicationMaster extends HiWay {
 	}
 
 	public static void main(String[] args) {
-		processDataTypeDir(new File("galaxy-galaxy-dist-5123ed7f1603/lib/galaxy/datatypes"));
+		processDataTypeDir(new File(galaxyPath + "/lib/galaxy/datatypes"));
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			galaxyTools = new HashMap<>();
-			parseToolDir(new File("galaxy-galaxy-dist-5123ed7f1603/tools"), builder);
+			parseToolDir(new File(galaxyPath + "/tools"), builder);
+			parseToolDir(new File(toolShedPath), builder);
 			processTools(builder);
 		} catch (ParserConfigurationException | FactoryConfigurationError e) {
 			e.printStackTrace();
 		}
-//		parseWorkflow("galaxy101.ga");
-		 parseWorkflow("RNAseq.ga");
+		parseWorkflow(workflowPath);
 	}
 
 	private static boolean processDataTypeDir(File dir) {
@@ -663,11 +686,11 @@ public class GalaxyApplicationMaster extends HiWay {
 
 			String type = paramEl.getAttribute("type");
 			switch (type) {
-//			case "data":
-//				String format = paramEl.getAttribute("format");
-//				String[] splitFormat = format.split(",");
-				// param.addDataTypes(splitFormat);
-//				break;
+			// case "data":
+			// String format = paramEl.getAttribute("format");
+			// String[] splitFormat = format.split(",");
+			// param.addDataTypes(splitFormat);
+			// break;
 			case "boolean":
 				String trueValue = paramEl.getAttribute("truevalue");
 				param.addMapping("True", trueValue);
@@ -720,14 +743,17 @@ public class GalaxyApplicationMaster extends HiWay {
 	}
 
 	private static Map<String, String> toolDescriptionToDir = new HashMap<>();
+	private static Map<String, String> dirToEnv = new HashMap<>();
 	private static Map<String, String> macrosByName = new HashMap<>();
 
 	private static boolean parseToolDir(File dir, DocumentBuilder builder) {
-		for (File file : dir.listFiles()) {
-			if (file.isDirectory()) {
-				parseToolDir(file, builder);
-			} else if (file.getName().endsWith(".xml")) {
-				try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+		try {
+			StringBuilder env = new StringBuilder();
+			for (File file : dir.listFiles()) {
+				if (file.isDirectory()) {
+					parseToolDir(file, builder);
+				} else if (file.getName().endsWith(".xml")) {
+
 					Document doc = builder.parse(file);
 					Element rootEl = doc.getDocumentElement();
 					if (rootEl.getNodeName() == "tool") {
@@ -737,6 +763,33 @@ public class GalaxyApplicationMaster extends HiWay {
 						DOMSource source = new DOMSource(rootEl);
 						transformer.transform(source, result);
 						toolDescriptionToDir.put(result.getWriter().toString(), dir.getCanonicalPath());
+					} else if (rootEl.getNodeName() == "tool_dependency") {
+						NodeList packageNds = (NodeList) rootEl.getElementsByTagName("package");
+						for (int i = 0; i < packageNds.getLength(); i++) {
+							Element packageEl = (Element) packageNds.item(i);
+							String packageName = packageEl.getAttribute("name");
+							String version = packageEl.getAttribute("version");
+
+							NodeList repositoryNds = (NodeList) packageEl.getElementsByTagName("repository");
+							for (int j = 0; j < repositoryNds.getLength(); j++) {
+								Element repositoryEl = (Element) repositoryNds.item(j);
+								String changeset_revision = repositoryEl.getAttribute("changeset_revision");
+								String repositoryName = repositoryEl.getAttribute("name");
+								String owner = repositoryEl.getAttribute("owner");
+
+								File envFile = new File(galaxyPath + "/dependencies/" + packageName + "/" + version + "/" + owner + "/" + repositoryName + "/"
+										+ changeset_revision + "/env.sh");
+								if (envFile.exists()) {
+									try (BufferedReader br = new BufferedReader(new FileReader(envFile))) {
+										String line;
+										while ((line = br.readLine()) != null) {
+											env.append(line).append("\n");
+										}
+									}
+								}
+
+							}
+						}
 					}
 
 					NodeList macroNds = (NodeList) rootEl.getElementsByTagName("macro");
@@ -753,10 +806,12 @@ public class GalaxyApplicationMaster extends HiWay {
 						macro = macro.substring(macro.indexOf('\n') + 1, macro.lastIndexOf('\n') - 1);
 						macrosByName.put(name, macro);
 					}
-				} catch (SAXException | IOException | TransformerException e) {
-					return false;
+
 				}
 			}
+			dirToEnv.put(dir.getCanonicalPath(), env.toString());
+		} catch (SAXException | IOException | TransformerException e) {
+			return false;
 		}
 		return true;
 	}
@@ -770,7 +825,7 @@ public class GalaxyApplicationMaster extends HiWay {
 				String name = m.group(1);
 				String replace = m.group(0);
 				String with = macrosByName.get(name);
-//				System.out.println(replace);
+				// System.out.println(replace);
 				if (with != null)
 					toolDescription.replace(replace, with);
 			}
@@ -780,7 +835,7 @@ public class GalaxyApplicationMaster extends HiWay {
 				if (rootEl.getNodeName() == "tool") {
 					String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
 					String id = rootEl.getAttribute("id");
-					GalaxyTool tool = new GalaxyTool(id, version);
+					GalaxyTool tool = new GalaxyTool(id, version, dirToEnv.get(dir));
 
 					Element commandEl = (Element) rootEl.getElementsByTagName("command").item(0);
 					if (commandEl != null) {
@@ -794,12 +849,13 @@ public class GalaxyApplicationMaster extends HiWay {
 						command = command.replaceAll("\\.value", "");
 						command = command.replaceAll("\\.dataset", "");
 						command = command.replaceAll("\\.fields\\.path", "");
-						command = command.replace(script, dir + "/" + script);
+
 						// ???
-						command = command.replace("D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603\\tools/",
-								"/home/hiway/software/shed_tools/toolshed.g2.bx.psu.edu/repos/devteam/join/de21bdbb8d28/join/");
-						command = command.replace("D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603\\tools\\",
-								"/home/hiway/software/galaxy/tools/");
+						dir = dir.replaceAll(toolShedPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/shed_tools");
+						dir = dir.replaceAll(galaxyPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/galaxy");
+						dir = dir.replaceAll("\\\\", "/");
+						
+						command = command.replace(script, dir + "/" + script);
 
 						tool.setTemplate(command);
 					}
