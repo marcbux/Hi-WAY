@@ -220,11 +220,11 @@ public class GalaxyApplicationMaster extends HiWay {
 		private Set<GalaxyParam> params;
 		private final String env;
 
-		public GalaxyTool(String id, String version, String env) {
+		public GalaxyTool(String id, String version, String dir, String env) {
 			this.id = id;
 			this.version = version;
 			params = new HashSet<>();
-			this.env = "PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n" + (env.endsWith("\n") ? env : env + "\n");
+			this.env = "PATH=" + dir + ":$PATH; export PATH\n" + "PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n" + (env.endsWith("\n") ? env : env + "\n");
 		}
 
 		public GalaxyParamValue getFirstMatchingParamByName(String name) {
@@ -520,6 +520,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			// ???
 			env = env.replaceAll(toolShedPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/shed_tools");
 			env = env.replaceAll(galaxyPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/galaxy");
+			env = env.replaceAll("\\\\", "/");
 
 			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(workflowPath + "." + id + ".env.sh"))) {
 				scriptWriter.write(env);
@@ -826,7 +827,10 @@ public class GalaxyApplicationMaster extends HiWay {
 				String name = m.group(1);
 				String replace = m.group(0);
 				String with = macrosByName.get(name);
-				// System.out.println(replace);
+				if (m.group(2).startsWith(">")) {
+					String yield = m.group(2).substring(1, m.group(2).indexOf("</expand>"));
+					with = with.replaceAll("<yield/>", yield.trim());
+				}
 				if (with != null)
 					toolDescription.replace(replace, with);
 			}
@@ -836,28 +840,27 @@ public class GalaxyApplicationMaster extends HiWay {
 				if (rootEl.getNodeName() == "tool") {
 					String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
 					String id = rootEl.getAttribute("id");
-					GalaxyTool tool = new GalaxyTool(id, version, dirToEnv.get(dir));
+					GalaxyTool tool = new GalaxyTool(id, version, dir, dirToEnv.get(dir));
 
 					Element commandEl = (Element) rootEl.getElementsByTagName("command").item(0);
 					if (commandEl != null) {
 						String command = commandEl.getChildNodes().item(0).getNodeValue().trim();
 						String script = command.split(" ")[0];
 						String interpreter = commandEl.getAttribute("interpreter");
-						if (interpreter.length() > 0)
+						if (interpreter.length() > 0) {
+							//???
+							dir = dir.replaceAll(toolShedPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/shed_tools");
+							dir = dir.replaceAll(galaxyPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/galaxy");
+							dir = dir.replaceAll("\\\\", "/");
+							
+							command = command.replace(script, dir + "/" + script);
 							command = interpreter + " " + command;
+						}
 						// command = command.replaceAll("\\.metadata\\.", "_metadata.");
 						// command = command.replaceAll("\\.extension", "_extension");
 						command = command.replaceAll("\\.value", "");
 						command = command.replaceAll("\\.dataset", "");
 						command = command.replaceAll("\\.fields\\.path", "");
-
-						// ???
-						dir = dir.replaceAll(toolShedPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/shed_tools");
-						dir = dir.replaceAll(galaxyPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/galaxy");
-						dir = dir.replaceAll("\\\\", "/");
-						
-						command = command.replace(script, dir + "/" + script);
-
 						tool.setTemplate(command);
 					}
 
