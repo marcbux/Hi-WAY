@@ -9,6 +9,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -60,8 +61,64 @@ public class GalaxyApplicationMaster extends HiWay {
 
 	public static final String galaxyPath = "D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603";
 	public static final String toolShedPath = "D:\\Documents\\Workspace2\\hiway\\hiway-core\\shed_tools";
-//	public static final String workflowPath = "galaxy101.ga";
+	// public static final String workflowPath = "galaxy101.ga";
 	public static final String workflowPath = "RNAseq.ga";
+
+	public static class GalaxyDataTable {
+		private final String name;
+		private final String comment_char;
+		private final String[] columns;
+		private Map<String, Map<String, String>> contentByValue;
+		private final String path;
+
+		public GalaxyDataTable(String name, String comment_char, String[] columns, String path) {
+			this.name = name;
+			this.comment_char = comment_char;
+			this.columns = columns;
+			this.path = path;
+			contentByValue = new HashMap<>();
+		}
+
+		public String[] getColumns() {
+			return columns;
+		}
+
+		public String getComment_char() {
+			return comment_char;
+		}
+
+		public String getName() {
+			return name;
+		}
+
+		public String getPath() {
+			return path;
+		}
+
+		public void addContent(String[] content) {
+			Map<String, String> newContent = new HashMap<>();
+			for (int i = 0; i < columns.length; i++) {
+				newContent.put(columns[i], content[i]);
+				if (columns[i].equals("value"))
+					contentByValue.put(content[i], newContent);
+			}
+		}
+
+		public JSONObject getContent(String value) {
+			JSONObject inner = new JSONObject(contentByValue.get(value));
+			JSONObject outer = new JSONObject();
+			try {
+				outer.put("fields", inner);
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+			return outer;
+		}
+
+		public Set<String> getValues() {
+			return contentByValue.keySet();
+		}
+	}
 
 	public static class GalaxyData extends Data {
 		String extension;
@@ -224,7 +281,8 @@ public class GalaxyApplicationMaster extends HiWay {
 			this.id = id;
 			this.version = version;
 			params = new HashSet<>();
-			this.env = "PATH=" + dir + ":$PATH; export PATH\n" + "PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n" + (env.endsWith("\n") ? env : env + "\n");
+			this.env = "PATH=" + dir + ":$PATH; export PATH\n" + "PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n"
+					+ (env.endsWith("\n") ? env : env + "\n");
 		}
 
 		public GalaxyParamValue getFirstMatchingParamByName(String name) {
@@ -527,7 +585,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			
+
 			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(workflowPath + "." + id + ".template.tmpl"))) {
 				scriptWriter.write(template);
 			} catch (IOException e) {
@@ -566,9 +624,22 @@ public class GalaxyApplicationMaster extends HiWay {
 	}
 
 	public static void main(String[] args) {
+		galaxyDataTypes = new HashMap<>();
 		processDataTypeDir(new File(galaxyPath + "/lib/galaxy/datatypes"));
+
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+
+			galaxyDataTables = new HashMap<>();
+			File shed_tool_data_table_conf = new File(galaxyPath + "/config/shed_tool_data_table_conf.xml");
+			if (!shed_tool_data_table_conf.exists())
+				shed_tool_data_table_conf = new File(galaxyPath + "/config/shed_tool_data_table_conf.xml.sample");
+			File tool_data_table_conf = new File(galaxyPath + "/config/tool_data_table_conf.xml");
+			if (!tool_data_table_conf.exists())
+				tool_data_table_conf = new File(galaxyPath + "/config/tool_data_table_conf.xml.sample");
+			processDataTables(shed_tool_data_table_conf, builder);
+			processDataTables(tool_data_table_conf, builder);
+
 			galaxyTools = new HashMap<>();
 			parseToolDir(new File(galaxyPath + "/tools"), builder);
 			parseToolDir(new File(toolShedPath), builder);
@@ -579,8 +650,53 @@ public class GalaxyApplicationMaster extends HiWay {
 		parseWorkflow(workflowPath);
 	}
 
+	private static boolean processDataTables(File file, DocumentBuilder builder) {
+		Document doc;
+		try {
+			doc = builder.parse(file);
+			NodeList tables = doc.getElementsByTagName("table");
+			for (int i = 0; i < tables.getLength(); i++) {
+				Element tableEl = (Element) tables.item(i);
+				Element columnsEl = (Element) tableEl.getElementsByTagName("columns").item(0);
+				Element fileEl = (Element) tableEl.getElementsByTagName("file").item(0);
+				String name = tableEl.getAttribute("name");
+				String comment_char = tableEl.getAttribute("comment_char");
+				String[] columns = columnsEl.getFirstChild().getNodeValue().split(", ");
+				String path = fileEl.getAttribute("path");
+				// ???
+				// if (!path.startsWith("/")) path = galaxyPath + "/" + path;
+				if (!path.startsWith("/"))
+					path = galaxyPath + "\\" + path;
+				GalaxyDataTable galaxyDataTable = new GalaxyDataTable(name, comment_char, columns, path);
+				processLocFile(new File(path), galaxyDataTable);
+				galaxyDataTables.put(name, galaxyDataTable);
+			}
+
+		} catch (SAXException | IOException e) {
+			e.printStackTrace();
+		}
+
+		return true;
+	}
+
+	private static void processLocFile(File file, GalaxyDataTable galaxyDataTable) {
+		if (!file.exists())
+			return;
+		try (BufferedReader locBr = new BufferedReader(new FileReader(file))) {
+			String line;
+			while ((line = locBr.readLine()) != null) {
+				if (line.startsWith(galaxyDataTable.getComment_char()))
+					continue;
+				String[] content = line.split("\t");
+				galaxyDataTable.addContent(content);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
 	private static boolean processDataTypeDir(File dir) {
-		galaxyDataTypes = new HashMap<>();
 		for (File file : dir.listFiles()) {
 			if (file.getName().endsWith(".py")) {
 				try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -705,6 +821,19 @@ public class GalaxyApplicationMaster extends HiWay {
 				String defaultValue = paramEl.getAttribute("value");
 				if (defaultValue != null && defaultValue.length() > 0)
 					param.setDefaultValue(defaultValue);
+			}
+
+			NodeList optionNds = (NodeList) xpath.evaluate("option", paramEl, XPathConstants.NODESET);
+			NodeList optionsNds = (NodeList) xpath.evaluate("options", paramEl, XPathConstants.NODESET);
+			for (int j = 0; j < optionNds.getLength() + optionsNds.getLength(); j++) {
+				Element optionEl = j < optionNds.getLength() ? (Element) optionNds.item(j) : (Element) optionsNds.item(j - optionNds.getLength());
+				if (optionEl.hasAttribute("from_data_table")) {
+					String tableName = optionEl.getAttribute("from_data_table");
+					GalaxyDataTable galaxyDataTable = galaxyDataTables.get(tableName);
+					for (String value : galaxyDataTable.getValues()) {
+						param.addMapping(value, galaxyDataTable.getContent(value));
+					}
+				}
 			}
 		}
 
@@ -832,7 +961,7 @@ public class GalaxyApplicationMaster extends HiWay {
 					with = with.replaceAll("<yield/>", yield.trim());
 				}
 				if (with != null)
-					toolDescription.replace(replace, with);
+					toolDescription = toolDescription.replace(replace, with);
 			}
 			try {
 				Document doc = builder.parse(new InputSource(new StringReader(toolDescription)));
@@ -848,11 +977,11 @@ public class GalaxyApplicationMaster extends HiWay {
 						String script = command.split(" ")[0];
 						String interpreter = commandEl.getAttribute("interpreter");
 						if (interpreter.length() > 0) {
-							//???
+							// ???
 							dir = dir.replaceAll(toolShedPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/shed_tools");
 							dir = dir.replaceAll(galaxyPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/galaxy");
 							dir = dir.replaceAll("\\\\", "/");
-							
+
 							command = command.replace(script, dir + "/" + script);
 							command = interpreter + " " + command;
 						}
@@ -860,7 +989,7 @@ public class GalaxyApplicationMaster extends HiWay {
 						// command = command.replaceAll("\\.extension", "_extension");
 						command = command.replaceAll("\\.value", "");
 						command = command.replaceAll("\\.dataset", "");
-						command = command.replaceAll("\\.fields\\.path", "");
+//						command = command.replaceAll("\\.fields\\.path", "");
 						tool.setTemplate(command);
 					}
 
@@ -913,6 +1042,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	// private static String path;
 	private static Map<String, Map<String, GalaxyTool>> galaxyTools;
 	private static Map<String, GalaxyDataType> galaxyDataTypes;
+	private static Map<String, GalaxyDataTable> galaxyDataTables;
 
 	public GalaxyApplicationMaster() {
 		super();
