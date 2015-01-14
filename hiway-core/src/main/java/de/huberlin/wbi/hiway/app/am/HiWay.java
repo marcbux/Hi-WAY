@@ -359,7 +359,7 @@ public abstract class HiWay {
 		}
 
 		protected void launchTask(TaskInstance task, Container allocatedContainer) {
-			containerIdToInvocation.put(allocatedContainer.getId().getId(), new HiWayInvocation(task));
+			containerIdToInvocation.put(allocatedContainer.getId().getContainerId(), new HiWayInvocation(task));
 			log.info("Launching workflow task on a new container." + ", task=" + task + ", containerId=" + allocatedContainer.getId() + ", containerNode="
 					+ allocatedContainer.getNodeId().getHost() + ":" + allocatedContainer.getNodeId().getPort() + ", containerNodeURI="
 					+ allocatedContainer.getNodeHttpAddress() + ", containerResourceMemory" + allocatedContainer.getResource().getMemory());
@@ -464,9 +464,9 @@ public abstract class HiWay {
 				String diagnostics = containerStatus.getDiagnostics();
 				ContainerId containerId = containerStatus.getContainerId();
 
-				if (containerIdToInvocation.containsKey(containerId.getId())) {
+				if (containerIdToInvocation.containsKey(containerId.getContainerId())) {
 
-					HiWayInvocation invocation = containerIdToInvocation.get(containerStatus.getContainerId().getId());
+					HiWayInvocation invocation = containerIdToInvocation.get(containerStatus.getContainerId().getContainerId());
 					TaskInstance finishedTask = invocation.task;
 
 					if (exitStatus == 0) {
@@ -612,7 +612,7 @@ public abstract class HiWay {
 	protected Configuration conf;
 	protected int containerCores = 1;
 	// a data structure storing the invocation launched by each container
-	protected Map<Integer, HiWayInvocation> containerIdToInvocation = new HashMap<>();
+	protected Map<Long, HiWayInvocation> containerIdToInvocation = new HashMap<>();
 	// a listener for processing the responses from the NodeManagers
 	protected NMCallbackHandler containerListener;
 	// the memory and number of virtual cores to request for the container on which the workflow tasks are launched

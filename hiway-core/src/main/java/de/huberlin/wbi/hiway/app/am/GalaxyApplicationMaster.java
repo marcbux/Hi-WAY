@@ -206,7 +206,8 @@ public class GalaxyApplicationMaster extends HiWay {
 	public static class GalaxyParamValue extends GalaxyParam {
 		private String defaultValue;
 		private Map<Object, Object> mappings;
-		String dataType;
+		private String dataType;
+		private String from_work_dir;
 
 		public GalaxyParamValue(String name) {
 			super(name);
@@ -268,6 +269,18 @@ public class GalaxyApplicationMaster extends HiWay {
 		// public Set<GalaxyDataType> getDataTypes() {
 		// return dataTypes;
 		// }
+
+		public String getFrom_work_dir() {
+			return from_work_dir;
+		}
+
+		public void setFrom_work_dir(String from_work_dir) {
+			this.from_work_dir = from_work_dir;
+		}
+
+		public boolean hasFrom_work_dir() {
+			return from_work_dir != null && from_work_dir.length() > 0;
+		}
 	}
 
 	public static class GalaxyTool {
@@ -276,13 +289,15 @@ public class GalaxyApplicationMaster extends HiWay {
 		private String template;
 		private Set<GalaxyParam> params;
 		private final String env;
+		
+//		private final String changeset_revision;
+//		private final String owner;		
 
 		public GalaxyTool(String id, String version, String dir, String env) {
 			this.id = id;
 			this.version = version;
 			params = new HashSet<>();
-			this.env = "PATH=" + dir + ":$PATH; export PATH\n" + "PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n"
-					+ (env.endsWith("\n") ? env : env + "\n");
+			this.env = "PATH=" + dir + ":$PATH; export PATH\n" + "PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n" + (env.endsWith("\n") ? env : env + "\n");
 		}
 
 		public GalaxyParamValue getFirstMatchingParamByName(String name) {
@@ -526,10 +541,21 @@ public class GalaxyApplicationMaster extends HiWay {
 			this.galaxyTool = galaxyTool;
 			pickleScript = new StringBuilder("import cPickle as pickle\ntool_state = ");
 			toolState = new JSONObject();
+			this.postScript = "";
+		}
+		
+private String postScript;
+		
+		public String getPostScript() {
+			return postScript;
 		}
 
 		public GalaxyTool getGalaxyTool() {
 			return galaxyTool;
+		}
+		
+		public void addToPostScript(String post) {
+			postScript = postScript + (post.endsWith("\n") ? post : post + "\n");
 		}
 
 		public void addToolState(String toolState) {
@@ -572,22 +598,29 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 
 		public void buildTemplate() {
-			String env = galaxyTool.getEnv();
+			String preScript = galaxyTool.getEnv();
 			String template = galaxyTool.getTemplate();
+			String postScript = getPostScript();
 
 			// ???
-			env = env.replaceAll(toolShedPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/shed_tools");
-			env = env.replaceAll(galaxyPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/galaxy");
-			env = env.replaceAll("\\\\", "/");
+			preScript = preScript.replaceAll(toolShedPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/shed_tools");
+			preScript = preScript.replaceAll(galaxyPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/galaxy");
+			preScript = preScript.replaceAll("\\\\", "/");
 
-			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(workflowPath + "." + id + ".env.sh"))) {
-				scriptWriter.write(env);
+			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(workflowPath + "." + id + ".pre.sh"))) {
+				scriptWriter.write(preScript);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 
 			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(workflowPath + "." + id + ".template.tmpl"))) {
 				scriptWriter.write(template);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(workflowPath + "." + id + ".post.sh"))) {
+				scriptWriter.write(postScript);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -989,7 +1022,7 @@ public class GalaxyApplicationMaster extends HiWay {
 						// command = command.replaceAll("\\.extension", "_extension");
 						command = command.replaceAll("\\.value", "");
 						command = command.replaceAll("\\.dataset", "");
-//						command = command.replaceAll("\\.fields\\.path", "");
+						// command = command.replaceAll("\\.fields\\.path", "");
 						tool.setTemplate(command);
 					}
 
@@ -1013,6 +1046,9 @@ public class GalaxyApplicationMaster extends HiWay {
 							} else {
 								param.setDataType(format);
 							}
+
+							String from_work_dir = dataEl.getAttribute("from_work_dir");
+							param.setFrom_work_dir(from_work_dir);
 						}
 					}
 
@@ -1145,7 +1181,8 @@ public class GalaxyApplicationMaster extends HiWay {
 						String fileName = id + "_" + outputName;
 						GalaxyDataType dataType = null;
 
-						String outputTypeString = tool.getFirstMatchingParamByName(outputName).getDataType();
+						GalaxyParamValue param = tool.getFirstMatchingParamByName(outputName);
+						String outputTypeString = param.getDataType();
 						if (galaxyDataTypes.containsKey(outputTypeString)) {
 							dataType = galaxyDataTypes.get(outputTypeString);
 						} else if (inputNameToIdName.containsKey(outputTypeString)) {
@@ -1162,6 +1199,10 @@ public class GalaxyApplicationMaster extends HiWay {
 						}
 						if (renameOutputs.containsKey(outputName))
 							fileName = renameOutputs.get(outputName);
+
+						if (param.hasFrom_work_dir())
+							task.addToPostScript("mv " + param.getFrom_work_dir() + " " + fileName);
+
 						GalaxyData data = new GalaxyData(fileName);
 						data.setDataType(dataType);
 
