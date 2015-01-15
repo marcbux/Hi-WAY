@@ -2,14 +2,12 @@ package de.huberlin.wbi.hiway.app.am;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -27,7 +25,6 @@ import javax.xml.parsers.FactoryConfigurationError;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
 import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
@@ -45,10 +42,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
-import org.znerd.xmlenc.XMLOutputter;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.ForeignLambdaExpr;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
@@ -288,16 +285,34 @@ public class GalaxyApplicationMaster extends HiWay {
 		private final String version;
 		private String template;
 		private Set<GalaxyParam> params;
-		private final String env;
-		
-//		private final String changeset_revision;
-//		private final String owner;		
+		private String env;
+		private Map<String, String> requirements;
 
-		public GalaxyTool(String id, String version, String dir, String env) {
+		// private final String changeset_revision;
+		// private final String owner;
+
+		public GalaxyTool(String id, String version, String dir) {
 			this.id = id;
 			this.version = version;
 			params = new HashSet<>();
-			this.env = "PATH=" + dir + ":$PATH; export PATH\n" + "PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n" + (env.endsWith("\n") ? env : env + "\n");
+			this.env = "PATH=" + dir + ":$PATH; export PATH\n" + "PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n";
+			requirements = new HashMap<>();
+		}
+
+		public void addRequirement(String name, String version) {
+			requirements.put(name, version);
+		}
+
+		public Set<String> getRequirements() {
+			return requirements.keySet();
+		}
+
+		public String getRequirementVersion(String name) {
+			return requirements.get(name);
+		}
+
+		public void addEnv(String env) {
+			this.env = this.env + (env.endsWith("\n") ? env : env + "\n");
 		}
 
 		public GalaxyParamValue getFirstMatchingParamByName(String name) {
@@ -543,9 +558,9 @@ public class GalaxyApplicationMaster extends HiWay {
 			toolState = new JSONObject();
 			this.postScript = "";
 		}
-		
-private String postScript;
-		
+
+		private String postScript;
+
 		public String getPostScript() {
 			return postScript;
 		}
@@ -553,7 +568,7 @@ private String postScript;
 		public GalaxyTool getGalaxyTool() {
 			return galaxyTool;
 		}
-		
+
 		public void addToPostScript(String post) {
 			postScript = postScript + (post.endsWith("\n") ? post : post + "\n");
 		}
@@ -648,6 +663,7 @@ private String postScript;
 			for (String toolDir : hiWayConf.get(HiWayConfiguration.HIWAY_GALAXY_TOOLS).split(",")) {
 				// if (!processToolDir(new File(toolDir.trim()), builder))
 				// return false;
+				log.info(builder.toString() + toolDir.toString());
 			}
 		} catch (ParserConfigurationException | FactoryConfigurationError e) {
 			e.printStackTrace();
@@ -660,23 +676,45 @@ private String postScript;
 		galaxyDataTypes = new HashMap<>();
 		processDataTypeDir(new File(galaxyPath + "/lib/galaxy/datatypes"));
 
+		String tool_data_table_config_path = "config/tool_data_table_conf.xml.sample";
+		String shed_tool_data_table_config = "config/shed_tool_data_table_conf.xml.sample";
+		String tool_dependency_dir = "dependencies";
+		String tool_path = "tools";
+		String tool_config_file = "config/tool_conf.xml.sample";
+		try (BufferedReader iniBr = new BufferedReader(new FileReader(new File(galaxyPath + "/config/galaxy.ini")))) {
+			String line;
+			while ((line = iniBr.readLine()) != null) {
+				if (line.startsWith("tool_data_table_config_path"))
+					tool_data_table_config_path = line.split("=")[1].trim();
+				if (line.startsWith("shed_tool_data_table_config"))
+					shed_tool_data_table_config = line.split("=")[1].trim();
+				if (line.startsWith("tool_dependency_dir"))
+					tool_dependency_dir = line.split("=")[1].trim();
+				if (line.startsWith("tool_path"))
+					tool_path = line.split("=")[1].trim();
+				if (line.startsWith("tool_config_file"))
+					tool_config_file = line.split("=")[1].trim();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		String[] tool_config_files = tool_config_file.split(",");
+
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 
 			galaxyDataTables = new HashMap<>();
-			File shed_tool_data_table_conf = new File(galaxyPath + "/config/shed_tool_data_table_conf.xml");
-			if (!shed_tool_data_table_conf.exists())
-				shed_tool_data_table_conf = new File(galaxyPath + "/config/shed_tool_data_table_conf.xml.sample");
-			File tool_data_table_conf = new File(galaxyPath + "/config/tool_data_table_conf.xml");
-			if (!tool_data_table_conf.exists())
-				tool_data_table_conf = new File(galaxyPath + "/config/tool_data_table_conf.xml.sample");
-			processDataTables(shed_tool_data_table_conf, builder);
-			processDataTables(tool_data_table_conf, builder);
+			processDataTables(new File(galaxyPath + "/" + tool_data_table_config_path), builder);
+			processDataTables(new File(galaxyPath + "/" + shed_tool_data_table_config), builder);
 
 			galaxyTools = new HashMap<>();
-			parseToolDir(new File(galaxyPath + "/tools"), builder);
-			parseToolDir(new File(toolShedPath), builder);
-			processTools(builder);
+			// parseToolDir(new File(galaxyPath + "/tools"), builder);
+			// parseToolDir(new File(toolShedPath), builder);
+			for (String config_file : tool_config_files) {
+				processToolLibraries(new File(galaxyPath + "/" + config_file.trim()), builder, tool_path, tool_dependency_dir);
+			}
+
+			// processTools(builder);
 		} catch (ParserConfigurationException | FactoryConfigurationError e) {
 			e.printStackTrace();
 		}
@@ -684,9 +722,9 @@ private String postScript;
 	}
 
 	private static boolean processDataTables(File file, DocumentBuilder builder) {
-		Document doc;
+
 		try {
-			doc = builder.parse(file);
+			Document doc = builder.parse(file);
 			NodeList tables = doc.getElementsByTagName("table");
 			for (int i = 0; i < tables.getLength(); i++) {
 				Element tableEl = (Element) tables.item(i);
@@ -727,6 +765,83 @@ private String postScript;
 			e.printStackTrace();
 		}
 
+	}
+
+	private static boolean processToolLibraries(File file, DocumentBuilder builder, String defaultPath, String dependencyDir) {
+		try {
+			File galaxyPathFile = new File(galaxyPath);
+			File dir = new File(galaxyPathFile, defaultPath);
+			Document doc = builder.parse(file);
+			Element toolboxEl = doc.getDocumentElement();
+			if (toolboxEl.hasAttribute("tool_path")) {
+				dir = new File(galaxyPathFile, toolboxEl.getAttribute("tool_path"));
+			}
+
+			NodeList tools = toolboxEl.getElementsByTagName("tool");
+			for (int i = 0; i < tools.getLength(); i++) {
+				Element toolEl = (Element) tools.item(i);
+				String toolFile = toolEl.getAttribute("file");
+				GalaxyTool tool = parseToolFile(new File(dir, toolFile), builder);
+
+				// else if (rootEl.getNodeName() == "tool_dependency") {
+				// NodeList packageNds = (NodeList) rootEl.getElementsByTagName("package");
+				// for (int i = 0; i < packageNds.getLength(); i++) {
+				// Element packageEl = (Element) packageNds.item(i);
+				// String packageName = packageEl.getAttribute("name");
+				// String version = packageEl.getAttribute("version");
+				//
+				// NodeList repositoryNds = (NodeList) packageEl.getElementsByTagName("repository");
+				// for (int j = 0; j < repositoryNds.getLength(); j++) {
+				// Element repositoryEl = (Element) repositoryNds.item(j);
+				// String changeset_revision = repositoryEl.getAttribute("changeset_revision");
+				// String repositoryName = repositoryEl.getAttribute("name");
+				// String owner = repositoryEl.getAttribute("owner");
+				//
+				// File envFile = new File(galaxyPath + "/dependencies/" + packageName + "/" + version + "/" + owner + "/" + repositoryName + "/"
+				// + changeset_revision + "/env.sh");
+				// if (envFile.exists()) {
+				// try (BufferedReader br = new BufferedReader(new FileReader(envFile))) {
+				// String line;
+				// while ((line = br.readLine()) != null) {
+				// env.append(line).append("\n");
+				// }
+				// }
+				// }
+				//
+				// }
+				// }
+				// }
+
+				// NodeList repositoryNds = toolEl.getElementsByTagName("tool_shed");
+				// String repository = repositoryNds.getLength() > 0 ? repositoryNds.item(0).getChildNodes().item(0).getNodeValue().trim() : "";
+				NodeList ownerNds = toolEl.getElementsByTagName("repository_owner");
+				String owner = ownerNds.getLength() > 0 ? ownerNds.item(0).getChildNodes().item(0).getNodeValue().trim() : "";
+				NodeList revisionNds = toolEl.getElementsByTagName("installed_changeset_revision");
+				String revision = revisionNds.getLength() > 0 ? revisionNds.item(0).getChildNodes().item(0).getNodeValue().trim() : "";
+				// NodeList versionNds = toolEl.getElementsByTagName("version");
+				// String version = versionNds.getLength() > 0 ? versionNds.item(0).getChildNodes().item(0).getNodeValue().trim() : "";
+
+				if (owner.length() > 0 && revision.length() > 0) {
+					for (String requirementName : tool.getRequirements()) {
+						File envFile = new File(galaxyPath + "/" + dependencyDir, requirementName + "/" + tool.getRequirementVersion(requirementName) + "/"
+								+ owner + "/" + tool.getId() + "/" + revision + "/env.sh");
+						if (envFile.exists()) {
+							try (BufferedReader br = new BufferedReader(new FileReader(envFile))) {
+								String line;
+								while ((line = br.readLine()) != null) {
+									tool.addEnv(line);
+								}
+							}
+						}
+					}
+				}
+
+			}
+		} catch (SAXException | IOException e) {
+			e.printStackTrace();
+		}
+
+		return true;
 	}
 
 	private static boolean processDataTypeDir(File dir) {
@@ -906,83 +1021,31 @@ private String postScript;
 		return params;
 	}
 
-	private static Map<String, String> toolDescriptionToDir = new HashMap<>();
-	private static Map<String, String> dirToEnv = new HashMap<>();
+	// private static Map<String, String> toolDescriptionToDir = new HashMap<>();
+	// private static Map<String, String> dirToEnv = new HashMap<>();
 	private static Map<String, String> macrosByName = new HashMap<>();
 
-	private static boolean parseToolDir(File dir, DocumentBuilder builder) {
+	private static GalaxyTool parseToolFile(File file, DocumentBuilder builder) {
 		try {
-			StringBuilder env = new StringBuilder();
-			for (File file : dir.listFiles()) {
-				if (file.isDirectory()) {
-					parseToolDir(file, builder);
-				} else if (file.getName().endsWith(".xml")) {
+			String path = file.getCanonicalPath();
+			// ???
+			String dir = path.substring(0, path.lastIndexOf("\\"));
+			// StringBuilder env = new StringBuilder();
+			Document doc = builder.parse(file);
+			Element rootEl = doc.getDocumentElement();
+			Transformer transformer = TransformerFactory.newInstance().newTransformer();
+			transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+			StreamResult result = new StreamResult(new StringWriter());
+			DOMSource source = new DOMSource(rootEl);
+			transformer.transform(source, result);
+			String toolDescription = result.getWriter().toString();
 
-					Document doc = builder.parse(file);
-					Element rootEl = doc.getDocumentElement();
-					if (rootEl.getNodeName() == "tool") {
-						Transformer transformer = TransformerFactory.newInstance().newTransformer();
-						transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-						StreamResult result = new StreamResult(new StringWriter());
-						DOMSource source = new DOMSource(rootEl);
-						transformer.transform(source, result);
-						toolDescriptionToDir.put(result.getWriter().toString(), dir.getCanonicalPath());
-					} else if (rootEl.getNodeName() == "tool_dependency") {
-						NodeList packageNds = (NodeList) rootEl.getElementsByTagName("package");
-						for (int i = 0; i < packageNds.getLength(); i++) {
-							Element packageEl = (Element) packageNds.item(i);
-							String packageName = packageEl.getAttribute("name");
-							String version = packageEl.getAttribute("version");
-
-							NodeList repositoryNds = (NodeList) packageEl.getElementsByTagName("repository");
-							for (int j = 0; j < repositoryNds.getLength(); j++) {
-								Element repositoryEl = (Element) repositoryNds.item(j);
-								String changeset_revision = repositoryEl.getAttribute("changeset_revision");
-								String repositoryName = repositoryEl.getAttribute("name");
-								String owner = repositoryEl.getAttribute("owner");
-
-								File envFile = new File(galaxyPath + "/dependencies/" + packageName + "/" + version + "/" + owner + "/" + repositoryName + "/"
-										+ changeset_revision + "/env.sh");
-								if (envFile.exists()) {
-									try (BufferedReader br = new BufferedReader(new FileReader(envFile))) {
-										String line;
-										while ((line = br.readLine()) != null) {
-											env.append(line).append("\n");
-										}
-									}
-								}
-
-							}
-						}
-					}
-
-					NodeList macroNds = (NodeList) rootEl.getElementsByTagName("macro");
-					for (int i = 0; i < macroNds.getLength(); i++) {
-						Element macroEl = (Element) macroNds.item(i);
-						String name = macroEl.getAttribute("name");
-
-						Transformer transformer = TransformerFactory.newInstance().newTransformer();
-						transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-						StreamResult result = new StreamResult(new StringWriter());
-						DOMSource source = new DOMSource(macroEl);
-						transformer.transform(source, result);
-						String macro = result.getWriter().toString();
-						macro = macro.substring(macro.indexOf('\n') + 1, macro.lastIndexOf('\n') - 1);
-						macrosByName.put(name, macro);
-					}
-
-				}
+			NodeList macrosNds = (NodeList) rootEl.getElementsByTagName("macros");
+			for (int i = 0; i < macrosNds.getLength(); i++) {
+				Node macrosNd = macrosNds.item(i);
+				processMacros(macrosNd, builder, dir);
 			}
-			dirToEnv.put(dir.getCanonicalPath(), env.toString());
-		} catch (SAXException | IOException | TransformerException e) {
-			return false;
-		}
-		return true;
-	}
 
-	private static boolean processTools(DocumentBuilder builder) {
-		for (String toolDescription : toolDescriptionToDir.keySet()) {
-			String dir = toolDescriptionToDir.get(toolDescription);
 			Pattern p = Pattern.compile("<expand macro=\"([^\"]*)\"(>.*?</expand>|/>)", Pattern.DOTALL);
 			Matcher m = p.matcher(toolDescription);
 			while (m.find()) {
@@ -996,75 +1059,125 @@ private String postScript;
 				if (with != null)
 					toolDescription = toolDescription.replace(replace, with);
 			}
-			try {
-				Document doc = builder.parse(new InputSource(new StringReader(toolDescription)));
-				Element rootEl = doc.getDocumentElement();
-				if (rootEl.getNodeName() == "tool") {
-					String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
-					String id = rootEl.getAttribute("id");
-					GalaxyTool tool = new GalaxyTool(id, version, dir, dirToEnv.get(dir));
+			
+			doc = builder.parse(new InputSource(new StringReader(toolDescription)));
+			rootEl = doc.getDocumentElement();
 
-					Element commandEl = (Element) rootEl.getElementsByTagName("command").item(0);
-					if (commandEl != null) {
-						String command = commandEl.getChildNodes().item(0).getNodeValue().trim();
-						String script = command.split(" ")[0];
-						String interpreter = commandEl.getAttribute("interpreter");
-						if (interpreter.length() > 0) {
-							// ???
-							dir = dir.replaceAll(toolShedPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/shed_tools");
-							dir = dir.replaceAll(galaxyPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/galaxy");
-							dir = dir.replaceAll("\\\\", "/");
+			String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
+			String id = rootEl.getAttribute("id");
+			GalaxyTool tool = new GalaxyTool(id, version, dir);
 
-							command = command.replace(script, dir + "/" + script);
-							command = interpreter + " " + command;
-						}
-						// command = command.replaceAll("\\.metadata\\.", "_metadata.");
-						// command = command.replaceAll("\\.extension", "_extension");
-						command = command.replaceAll("\\.value", "");
-						command = command.replaceAll("\\.dataset", "");
-						// command = command.replaceAll("\\.fields\\.path", "");
-						tool.setTemplate(command);
-					}
-
-					Element inputsEl = (Element) rootEl.getElementsByTagName("inputs").item(0);
-					if (inputsEl != null)
-						tool.setParams(getParams(inputsEl));
-
-					Element outputsEl = (Element) rootEl.getElementsByTagName("outputs").item(0);
-					if (outputsEl != null) {
-						NodeList dataNds = outputsEl.getElementsByTagName("data");
-						for (int i = 0; i < dataNds.getLength(); i++) {
-							Element dataEl = (Element) dataNds.item(i);
-							String name = dataEl.getAttribute("name");
-							GalaxyParamValue param = new GalaxyParamValue(name);
-							tool.addParam(name, param);
-
-							String format = dataEl.getAttribute("format");
-							String metadata_source = dataEl.getAttribute("metadata_source");
-							if (format.equals("input") && metadata_source != null && metadata_source.length() > 0) {
-								param.setDataType(metadata_source);
-							} else {
-								param.setDataType(format);
-							}
-
-							String from_work_dir = dataEl.getAttribute("from_work_dir");
-							param.setFrom_work_dir(from_work_dir);
-						}
-					}
-
-					if (tool.getTemplate() != null) {
-						Map<String, GalaxyTool> toolMap = addAndGetToolMap(id);
-						toolMap.put(version, tool);
-					}
-
-				}
-			} catch (SAXException | IOException | XPathExpressionException e) {
-				e.printStackTrace();
-				return false;
+			NodeList requirementNds = rootEl.getElementsByTagName("requirement");
+			for (int i = 0; i < requirementNds.getLength(); i++) {
+				Element requirementEl = (Element) requirementNds.item(i);
+				String requirementName = requirementEl.getChildNodes().item(0).getNodeValue().trim();
+				String requirementVersion = requirementEl.getAttribute("version");
+				tool.addRequirement(requirementName, requirementVersion);
 			}
+
+			Element commandEl = (Element) rootEl.getElementsByTagName("command").item(0);
+			if (commandEl != null) {
+				String command = commandEl.getChildNodes().item(0).getNodeValue().trim();
+				String script = command.split(" ")[0];
+				String interpreter = commandEl.getAttribute("interpreter");
+				if (interpreter.length() > 0) {
+					// ???
+					dir = dir.replaceAll(toolShedPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/shed_tools");
+					dir = dir.replaceAll(galaxyPath.replaceAll("\\\\", "\\\\\\\\"), "/home/hiway/software/galaxy");
+					dir = dir.replaceAll("\\\\", "/");
+
+					command = command.replace(script, dir + "/" + script);
+					command = interpreter + " " + command;
+				}
+				// command = command.replaceAll("\\.metadata\\.", "_metadata.");
+				// command = command.replaceAll("\\.extension", "_extension");
+				command = command.replaceAll("\\.value", "");
+				command = command.replaceAll("\\.dataset", "");
+				// command = command.replaceAll("\\.fields\\.path", "");
+				tool.setTemplate(command);
+			}
+
+			Element inputsEl = (Element) rootEl.getElementsByTagName("inputs").item(0);
+			if (inputsEl != null)
+				tool.setParams(getParams(inputsEl));
+
+			Element outputsEl = (Element) rootEl.getElementsByTagName("outputs").item(0);
+			if (outputsEl != null) {
+				NodeList dataNds = outputsEl.getElementsByTagName("data");
+				for (int i = 0; i < dataNds.getLength(); i++) {
+					Element dataEl = (Element) dataNds.item(i);
+					String name = dataEl.getAttribute("name");
+					GalaxyParamValue param = new GalaxyParamValue(name);
+					tool.addParam(name, param);
+
+					String format = dataEl.getAttribute("format");
+					String metadata_source = dataEl.getAttribute("metadata_source");
+					if (format.equals("input") && metadata_source != null && metadata_source.length() > 0) {
+						param.setDataType(metadata_source);
+					} else {
+						param.setDataType(format);
+					}
+
+					String from_work_dir = dataEl.getAttribute("from_work_dir");
+					param.setFrom_work_dir(from_work_dir);
+				}
+			}
+
+			if (tool.getTemplate() != null) {
+				Map<String, GalaxyTool> toolMap = addAndGetToolMap(id);
+				toolMap.put(version, tool);
+			}
+
+			return tool;
+
+		} catch (SAXException | IOException | TransformerException | XPathExpressionException e) {
+			return null;
+		}
+	}
+
+	private static boolean processMacros(Node macrosNd, DocumentBuilder builder, String dir) {
+		try {
+			Element macrosEl = (Element) macrosNd;
+			NodeList importNds = macrosEl.getElementsByTagName("import");
+			for (int j = 0; j < importNds.getLength(); j++) {
+				Element importEl = (Element) importNds.item(j);
+				String importFileName = importEl.getChildNodes().item(0).getNodeValue().trim();
+				File file = new File(dir, importFileName);
+				Document doc = builder.parse(file);
+				processMacros(doc.getDocumentElement(), builder, dir);
+			}
+
+			NodeList macroNds = macrosEl.getElementsByTagName("macro");
+			for (int j = 0; j < macroNds.getLength(); j++) {
+				Element macroEl = (Element) macroNds.item(j);
+				String name = macroEl.getAttribute("name");
+
+				Transformer transformer = TransformerFactory.newInstance().newTransformer();
+				transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+				StreamResult result = new StreamResult(new StringWriter());
+				DOMSource source = new DOMSource(macroEl);
+				transformer.transform(source, result);
+				String macro = result.getWriter().toString();
+				macro = macro.substring(macro.indexOf('\n') + 1, macro.lastIndexOf('\n') - 1);
+				macrosByName.put(name, macro);
+			}
+		} catch (SAXException | IOException | TransformerException e) {
+			e.printStackTrace();
 		}
 		return true;
 	}
+
+	// private static boolean processTools(DocumentBuilder builder) {
+	// for (String toolDescription : toolDescriptionToDir.keySet()) {
+	// try {
+	//
+	// } catch (SAXException | IOException | XPathExpressionException e) {
+	// e.printStackTrace();
+	// return false;
+	// }
+	// }
+	// return true;
+	// }
 
 	private static Map<String, GalaxyTool> addAndGetToolMap(String id) {
 		if (!galaxyTools.containsKey(id)) {
