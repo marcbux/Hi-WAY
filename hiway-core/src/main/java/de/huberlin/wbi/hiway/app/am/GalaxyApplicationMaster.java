@@ -814,6 +814,8 @@ public class GalaxyApplicationMaster extends HiWay {
 
 				// NodeList repositoryNds = toolEl.getElementsByTagName("tool_shed");
 				// String repository = repositoryNds.getLength() > 0 ? repositoryNds.item(0).getChildNodes().item(0).getNodeValue().trim() : "";
+				NodeList repositoryNameNds = toolEl.getElementsByTagName("repository_name");
+				String repositoryName = repositoryNameNds.getLength() > 0 ? repositoryNameNds.item(0).getChildNodes().item(0).getNodeValue().trim() : "";
 				NodeList ownerNds = toolEl.getElementsByTagName("repository_owner");
 				String owner = ownerNds.getLength() > 0 ? ownerNds.item(0).getChildNodes().item(0).getNodeValue().trim() : "";
 				NodeList revisionNds = toolEl.getElementsByTagName("installed_changeset_revision");
@@ -821,10 +823,10 @@ public class GalaxyApplicationMaster extends HiWay {
 				// NodeList versionNds = toolEl.getElementsByTagName("version");
 				// String version = versionNds.getLength() > 0 ? versionNds.item(0).getChildNodes().item(0).getNodeValue().trim() : "";
 
-				if (owner.length() > 0 && revision.length() > 0) {
+				if (repositoryName.length() > 0 && owner.length() > 0 && revision.length() > 0) {
 					for (String requirementName : tool.getRequirements()) {
 						File envFile = new File(galaxyPath + "/" + dependencyDir, requirementName + "/" + tool.getRequirementVersion(requirementName) + "/"
-								+ owner + "/" + tool.getId() + "/" + revision + "/env.sh");
+								+ owner + "/" + repositoryName + "/" + revision + "/env.sh");
 						if (envFile.exists()) {
 							try (BufferedReader br = new BufferedReader(new FileReader(envFile))) {
 								String line;
@@ -1066,7 +1068,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
 			String id = rootEl.getAttribute("id");
 			GalaxyTool tool = new GalaxyTool(id, version, dir);
-
+			
 			NodeList requirementNds = rootEl.getElementsByTagName("requirement");
 			for (int i = 0; i < requirementNds.getLength(); i++) {
 				Element requirementEl = (Element) requirementNds.item(i);
@@ -1268,6 +1270,8 @@ public class GalaxyApplicationMaster extends HiWay {
 								String output_name = post_job_action.getString("output_name");
 								JSONObject action_arguments = post_job_action.getJSONObject("action_arguments");
 								String newname = action_arguments.getString("newname");
+								if (newname.contains(" "))
+									newname = "\"" + newname + "\"";
 								renameOutputs.put(output_name, newname);
 							} else if (action_type.equals("HideDatasetAction")) {
 								String output_name = post_job_action.getString("output_name");
