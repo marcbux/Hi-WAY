@@ -7,8 +7,9 @@
  *
  * List of Contributors:
  *
- * Jörgen Brandt (HU Berlin)
  * Marc Bux (HU Berlin)
+ * Jörgen Brandt (HU Berlin)
+ * Hannes Schuh (HU Berlin)
  * Ulf Leser (HU Berlin)
  *
  * Jörgen Brandt is funded by the European Commission through the BiobankCloud
@@ -87,12 +88,12 @@ public abstract class StaticScheduler extends Scheduler {
 		super.getNextTask(container);
 		String node = container.getNodeId().getHost();
 
-		log.info("Looking for task on container " + container.getId().getId() + " on node " + node);
+		log.info("Looking for task on container " + container.getId().getContainerId() + " on node " + node);
 		log.info("Queue: " + queues.get(node).toString());
 
 		TaskInstance task = queues.get(node).remove();
 
-		log.info("Assigned task " + task + " to container " + container.getId().getId() + " on node " + node);
+		log.info("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + node);
 		task.incTries();
 
 		return task;

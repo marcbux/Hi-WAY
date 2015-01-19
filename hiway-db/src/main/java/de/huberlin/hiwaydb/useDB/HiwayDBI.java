@@ -7,9 +7,9 @@
  *
  * List of Contributors:
  *
+ * Hannes Schuh (HU Berlin)
  * Marc Bux (HU Berlin)
  * Jörgen Brandt (HU Berlin)
- * Hannes Schuh (HU Berlin)
  * Ulf Leser (HU Berlin)
  *
  * Jörgen Brandt is funded by the European Commission through the BiobankCloud
@@ -30,48 +30,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.logstats;
+package de.huberlin.hiwaydb.useDB;
 
-public class WorkfowRun {
+import java.util.Collection;
+import java.util.Set;
 
-	private int maxConcurrentNodes;
-	private long noTaskReadyTime;
-	private long runtime;
-	private long runOnsetTimestamp;
+import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 
-	public WorkfowRun() {
-	}
+public interface HiwayDBI {
 
-	public int getMaxConcurrentNodes() {
-		return maxConcurrentNodes;
-	}
+	public static final String KEY_FILE_TIME_STAGEIN = "file-time-stagein";
+	public static final String KEY_FILE_TIME_STAGEOUT = "file-time-stageout";
+	public static final String KEY_HIWAY_EVENT = "hiway-event";
+	public static final String KEY_INVOC_HOST = "invoc-host";
+	public static final String KEY_INVOC_TIME_SCHED = "invoc-time-sched";
+	public static final String KEY_INVOC_TIME_STAGEIN = "invoc-time-stagein";
+	public static final String KEY_INVOC_TIME_STAGEOUT = "invoc-time-stageout";
+	public static final String KEY_WF_NAME = "wf-name";
+	public static final String KEY_WF_TIME = "wf-time";
 
-	public long getNoTaskReadyTime() {
-		return noTaskReadyTime;
-	}
+	public Set<String> getHostNames();
+	public Set<Long> getTaskIdsForWorkflow(String workflowName);
 
-	public long getRuntime() {
-		return runtime;
-	}
+	public String getTaskName(long taskId);
 	
-	public long getRunOnsetTimestamp() {
-		return runOnsetTimestamp;
-	}
+	public Collection<InvocStat> getLogEntriesForTasks(Set<Long> taskIds);
+	public Collection<InvocStat> getLogEntriesForTaskOnHostSince(long taskId, String hostName, long timestamp);
 
-	public void setMaxConcurrentNodes(int maxConcurrentNodes) {
-		this.maxConcurrentNodes = maxConcurrentNodes;
-	}
-
-	public void setNoTaskReadyTime(long noTaskReadyTime) {
-		this.noTaskReadyTime = noTaskReadyTime;
-	}
-	
-	public void setRuntime(long runtime) {
-		this.runtime = runtime;
-	}
-
-	public void setRunOnsetTimestamp(long runOnsetTimestamp) {
-		this.runOnsetTimestamp = runOnsetTimestamp;
-	}
+	public void logToDB(JsonReportEntry entry);	
 
 }

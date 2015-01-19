@@ -7,8 +7,9 @@
  *
  * List of Contributors:
  *
- * Jörgen Brandt (HU Berlin)
  * Marc Bux (HU Berlin)
+ * Jörgen Brandt (HU Berlin)
+ * Hannes Schuh (HU Berlin)
  * Ulf Leser (HU Berlin)
  *
  * Jörgen Brandt is funded by the European Commission through the BiobankCloud
@@ -274,7 +275,7 @@ public abstract class Scheduler {
 		numberOfRunningTasks--;
 		numberOfFinishedTasks++;
 
-		log.info("Task " + task + " in container " + containerStatus.getContainerId().getId() + " finished after " + runtimeInMs + " ms");
+		log.info("Task " + task + " in container " + containerStatus.getContainerId().getContainerId() + " finished after " + runtimeInMs + " ms");
 
 		return new ArrayList<>();
 	}
@@ -282,7 +283,7 @@ public abstract class Scheduler {
 	public Collection<ContainerId> taskFailed(TaskInstance task, ContainerStatus containerStatus) {
 		numberOfRunningTasks--;
 
-		log.info("Task " + task + " on container " + containerStatus.getContainerId().getId() + " failed");
+		log.info("Task " + task + " on container " + containerStatus.getContainerId().getContainerId() + " failed");
 		if (task.retry(maxRetries)) {
 			log.info("Retrying task " + task + ".");
 			addTask(task);

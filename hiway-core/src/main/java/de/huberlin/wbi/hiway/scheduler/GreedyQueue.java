@@ -7,8 +7,9 @@
  *
  * List of Contributors:
  *
- * Jörgen Brandt (HU Berlin)
  * Marc Bux (HU Berlin)
+ * Jörgen Brandt (HU Berlin)
+ * Hannes Schuh (HU Berlin)
  * Ulf Leser (HU Berlin)
  *
  * Jörgen Brandt is funded by the European Commission through the BiobankCloud
@@ -79,7 +80,7 @@ public class GreedyQueue extends Scheduler {
 		super.getNextTask(container);
 		TaskInstance task = queue.remove();
 
-		log.info("Assigned task " + task + " to container " + container.getId().getId() + " on node " + container.getNodeId().getHost());
+		log.info("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
 		task.incTries();
 		return task;
 	}

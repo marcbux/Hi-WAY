@@ -1,19 +1,21 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>de.huberlin.wbi.hiway</groupId>
+	<groupId>de.hu-berlin.wbi.hiway</groupId>
 	<artifactId>hiway</artifactId>
-	<version>0.2.0-SNAPSHOT</version>
+	<version>1.0.0</version>
 	<packaging>pom</packaging>
 	<name>Hi-WAY</name>
 	<url>https://github.com/marcbux/Hi-WAY</url>
 	<modules>
 		<module>hiway-core</module>
+		<module>hiway-db</module>
 		<module>hiway-addons</module>
 		<module>hiway-dist</module>
 	</modules>
 	<properties>
 		<jdk.version>1.7</jdk.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<cuneiform.version>2.0.0-SNAPSHOT</cuneiform.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -29,28 +31,6 @@
 		<repository>
 			<id>ossrh</id>
 			<url>https://oss.sonatype.org/content/groups/public</url>
-		</repository>
-		<repository>
-			<id>BiobankCloud-releases</id>
-			<name>BiobankCloud-releases</name>
-			<url>https://klette.informatik.hu-berlin.de/artifactory/BiobankCloud-releases</url>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-		</repository>
-		<repository>
-			<id>BiobankCloud-snapshot</id>
-			<name>BiobankCloud-snapshot</name>
-			<url>https://klette.informatik.hu-berlin.de/artifactory/BiobankCloud-snapshot</url>
-			<releases>
-				<enabled>false</enabled>
-			</releases>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
 		</repository>
 	</repositories>
 </project>

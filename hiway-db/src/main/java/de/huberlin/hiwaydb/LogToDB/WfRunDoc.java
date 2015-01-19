@@ -7,9 +7,9 @@
  *
  * List of Contributors:
  *
+ * Hannes Schuh (HU Berlin)
  * Marc Bux (HU Berlin)
  * Jörgen Brandt (HU Berlin)
- * Hannes Schuh (HU Berlin)
  * Ulf Leser (HU Berlin)
  *
  * Jörgen Brandt is funded by the European Commission through the BiobankCloud
@@ -30,48 +30,69 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.logstats;
+package de.huberlin.hiwaydb.LogToDB;
 
-public class WorkfowRun {
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
-	private int maxConcurrentNodes;
-	private long noTaskReadyTime;
-	private long runtime;
-	private long runOnsetTimestamp;
+public class WfRunDoc {
 
-	public WorkfowRun() {
+	private String name;
+	private String runId;
+	private Long wfTime;
+	private Long reductionTime;
+	
+	private Map<String, String>  hiwayEvent = new HashMap<String, String> (0);
+	private Set<Long> taskIDs = new HashSet<Long>(0);
+
+	public String getName() {
+		return name;
 	}
 
-	public int getMaxConcurrentNodes() {
-		return maxConcurrentNodes;
+	public void setName(String name) {
+		this.name = name;
 	}
 
-	public long getNoTaskReadyTime() {
-		return noTaskReadyTime;
+	public String getRunId() {
+		return runId;
 	}
 
-	public long getRuntime() {
-		return runtime;
+	public void setRunId(String runId) {
+		this.runId = runId;
+	}
+
+	public Long getWfTime() {
+		return wfTime;
+	}
+
+	public void setWfTime(Long wfTime) {
+		this.wfTime = wfTime;
+	}
+
+	public Map<String, String> getHiwayEvent() {
+		return hiwayEvent;
+	}
+
+	public void setHiwayEvent(Map<String, String> hiwayEvent) {
+		this.hiwayEvent = hiwayEvent;
+	}
+
+	public Long getReductionTime() {
+		return reductionTime;
+	}
+
+	public void setReductionTime(Long reductionTime) {
+		this.reductionTime = reductionTime;
+	}
+
+	public Set<Long> getTaskIDs() {
+		return taskIDs;
+	}
+
+	public void setTaskIDs(Set<Long> taskIDs) {
+		this.taskIDs = taskIDs;
 	}
 	
-	public long getRunOnsetTimestamp() {
-		return runOnsetTimestamp;
-	}
-
-	public void setMaxConcurrentNodes(int maxConcurrentNodes) {
-		this.maxConcurrentNodes = maxConcurrentNodes;
-	}
-
-	public void setNoTaskReadyTime(long noTaskReadyTime) {
-		this.noTaskReadyTime = noTaskReadyTime;
-	}
-	
-	public void setRuntime(long runtime) {
-		this.runtime = runtime;
-	}
-
-	public void setRunOnsetTimestamp(long runOnsetTimestamp) {
-		this.runOnsetTimestamp = runOnsetTimestamp;
-	}
-
 }

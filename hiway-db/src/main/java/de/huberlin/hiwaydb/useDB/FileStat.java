@@ -7,9 +7,9 @@
  *
  * List of Contributors:
  *
+ * Hannes Schuh (HU Berlin)
  * Marc Bux (HU Berlin)
  * Jörgen Brandt (HU Berlin)
- * Hannes Schuh (HU Berlin)
  * Ulf Leser (HU Berlin)
  *
  * Jörgen Brandt is funded by the European Commission through the BiobankCloud
@@ -30,48 +30,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.logstats;
+package de.huberlin.hiwaydb.useDB;
 
-public class WorkfowRun {
+public class FileStat {
 
-	private int maxConcurrentNodes;
-	private long noTaskReadyTime;
-	private long runtime;
-	private long runOnsetTimestamp;
+	private String fileName;
+	private Long realTime;
+	private Long size;
 
-	public WorkfowRun() {
-	}
-
-	public int getMaxConcurrentNodes() {
-		return maxConcurrentNodes;
-	}
-
-	public long getNoTaskReadyTime() {
-		return noTaskReadyTime;
-	}
-
-	public long getRuntime() {
-		return runtime;
-	}
 	
-	public long getRunOnsetTimestamp() {
-		return runOnsetTimestamp;
+	public FileStat() {
 	}
 
-	public void setMaxConcurrentNodes(int maxConcurrentNodes) {
-		this.maxConcurrentNodes = maxConcurrentNodes;
+	public FileStat(Long size, Long realTime, String fileName) {
+		this.size = size;
+		this.realTime = realTime;
+		this.fileName = fileName;
 	}
 
-	public void setNoTaskReadyTime(long noTaskReadyTime) {
-		this.noTaskReadyTime = noTaskReadyTime;
-	}
-	
-	public void setRuntime(long runtime) {
-		this.runtime = runtime;
+	public FileStat(String fileName) {
+		this.fileName = fileName;
 	}
 
-	public void setRunOnsetTimestamp(long runOnsetTimestamp) {
-		this.runOnsetTimestamp = runOnsetTimestamp;
+	public String getFileName() {
+		return this.fileName;
+	}
+
+	public Long getRealTime() {
+		return this.realTime;
+	}
+
+	public Long getSize() {
+		return this.size;
+	}
+
+	public void setFileName(String fileName) {
+		this.fileName = fileName;
+	}
+
+	public void setRealTime(Long d) {
+		this.realTime = d;
+	}
+
+	public void setSize(Long size) {
+		this.size = size;
 	}
 
 }
+

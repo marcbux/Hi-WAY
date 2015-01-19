@@ -7,15 +7,16 @@
  *
  * List of Contributors:
  *
- * J�rgen Brandt (HU Berlin)
  * Marc Bux (HU Berlin)
+ * Jörgen Brandt (HU Berlin)
+ * Hannes Schuh (HU Berlin)
  * Ulf Leser (HU Berlin)
  *
- * J�rgen Brandt is funded by the European Commission through the BiobankCloud
+ * Jörgen Brandt is funded by the European Commission through the BiobankCloud
  * project. Marc Bux is funded by the Deutsche Forschungsgemeinschaft through
  * research training group SOAMED (GRK 1651).
  *
- * Copyright 2014 Humboldt-Universit�t zu Berlin
+ * Copyright 2014 Humboldt-Universität zu Berlin
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -391,10 +392,10 @@ public class C3PO extends Scheduler {
 				taskToContainers.get(task).add(container);
 
 				if (replicate) {
-					log.info("Assigned speculative copy of task " + task + " to container " + container.getId().getId() + " on node "
+					log.info("Assigned speculative copy of task " + task + " to container " + container.getId().getContainerId() + " on node "
 							+ container.getNodeId().getHost());
 				} else {
-					log.info("Assigned task " + task + " to container " + container.getId().getId() + " on node " + container.getNodeId().getHost());
+					log.info("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
 				}
 
 				task.incTries();

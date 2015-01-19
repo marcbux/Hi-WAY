@@ -7,8 +7,9 @@
  *
  * List of Contributors:
  *
- * Jörgen Brandt (HU Berlin)
  * Marc Bux (HU Berlin)
+ * Jörgen Brandt (HU Berlin)
+ * Hannes Schuh (HU Berlin)
  * Ulf Leser (HU Berlin)
  *
  * Jörgen Brandt is funded by the European Commission through the BiobankCloud

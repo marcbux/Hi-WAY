@@ -20,7 +20,7 @@
 			<useProjectArtifact>false</useProjectArtifact>
 			<useProjectAttachments>false</useProjectAttachments>
 			<excludes>
-				<exclude>de.huberlin.wbi.hiway:hiway-core</exclude>
+				<exclude>de.hu-berlin.wbi.hiway:hiway-core</exclude>
 			</excludes>
 		</dependencySet>
 
@@ -31,7 +31,7 @@
 			<useProjectArtifact>false</useProjectArtifact>
 			<useProjectAttachments>false</useProjectAttachments>
 			<includes>
-				<include>de.huberlin.wbi.hiway:hiway-core</include>
+				<include>de.hu-berlin.wbi.hiway:hiway-core</include>
 			</includes>
 
 			<!-- <excludes> -->

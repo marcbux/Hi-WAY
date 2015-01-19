@@ -7,8 +7,9 @@
  *
  * List of Contributors:
  *
- * Jörgen Brandt (HU Berlin)
  * Marc Bux (HU Berlin)
+ * Jörgen Brandt (HU Berlin)
+ * Hannes Schuh (HU Berlin)
  * Ulf Leser (HU Berlin)
  *
  * Jörgen Brandt is funded by the European Commission through the BiobankCloud
@@ -31,34 +32,33 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.app.am;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
-import edu.isi.pegasus.common.logging.LogManager;
-import edu.isi.pegasus.common.logging.LogManagerFactory;
-import edu.isi.pegasus.planner.classes.ADag;
-import edu.isi.pegasus.planner.classes.Job;
-import edu.isi.pegasus.planner.classes.PegasusBag;
-import edu.isi.pegasus.planner.classes.PegasusFile;
-import edu.isi.pegasus.planner.common.PegasusProperties;
-import edu.isi.pegasus.planner.parser.DAXParserFactory;
-import edu.isi.pegasus.planner.parser.Parser;
-import edu.isi.pegasus.planner.parser.dax.DAX2CDAG;
-import edu.isi.pegasus.planner.parser.dax.DAXParser;
 
 public class DaxApplicationMaster extends HiWay {
 
@@ -120,113 +120,124 @@ public class DaxApplicationMaster extends HiWay {
 		HiWay.loop(new DaxApplicationMaster(), args);
 	}
 
-	private ADag dag;
-
 	@Override
 	public void parseWorkflow() {
 		Map<Object, TaskInstance> tasks = new HashMap<>();
 		log.info("Parsing Pegasus DAX " + workflowFile);
 
-		PegasusProperties properties = PegasusProperties.nonSingletonInstance();
-		PegasusBag bag = new PegasusBag();
-		bag.add(PegasusBag.PEGASUS_PROPERTIES, properties);
+		try {
+			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+			Document doc = builder.parse(new File(workflowFile.getLocalPath()));
+			NodeList jobNds = doc.getElementsByTagName("job");
 
-		LogManager logger = LogManagerFactory.loadSingletonInstance(properties);
-		logger.logEventStart("DaxWorkflow", "", "");
-		logger.setLevel(5);
-		bag.add(PegasusBag.PEGASUS_LOGMANAGER, logger);
+			for (int i = 0; i < jobNds.getLength(); i++) {
+				Element jobEl = (Element) jobNds.item(i);
+				String id = jobEl.getAttribute("id");
+				String taskName = jobEl.getAttribute("name");
+				DaxTaskInstance task = new DaxTaskInstance(taskName);
+				task.setRuntime(jobEl.hasAttribute("runtime") ? Double.parseDouble(jobEl.getAttribute("runtime")) : 0d);
+				tasks.put(id, task);
 
-		DAXParser daxParser = DAXParserFactory.loadDAXParser(bag, "DAX2CDAG", workflowFile.getLocalPath());
-		((Parser) daxParser).startParser(workflowFile.getLocalPath());
-		dag = (ADag) ((DAX2CDAG) daxParser.getDAXCallback()).getConstructedObject();
-
-		Queue<String> jobQueue = new LinkedList<>();
-		for (Object rootNode : dag.getRootNodes()) {
-			jobQueue.add((String) rootNode);
-		}
-
-		Map<TaskInstance, Job> taskToJob = new HashMap<>();
-
-		while (!jobQueue.isEmpty()) {
-			String jobName = jobQueue.remove();
-			Job job = dag.getSubInfo(jobName);
-			String taskId = job.getID();
-
-			String taskName = job.getTXName();
-			DaxTaskInstance task = new DaxTaskInstance(taskName);
-			task.setRuntime(job.getRuntime());
-			taskToJob.put(task, job);
-			tasks.put(taskId, task);
-
-			for (Object input : job.getInputFiles()) {
-				PegasusFile file = (PegasusFile) input;
-				String inputName = file.getLFN();
-				if (!files.containsKey(inputName)) {
-					Data data = new Data(inputName);
-					data.setInput(true);
-					files.put(inputName, data);
-				}
-				Data data = files.get(inputName);
-				task.addInputData(data, (long) file.getSize());
-			}
-
-			if (job.getOutputFiles().size() > 0) {
-
-				List<String> outputs = new LinkedList<>();
-
-				for (Object output : job.getOutputFiles()) {
-					PegasusFile file = (PegasusFile) output;
-					String outputName = file.getLFN();
-					if (!files.containsKey(outputName))
-						files.put(outputName, new Data(outputName));
-					Data data = files.get(outputName);
-					task.addOutputData(data, (long) file.getSize());
-					data.setInput(false);
-					outputs.add(outputName);
+				StringBuilder arguments = new StringBuilder();
+				NodeList argumentNds = jobEl.getElementsByTagName("argument");
+				for (int j = 0; j < argumentNds.getLength(); j++) {
+					Element argumentEl = (Element) argumentNds.item(j);
+					
+					NodeList argumentChildNds = argumentEl.getChildNodes();
+					for (int k = 0; k < argumentChildNds.getLength(); k++) {
+						Node argumentChildNd = argumentChildNds.item(k);
+						String argument = "";
+						
+						switch (argumentChildNd.getNodeType()) {
+						case Node.ELEMENT_NODE:
+							Element argumentChildEl = (Element) argumentChildNd;
+							if (argumentChildEl.hasAttribute("name")) {
+								argument = argumentChildEl.getAttribute("name");
+							}
+							break;
+						case Node.TEXT_NODE:
+							argument = argumentChildNd.getNodeValue().replaceAll("\\s+", " ").trim();
+							break;
+						}
+						
+						if (argument.length() > 0) {
+							arguments.append(" ").append(argument);
+						}
+					}
 				}
 
-				try {
+				NodeList usesNds = jobEl.getElementsByTagName("uses");
+				for (int j = 0; j < jobNds.getLength(); j++) {
+					Element usesEl = (Element) usesNds.item(j);
+					String link = usesEl.getAttribute("link");
+					String fileName = usesEl.getAttribute("file");
+					long size = usesEl.hasAttribute("size") ? Long.parseLong(usesEl.getAttribute("size")) : 0l;
+					List<String> outputs = new LinkedList<>();
+
+					switch (link) {
+					case "input":
+						if (!files.containsKey(fileName)) {
+							Data data = new Data(fileName);
+							data.setInput(true);
+							files.put(fileName, data);
+						}
+						Data data = files.get(fileName);
+						task.addInputData(data, size);
+						break;
+					case "output":
+						if (!files.containsKey(fileName))
+							files.put(fileName, new Data(fileName));
+						data = files.get(fileName);
+						task.addOutputData(data, size);
+						data.setInput(false);
+						outputs.add(fileName);
+						break;
+					}
+
 					task.getReport().add(
 							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
 									JsonReportEntry.KEY_INVOC_OUTPUT, new JSONObject().put("output", outputs)));
-				} catch (JSONException e) {
-					onError(e);
+				}
+
+				task.setCommand(taskName + arguments.toString());
+				log.info("Adding task " + task + ": " + task.getInputData() + " -> " + task.getOutputData());
+			}
+
+			NodeList childNds = doc.getElementsByTagName("child");
+			for (int i = 0; i < childNds.getLength(); i++) {
+				Element childEl = (Element) childNds.item(i);
+				String childId = childEl.getAttribute("ref");
+				TaskInstance child = tasks.get(childId);
+
+				NodeList parentNds = childEl.getElementsByTagName("parent");
+				for (int j = 0; j < parentNds.getLength(); j++) {
+					Element parentEl = (Element) parentNds.item(j);
+					String parentId = parentEl.getAttribute("ref");
+					TaskInstance parent = tasks.get(parentId);
+
+					child.addParentTask(parent);
+					parent.addChildTask(child);
 				}
 			}
 
-			for (Object parent : dag.getParents(jobName)) {
-				TaskInstance parentTask = tasks.get(parent);
+			for (TaskInstance task : tasks.values()) {
 				try {
-					task.addParentTask(parentTask);
-					parentTask.addChildTask(task);
+					if (task.getChildTasks().size() == 0) {
+						for (Data data : task.getOutputData()) {
+							data.setOutput(true);
+						}
+					}
 				} catch (WorkflowStructureUnknownException e) {
 					onError(e);
 				}
+
+				task.getReport().add(
+						new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
+								JsonReportEntry.KEY_INVOC_SCRIPT, task.getCommand()));
 			}
 
-			for (Object child : dag.getChildren(jobName)) {
-				String childName = (String) child;
-				if (!tasks.containsKey(child) && tasks.keySet().containsAll(dag.getParents(childName)))
-					jobQueue.add(childName);
-			}
-
-			task.setCommand(taskName + job.getArguments().replaceAll(" +", " "));
-			log.info("Adding task " + task + ": " + task.getInputData() + " -> " + task.getOutputData());
-		}
-
-		for (TaskInstance task : tasks.values()) {
-			try {
-				if (task.getChildTasks().size() == 0) {
-					for (Data data : task.getOutputData()) {
-						data.setOutput(true);
-					}
-				}
-			} catch (WorkflowStructureUnknownException e) {
-				onError(e);
-			}
-
-			task.getReport().add(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
-					JsonReportEntry.KEY_INVOC_SCRIPT, task.getCommand()));
+		} catch (WorkflowStructureUnknownException | IOException | JSONException | ParserConfigurationException | SAXException e) {
+			onError(e);
 		}
 
 		scheduler.addTasks(tasks.values());
