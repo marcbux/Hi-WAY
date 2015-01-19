@@ -5,7 +5,44 @@
 	<version>1.0.0</version>
 	<packaging>pom</packaging>
 	<name>Hi-WAY</name>
+	<description>The Heterogeneity-incorporating Workflow ApplicationMaster for YARN (Hi-WAY) provides the means to execute arbitrary scientific workflows on top of Apache's Hadoop 2.x (YARN). In this context, scientific workflows are directed acyclic graphs (DAGs), in which nodes are executables accessible from the command line (e.g. tar, cat, or any other executable in the PATH of the worker nodes), and edges represent data dependencies between these executables.</description>
 	<url>https://github.com/marcbux/Hi-WAY</url>
+	<scm>
+		<url>https://github.com/marcbux/Hi-WAY.git</url>
+	</scm>
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+	<developers>
+		<developer>
+			<name>Jörgen Brandt</name>
+			<email>brandjoe@informatik.hu-berlin.de</email>
+			<organization>Humboldt-Universität zu Berlin</organization>
+			<organizationUrl>https://www.hu-berlin.de/</organizationUrl>
+		</developer>
+		<developer>
+			<name>Marc Bux</name>
+			<email>buxmarcn@informatik.hu-berlin.de</email>
+			<organization>Humboldt-Universität zu Berlin</organization>
+			<organizationUrl>https://www.hu-berlin.de/</organizationUrl>
+		</developer>
+		<developer>
+			<name>Hannes Schuh</name>
+			<email>schuh@informatik.hu-berlin.de</email>
+			<organization>Humboldt-Universität zu Berlin</organization>
+			<organizationUrl>https://www.hu-berlin.de/</organizationUrl>
+		</developer>
+		<developer>
+			<name>Ulf Leser</name>
+			<email>leser@informatik.hu-berlin.de</email>
+			<organization>Humboldt-Universität zu Berlin</organization>
+			<organizationUrl>https://www.hu-berlin.de/</organizationUrl>
+		</developer>
+	</developers>
 	<modules>
 		<module>hiway-core</module>
 		<module>hiway-db</module>
