@@ -48,7 +48,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.junit.Test;
 
 import de.huberlin.wbi.hiway.common.TaskInstance;
-import de.huberlin.wbi.hiway.scheduler.C3PO;
+//import de.huberlin.wbi.hiway.scheduler.C3PO;
 import de.huberlin.wbi.hiway.scheduler.GreedyQueue;
 
 public class TestScheduler {
@@ -120,12 +120,12 @@ public class TestScheduler {
 
 	}
 
-	@Test
-	public void shakeRattelRollC3PO() {
-		C3PO c3po = new C3PO("shakeRattleRoll", 0, null);
-		c3po.setnClones(0);
-		shakeRattelRoll(c3po);
-	}
+//	@Test
+//	public void shakeRattelRollC3PO() {
+//		C3PO c3po = new C3PO("shakeRattleRoll", 0, null);
+//		c3po.setnClones(0);
+//		shakeRattelRoll(c3po);
+//	}
 
 	@Test
 	public void shakeRattelRollGreedyQueue() {
