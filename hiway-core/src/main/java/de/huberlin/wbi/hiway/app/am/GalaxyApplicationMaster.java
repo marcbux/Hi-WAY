@@ -150,8 +150,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	}
 
 	public static class GalaxyData extends Data {
-		String extension;
-		GalaxyDataType dataType;
+		private GalaxyDataType dataType;
 
 		public GalaxyData(String path) {
 			super(path);
@@ -399,6 +398,8 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 
 		private void mapParams(JSONObject jo) throws JSONException {
+			if (jo.length() == 0)
+				return;
 			for (String name : JSONObject.getNames(jo)) {
 				Object value = jo.get(name);
 				if (value instanceof JSONObject) {
@@ -475,15 +476,15 @@ public class GalaxyApplicationMaster extends HiWay {
 
 					if (data.hasDataType()) {
 						GalaxyDataType dataType = data.getDataType();
-						if (dataType.hasExtension()) {
-							String fileExt = dataType.getExtension();
-							fileJo.putOpt("extension", fileExt);
-							fileJo.putOpt("ext", fileExt);
-						}
+						// if (dataType.hasExtension()) {
+						String fileExt = dataType.getExtension();
+						fileJo.putOpt("extension", fileExt);
+						fileJo.putOpt("ext", fileExt);
+						// }
 					}
 
 					if (data.hasDataType())
-						fileJo.putOpt("metadata", new JSONObject(data.getDataType().getMetadata()));
+						fileJo.putOpt("metadata", new JSONObject());
 
 					jo.putOpt(name, fileJo);
 				}
@@ -525,70 +526,80 @@ public class GalaxyApplicationMaster extends HiWay {
 	}
 
 	public static class GalaxyDataType {
+		private final String file;
 		private final String name;
-		private String extension;
-		private GalaxyDataType parent;
-		private Map<String, String> metadata;
+		private final String extension;
 
-		public GalaxyDataType(String name) {
+		// private GalaxyDataType parent;
+		// private Map<String, String> metadata;
+
+		public GalaxyDataType(String file, String name, String extension) {
+			this.file = file;
 			this.name = name;
-			metadata = new HashMap<>();
+			this.extension = extension;
+			// metadata = new HashMap<>();
 		}
 
-		public GalaxyDataType getParent() {
-			return parent;
-		}
+		// public GalaxyDataType getParent() {
+		// return parent;
+		// }
 
-		public boolean hasParent() {
-			return parent != null;
-		}
+		// public boolean hasParent() {
+		// return parent != null;
+		// }
 
 		public String getName() {
 			return name;
 		}
 
-		public void setParent(GalaxyDataType parent) {
-			this.parent = parent;
-		}
+		// public void setParent(GalaxyDataType parent) {
+		// this.parent = parent;
+		// }
 
 		public String getExtension() {
 			return extension;
 		}
 
-		public boolean hasExtension() {
-			return extension != null;
+		public String getFile() {
+			return file;
 		}
 
-		public void setExtension(String extension) {
-			this.extension = extension;
-		}
+		// public boolean hasExtension() {
+		// return extension != null;
+		// }
 
-		public void addMetadata(String name, String value) {
-			metadata.put(name, value);
-		}
+		// public void setExtension(String extension) {
+		// this.extension = extension;
+		// }
 
-		public Map<String, String> getMetadata() {
-			Map<String, String> allMetadata = new HashMap<>();
-			if (parent != null) {
-				allMetadata.putAll(parent.getMetadata());
-			}
-			allMetadata.putAll(metadata);
-			return allMetadata;
-		}
+		// public void addMetadata(String name, String value) {
+		// metadata.put(name, value);
+		// }
+
+		// public Map<String, String> getMetadata() {
+		// Map<String, String> allMetadata = new HashMap<>();
+		// if (parent != null) {
+		// allMetadata.putAll(parent.getMetadata());
+		// }
+		// allMetadata.putAll(metadata);
+		// return allMetadata;
+		// }
 
 	}
 
 	public static class GalaxyTaskInstance extends TaskInstance {
 		private GalaxyTool galaxyTool;
-		private StringBuilder pickleScript;
 		private JSONObject toolState;
+		StringBuilder pickleScript;
+		Set<GalaxyData> inputs;
 
 		public GalaxyTaskInstance(long id, String taskName, GalaxyTool galaxyTool) {
 			super(id, UUID.randomUUID(), taskName, Math.abs(taskName.hashCode()), ForeignLambdaExpr.LANGID_BASH);
 			this.galaxyTool = galaxyTool;
-			pickleScript = new StringBuilder("import cPickle as pickle\ntool_state = ");
 			toolState = new JSONObject();
+			pickleScript = new StringBuilder("import os, ast\nimport cPickle as pickle\nimport galaxy.app\n");
 			this.postScript = "";
+			inputs = new HashSet<>();
 		}
 
 		private String postScript;
@@ -629,14 +640,66 @@ public class GalaxyApplicationMaster extends HiWay {
 			}
 		}
 
-		public void addFile(String name, GalaxyData data) {
+		public void addFile(String name, boolean computeMetadata, GalaxyData data) {
 			galaxyTool.addFile(name, data, toolState);
+			if (computeMetadata && data.hasDataType()) {
+				GalaxyDataType dataType = data.getDataType();
+				pickleScript.append("from ");
+				pickleScript.append(dataType.getFile());
+				pickleScript.append(" import ");
+				pickleScript.append(dataType.getName());
+				pickleScript.append("\n");
+				inputs.add(data);
+			}
 		}
 
 		public void buildPickleScript() throws JSONException {
 			galaxyTool.populateToolState(toolState);
+			pickleScript.append("\ntool_state = ");
 			pickleScript.append(toolState.toString());
-			pickleScript.append("\npickle.dump(tool_state, open(\"" + workflowPath + "." + id + ".pickle.p\", \"wb\"))\n");
+			pickleScript.append("\n\nclass Dict(dict):");
+			pickleScript.append("\n    def __init__(self, *args, **kwargs):");
+			pickleScript.append("\n        super(Dict, self).__init__(*args, **kwargs)");
+			pickleScript.append("\n        self.__dict__ = self");
+			pickleScript.append("\n\nclass Dataset(Dict):");
+			pickleScript.append("\n    def has_data(self):");
+			pickleScript.append("\n        return True");
+			pickleScript.append("\n    def get_size(self):");
+			pickleScript.append("\n        return os.path.getsize(self.file_name)");
+			pickleScript.append("\n\ndef expandToolState(src, dest):");
+			pickleScript.append("\n    for k, v in src.iteritems():");
+			pickleScript.append("\n        if isinstance (v, dict):");
+			pickleScript.append("\n            dest[k] = Dataset() if 'path' in v else Dict()");
+			pickleScript.append("\n            expandToolState(v, dest[k])");
+			for (GalaxyData input : inputs) {
+				pickleScript.append("\n            if 'path' in v and v['path'] == '");
+				pickleScript.append(input.getName());
+				pickleScript.append("':");
+				pickleScript.append("\n                dest[k]['file_name'] = v['path']");
+				pickleScript.append("\n                datatype = ");
+				pickleScript.append(input.getDataType().getName());
+				pickleScript.append("()");
+				pickleScript.append("\n                datatype.set_meta(dataset=dest[k])");
+				pickleScript.append("\n                for key in dest[k].metadata.keys():");
+				pickleScript.append("\n                    value = dest[k].metadata[key]");
+				pickleScript.append("\n                    if isinstance (value, list):");
+				pickleScript.append("\n                        dest[k].metadata[key] = ', '.join(value)");
+			}
+			pickleScript.append("\n        elif isinstance (v, list):");
+			pickleScript.append("\n            dest[k] = list()");
+			pickleScript.append("\n            for i in v:");
+			pickleScript.append("\n                j = Dict()");
+			pickleScript.append("\n                dest[k].append(j)");
+			pickleScript.append("\n                expandToolState(i, j)");
+			pickleScript.append("\n        else:");
+			pickleScript.append("\n            dest[k] = v");
+			pickleScript.append("\n\nexpanded_tool_state = Dict()");
+			pickleScript.append("\nexpandToolState(tool_state, expanded_tool_state)");
+			pickleScript.append("\npickle.dump(ast.literal_eval(str(expanded_tool_state)), open(\"");
+			pickleScript.append(workflowPath);
+			pickleScript.append(".");
+			pickleScript.append(id);
+			pickleScript.append(".pickle.p\", \"wb\"))\n");
 			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(workflowPath + "." + id + ".params.py"))) {
 				scriptWriter.write(pickleScript.toString());
 			} catch (IOException e) {
@@ -686,8 +749,8 @@ public class GalaxyApplicationMaster extends HiWay {
 		super.init(args);
 		galaxyTools = new HashMap<>();
 		// pythonPath = hiWayConf.get(HiWayConfiguration.HIWAY_GALAXY_PYTHONPATH);
-		if (!processDataTypeDir(new File(hiWayConf.get(HiWayConfiguration.HIWAY_GALAXY_DATATYPES))))
-			return false;
+		// if (!processDataTypeDir(new File(hiWayConf.get(HiWayConfiguration.HIWAY_GALAXY_DATATYPES))))
+		// return false;
 
 		DocumentBuilder builder;
 		try {
@@ -705,14 +768,15 @@ public class GalaxyApplicationMaster extends HiWay {
 	}
 
 	public static void main(String[] args) {
-		galaxyDataTypes = new HashMap<>();
-		processDataTypeDir(new File(galaxyPath + "/lib/galaxy/datatypes"));
+
+		// processDataTypeDir(new File(galaxyPath + "/lib/galaxy/datatypes"));
 
 		String tool_data_table_config_path = "config/tool_data_table_conf.xml.sample";
 		String shed_tool_data_table_config = "config/shed_tool_data_table_conf.xml.sample";
 		String tool_dependency_dir = "dependencies";
 		String tool_path = "tools";
 		String tool_config_file = "config/tool_conf.xml.sample";
+		String datatypes_config_file = "config/datatypes_conf.xml.sample";
 		try (BufferedReader iniBr = new BufferedReader(new FileReader(new File(galaxyPath + "/config/galaxy.ini")))) {
 			String line;
 			while ((line = iniBr.readLine()) != null) {
@@ -726,6 +790,8 @@ public class GalaxyApplicationMaster extends HiWay {
 					tool_path = line.split("=")[1].trim();
 				if (line.startsWith("tool_config_file"))
 					tool_config_file = line.split("=")[1].trim();
+				if (line.startsWith("datatypes_config_file"))
+					datatypes_config_file = line.split("=")[1].trim();
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -733,29 +799,49 @@ public class GalaxyApplicationMaster extends HiWay {
 		String[] tool_config_files = tool_config_file.split(",");
 
 		try {
-			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+			galaxyDataTypes = new HashMap<>();
+			processDataTypes(new File(galaxyPath + "/" + datatypes_config_file));
 
 			galaxyDataTables = new HashMap<>();
-			processDataTables(new File(galaxyPath + "/" + tool_data_table_config_path), builder);
-			processDataTables(new File(galaxyPath + "/" + shed_tool_data_table_config), builder);
+			processDataTables(new File(galaxyPath + "/" + tool_data_table_config_path));
+			processDataTables(new File(galaxyPath + "/" + shed_tool_data_table_config));
 
 			galaxyTools = new HashMap<>();
 			// parseToolDir(new File(galaxyPath + "/tools"), builder);
 			// parseToolDir(new File(toolShedPath), builder);
 			for (String config_file : tool_config_files) {
-				processToolLibraries(new File(galaxyPath + "/" + config_file.trim()), builder, tool_path, tool_dependency_dir);
+				processToolLibraries(new File(galaxyPath + "/" + config_file.trim()), tool_path, tool_dependency_dir);
 			}
 
 			// processTools(builder);
-		} catch (ParserConfigurationException | FactoryConfigurationError e) {
+		} catch (FactoryConfigurationError e) {
 			e.printStackTrace();
 		}
 		parseWorkflow(workflowPath);
 	}
 
-	private static boolean processDataTables(File file, DocumentBuilder builder) {
+	private static void processDataTypes(File file) {
+		try {
+			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+			Document doc = builder.parse(file);
+			NodeList datatypeNds = doc.getElementsByTagName("datatype");
+			for (int i = 0; i < datatypeNds.getLength(); i++) {
+				Element datatypeEl = (Element) datatypeNds.item(i);
+				if (!datatypeEl.hasAttribute("extension") || !datatypeEl.hasAttribute("type") || datatypeEl.hasAttribute("subclass"))
+					continue;
+				String extension = datatypeEl.getAttribute("extension");
+				String[] splitType = datatypeEl.getAttribute("type").split(":");
+				galaxyDataTypes.put(extension, new GalaxyDataType(splitType[0], splitType[1], extension));
+			}
+		} catch (SAXException | IOException | ParserConfigurationException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void processDataTables(File file) {
 
 		try {
+			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			Document doc = builder.parse(file);
 			NodeList tables = doc.getElementsByTagName("table");
 			for (int i = 0; i < tables.getLength(); i++) {
@@ -775,11 +861,9 @@ public class GalaxyApplicationMaster extends HiWay {
 				galaxyDataTables.put(name, galaxyDataTable);
 			}
 
-		} catch (SAXException | IOException e) {
+		} catch (SAXException | IOException | ParserConfigurationException e) {
 			e.printStackTrace();
 		}
-
-		return true;
 	}
 
 	private static void processLocFile(File file, GalaxyDataTable galaxyDataTable) {
@@ -799,10 +883,11 @@ public class GalaxyApplicationMaster extends HiWay {
 
 	}
 
-	private static boolean processToolLibraries(File file, DocumentBuilder builder, String defaultPath, String dependencyDir) {
+	private static void processToolLibraries(File file, String defaultPath, String dependencyDir) {
 		try {
 			File galaxyPathFile = new File(galaxyPath);
 			File dir = new File(galaxyPathFile, defaultPath);
+			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			Document doc = builder.parse(file);
 			Element toolboxEl = doc.getDocumentElement();
 			if (toolboxEl.hasAttribute("tool_path")) {
@@ -871,105 +956,100 @@ public class GalaxyApplicationMaster extends HiWay {
 				}
 
 			}
-		} catch (SAXException | IOException e) {
+		} catch (SAXException | IOException | ParserConfigurationException e) {
 			e.printStackTrace();
 		}
-
-		return true;
 	}
 
-	private static boolean processDataTypeDir(File dir) {
-		for (File file : dir.listFiles()) {
-			if (file.getName().endsWith(".py")) {
-				try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-					String line;
-					String[] splitLine;
-					GalaxyDataType dataType = null;
-					while ((line = reader.readLine()) != null) {
-						if (line.startsWith("class")) {
-							line = line.replace("class", "").replaceAll(" ", "").replace(":", "").replace(")", "");
-							splitLine = line.split("\\(");
-							if (splitLine.length == 1)
-								continue;
-							String name = splitLine[0];
-							dataType = addAndGetDataType(name);
-							String parentNames = splitLine[1].substring(splitLine[1].lastIndexOf(".") + 1);
-							String[] splitSplit = parentNames.split(",");
-							GalaxyDataType parentType = addAndGetDataType(splitSplit[0]);
-							dataType.setParent(parentType);
-						} else if (line.startsWith("    file_ext = ")) {
-							String extension = line.replace("    file_ext = ", "").replaceAll("[\\\"']", "");
-							dataType.setExtension(extension);
-							galaxyDataTypes.put(extension, dataType);
-						} else if (line.startsWith("    MetadataElement(")) {
-							line = line.replace("MetadataElement(", "").replace(")", "").trim();
-							splitLine = line.split(", ");
-							String name = null, value = null;
-							for (String split : splitLine) {
-								String[] splitSplit = split.split("=");
-								switch (splitSplit[0]) {
-								case "name":
-									name = splitSplit[1].replaceAll("[\\\"']", "");
-									break;
-								case "default":
-									value = splitSplit[1].replaceAll("[\\\"']", "");
-									break;
-								case "no_value":
-									if (value == null)
-										value = splitSplit[1].replaceAll("[\\\"']", "");
-								}
-							}
-							if ((name != null) && (value != null)) {
-								dataType.addMetadata(name, value);
-							}
-						}
-					}
-				} catch (IOException e) {
-					e.printStackTrace();
-					return false;
-				}
-			}
-		}
+	// private static boolean processDataTypeDir(File dir) {
+	// for (File file : dir.listFiles()) {
+	// if (file.getName().endsWith(".py")) {
+	// try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+	// String line;
+	// String[] splitLine;
+	// GalaxyDataType dataType = null;
+	// while ((line = reader.readLine()) != null) {
+	// if (line.startsWith("class")) {
+	// line = line.replace("class", "").replaceAll(" ", "").replace(":", "").replace(")", "");
+	// splitLine = line.split("\\(");
+	// if (splitLine.length == 1)
+	// continue;
+	// String name = splitLine[0];
+	// dataType = addAndGetDataType(name);
+	// String parentNames = splitLine[1].substring(splitLine[1].lastIndexOf(".") + 1);
+	// String[] splitSplit = parentNames.split(",");
+	// GalaxyDataType parentType = addAndGetDataType(splitSplit[0]);
+	// dataType.setParent(parentType);
+	// } else if (line.startsWith("    file_ext = ")) {
+	// String extension = line.replace("    file_ext = ", "").replaceAll("[\\\"']", "");
+	// dataType.setExtension(extension);
+	// galaxyDataTypes.put(extension, dataType);
+	// } else if (line.startsWith("    MetadataElement(")) {
+	// line = line.replace("MetadataElement(", "").replace(")", "").trim();
+	// splitLine = line.split(", ");
+	// String name = null, value = null;
+	// for (String split : splitLine) {
+	// String[] splitSplit = split.split("=");
+	// switch (splitSplit[0]) {
+	// case "name":
+	// name = splitSplit[1].replaceAll("[\\\"']", "");
+	// break;
+	// case "default":
+	// value = splitSplit[1].replaceAll("[\\\"']", "");
+	// break;
+	// case "no_value":
+	// if (value == null)
+	// value = splitSplit[1].replaceAll("[\\\"']", "");
+	// }
+	// }
+	// if ((name != null) && (value != null)) {
+	// dataType.addMetadata(name, value);
+	// }
+	// }
+	// }
+	// } catch (IOException e) {
+	// e.printStackTrace();
+	// return false;
+	// }
+	// }
+	// }
+	//
+	// Set<String> delete = new HashSet<>();
+	// for (String name : galaxyDataTypes.keySet())
+	// if (!isDataType(galaxyDataTypes.get(name)))
+	// delete.add(name);
+	// galaxyDataTypes.keySet().removeAll(delete);
+	//
+	// Map<String, GalaxyDataType> add = new HashMap<>();
+	// for (String name : galaxyDataTypes.keySet()) {
+	// GalaxyDataType dataType = galaxyDataTypes.get(name);
+	// add.put(name.toLowerCase(), dataType);
+	// if (dataType.hasExtension()) {
+	// String extension = dataType.getExtension();
+	// add.put(extension, dataType);
+	// add.put(extension.toLowerCase(), dataType);
+	// }
+	// }
+	// galaxyDataTypes.putAll(add);
+	//
+	// return true;
+	// }
 
-		Set<String> delete = new HashSet<>();
-		for (String name : galaxyDataTypes.keySet())
-			if (!isDataType(galaxyDataTypes.get(name)))
-				delete.add(name);
-		galaxyDataTypes.keySet().removeAll(delete);
+	// private static GalaxyDataType addAndGetDataType(String name) {
+	// if (!galaxyDataTypes.containsKey(name)) {
+	// galaxyDataTypes.put(name, new GalaxyDataType(name));
+	// }
+	// return galaxyDataTypes.get(name);
+	// }
 
-		Map<String, GalaxyDataType> add = new HashMap<>();
-		for (String name : galaxyDataTypes.keySet()) {
-			GalaxyDataType dataType = galaxyDataTypes.get(name);
-			add.put(name.toLowerCase(), dataType);
-			if (dataType.hasExtension()) {
-				String extension = dataType.getExtension();
-				add.put(extension, dataType);
-				add.put(extension.toLowerCase(), dataType);
-			}
-		}
-		galaxyDataTypes.putAll(add);
-
-		// for (GalaxyDataType dataType : galaxyDataTypes.values())
-		// System.out.println(dataType.getExtension() + ": " + dataType.getName() + " --> " + dataType.getParent().getName());
-
-		return true;
-	}
-
-	private static GalaxyDataType addAndGetDataType(String name) {
-		if (!galaxyDataTypes.containsKey(name)) {
-			galaxyDataTypes.put(name, new GalaxyDataType(name));
-		}
-		return galaxyDataTypes.get(name);
-	}
-
-	private static boolean isDataType(GalaxyDataType dataType) {
-		if (dataType.getName().equals("Data"))
-			return true;
-		GalaxyDataType parent = dataType.getParent();
-		if (parent != null)
-			return isDataType(parent);
-		return false;
-	}
+	// private static boolean isDataType(GalaxyDataType dataType) {
+	// if (dataType.getName().equals("Data"))
+	// return true;
+	// GalaxyDataType parent = dataType.getParent();
+	// if (parent != null)
+	// return isDataType(parent);
+	// return false;
+	// }
 
 	private static Set<GalaxyParam> getParams(Element el) throws XPathExpressionException {
 		Set<GalaxyParam> params = new HashSet<>();
@@ -1093,14 +1173,14 @@ public class GalaxyApplicationMaster extends HiWay {
 				if (with != null)
 					toolDescription = toolDescription.replace(replace, with);
 			}
-			
+
 			doc = builder.parse(new InputSource(new StringReader(toolDescription)));
 			rootEl = doc.getDocumentElement();
 
 			String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
 			String id = rootEl.getAttribute("id");
 			GalaxyTool tool = new GalaxyTool(id, version, dir);
-			
+
 			NodeList requirementNds = rootEl.getElementsByTagName("requirement");
 			for (int i = 0; i < requirementNds.getLength(); i++) {
 				Element requirementEl = (Element) requirementNds.item(i);
@@ -1303,7 +1383,7 @@ public class GalaxyApplicationMaster extends HiWay {
 								JSONObject action_arguments = post_job_action.getJSONObject("action_arguments");
 								String newname = action_arguments.getString("newname");
 								if (newname.contains(" "))
-									newname = "\"" + newname + "\"";
+									newname = newname.replaceAll("\\s", "_");
 								renameOutputs.put(output_name, newname);
 							} else if (action_type.equals("HideDatasetAction")) {
 								String output_name = post_job_action.getString("output_name");
@@ -1361,7 +1441,7 @@ public class GalaxyApplicationMaster extends HiWay {
 						}
 						files.put(idName, data);
 						task.addOutputData(data);
-						task.addFile(outputName, data);
+						task.addFile(outputName, false, data);
 						outputFiles.add(fileName);
 					}
 
@@ -1392,7 +1472,7 @@ public class GalaxyApplicationMaster extends HiWay {
 							parentTask.addChildTask(task);
 						}
 						task.addInputData(files.get(idName));
-						task.addFile(input_connection_key, files.get(idName));
+						task.addFile(input_connection_key, true, files.get(idName));
 						continue;
 					}
 
