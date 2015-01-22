@@ -90,8 +90,7 @@ public class GalaxyApplicationMaster extends HiWay {
 
 	public static final String galaxyPath = "D:\\Documents\\Workspace2\\hiway\\hiway-core\\galaxy-galaxy-dist-5123ed7f1603";
 	public static final String toolShedPath = "D:\\Documents\\Workspace2\\hiway\\hiway-core\\shed_tools";
-	// public static final String workflowPath = "galaxy101.ga";
-	public static final String workflowPath = "RNAseq.ga";
+	public static final String workflowPath = "workflow";
 
 	public static class GalaxyDataTable {
 		private final String name;
@@ -630,7 +629,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			// replace : ", with : "",
 			toolState_json = toolState_json.replaceAll(": ?\",", ": \"\",");
 			// replace UnvalidatedValue with their actual value
-			toolState_json = toolState_json.replaceAll("\\{\"__class__\":[^\"]*\"UnvalidatedValue\",[^\"]*\"value\":[^\"](\"[^\"]*\")\\}", "$1");
+			toolState_json = toolState_json.replaceAll("\\{\"__class__\":\\s?\"UnvalidatedValue\",\\s?\"value\":\\s?([^\\}]*)\\}", "$1");
 			// replace "null" with ""
 			toolState_json = toolState_json.replaceAll("\"null\"", "\"\"");
 			try {
@@ -679,11 +678,18 @@ public class GalaxyApplicationMaster extends HiWay {
 				pickleScript.append("\n                datatype = ");
 				pickleScript.append(input.getDataType().getName());
 				pickleScript.append("()");
-				pickleScript.append("\n                datatype.set_meta(dataset=dest[k])");
+				pickleScript.append("\n                for key in datatype.metadata_spec.keys():");
+				pickleScript.append("\n                    value = datatype.metadata_spec[key]");
+				pickleScript.append("\n                    default = value.get(\"default\")");
+				pickleScript.append("\n                    dest[k].metadata[key] = default");
+				pickleScript.append("\n                try:");
+				pickleScript.append("\n                    datatype.set_meta(dataset=dest[k])");
+				pickleScript.append("\n                except:");
+				pickleScript.append("\n                    pass");
 				pickleScript.append("\n                for key in dest[k].metadata.keys():");
 				pickleScript.append("\n                    value = dest[k].metadata[key]");
 				pickleScript.append("\n                    if isinstance (value, list):");
-				pickleScript.append("\n                        dest[k].metadata[key] = ', '.join(value)");
+				pickleScript.append("\n                        dest[k].metadata[key] = ', '.join(str(item) for item in value)");
 			}
 			pickleScript.append("\n        elif isinstance (v, list):");
 			pickleScript.append("\n            dest[k] = list()");
@@ -695,11 +701,12 @@ public class GalaxyApplicationMaster extends HiWay {
 			pickleScript.append("\n            dest[k] = v");
 			pickleScript.append("\n\nexpanded_tool_state = Dict()");
 			pickleScript.append("\nexpandToolState(tool_state, expanded_tool_state)");
-			pickleScript.append("\npickle.dump(ast.literal_eval(str(expanded_tool_state)), open(\"");
+			pickleScript.append("\nwith open(\"");
 			pickleScript.append(workflowPath);
 			pickleScript.append(".");
 			pickleScript.append(id);
-			pickleScript.append(".pickle.p\", \"wb\"))\n");
+			pickleScript.append(".pickle.p\", \"wb\") as picklefile:");
+			pickleScript.append("\n    pickle.dump(ast.literal_eval(str(expanded_tool_state)), picklefile)\n");
 			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(workflowPath + "." + id + ".params.py"))) {
 				scriptWriter.write(pickleScript.toString());
 			} catch (IOException e) {

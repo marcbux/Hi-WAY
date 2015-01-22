@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>de.hu-berlin.wbi.hiway</groupId>
 		<artifactId>hiway</artifactId>
-		<version>1.0.0</version>
+		<version>1.0.0-SNAPSHOT</version>
 	</parent>
 	<artifactId>hiway-db</artifactId>
 	<dependencies>
