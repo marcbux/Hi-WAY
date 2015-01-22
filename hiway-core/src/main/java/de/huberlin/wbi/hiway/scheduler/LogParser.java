@@ -48,7 +48,7 @@ import de.huberlin.hiwaydb.useDB.FileStat;
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.app.am.HiWay;
+import de.huberlin.wbi.hiway.am.HiWay;
 
 public class LogParser implements HiwayDBI {
 

@@ -30,7 +30,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app.am;
+package de.huberlin.wbi.hiway.am.log;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -43,25 +43,26 @@ import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
+import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 public class LogApplicationMaster extends HiWay {
-	
+
 	private static final Log log = LogFactory.getLog(LogApplicationMaster.class);
 
 	public static void main(String[] args) {
 		HiWay.loop(new LogApplicationMaster(), args);
 	}
-	
+
 	@Override
 	public void parseWorkflow() {
-		log.info("Parsing Hi-WAY log " + workflowFile);
+		log.info("Parsing Hi-WAY log " + getWorkflowFile());
 		Map<Long, TaskInstance> tasks = new HashMap<>();
 		Map<Data, TaskInstance> taskProcucingThisFile = new HashMap<>();
-		
-		try (BufferedReader reader = new BufferedReader(new FileReader(workflowFile.getLocalPath()))) {
+
+		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath()))) {
 			String line;
 			while ((line = reader.readLine()) != null) {
 				try {
@@ -71,27 +72,27 @@ public class LogApplicationMaster extends HiWay {
 						tasks.put(invocId, new TaskInstance(getRunId(), entry.getTaskName(), entry.getTaskId(), entry.getLang()));
 					}
 					TaskInstance task = tasks.get(invocId);
-					
+
 					switch (entry.getKey()) {
 					case JsonReportEntry.KEY_FILE_SIZE_STAGEIN:
 						String inputName = entry.getFile();
-						if (!files.containsKey(inputName)) {
+						if (!getFiles().containsKey(inputName)) {
 							Data data = new Data(inputName);
 							data.setInput(true);
-							files.put(inputName, data);
+							getFiles().put(inputName, data);
 						}
-						Data data = files.get(inputName);
+						Data data = getFiles().get(inputName);
 						task.addInputData(data);
 						data.setOutput(false);
 						break;
 					case JsonReportEntry.KEY_FILE_SIZE_STAGEOUT:
 						String outputName = entry.getFile();
-						if (!files.containsKey(outputName)) {
+						if (!getFiles().containsKey(outputName)) {
 							data = new Data(outputName);
 							data.setOutput(true);
-							files.put(outputName, data);
+							getFiles().put(outputName, data);
 						}
-						data = files.get(outputName);
+						data = getFiles().get(outputName);
 						task.addOutputData(data);
 						data.setInput(false);
 						taskProcucingThisFile.put(data, task);
@@ -113,10 +114,11 @@ public class LogApplicationMaster extends HiWay {
 		} catch (IOException e) {
 			HiWay.onError(e);
 		}
-		
+
 		for (TaskInstance task : tasks.values()) {
 			for (Data data : task.getInputData()) {
-				if (data.isInput()) continue;
+				if (data.isInput())
+					continue;
 				TaskInstance parentTask = taskProcucingThisFile.get(data);
 				try {
 					task.addParentTask(parentTask);
@@ -126,8 +128,8 @@ public class LogApplicationMaster extends HiWay {
 				}
 			}
 		}
-		
-		scheduler.addTasks(tasks.values());
+
+		getScheduler().addTasks(tasks.values());
 	}
 
 }

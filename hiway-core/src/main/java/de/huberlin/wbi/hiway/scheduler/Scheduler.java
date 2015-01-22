@@ -62,8 +62,8 @@ import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.hiwaydb.useDB.HiwayDBNoSQL;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.app.HiWayConfiguration;
-import de.huberlin.wbi.hiway.app.am.HiWay;
+import de.huberlin.wbi.hiway.am.HiWay;
+import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -73,17 +73,6 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * 
  */
 public abstract class Scheduler {
-
-	protected class Estimate {
-		String taskName;
-		double weight = 1d;
-	}
-
-	protected class RuntimeEstimate extends Estimate {
-		long averageRuntime;
-		int finishedTasks;
-		long timeSpent;
-	}
 
 	private static final Log log = LogFactory.getLog(Scheduler.class);
 

@@ -30,7 +30,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.scheduler;
+package de.huberlin.wbi.hiway.scheduler.heft;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -45,10 +45,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 
-import de.huberlin.wbi.hiway.app.HiWayConfiguration;
-import de.huberlin.wbi.hiway.app.am.HiWay;
+import de.huberlin.wbi.hiway.am.HiWay;
+import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
+import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
 
 /**
  * <p>

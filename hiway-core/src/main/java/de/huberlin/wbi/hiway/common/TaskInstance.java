@@ -103,14 +103,6 @@ public class TaskInstance implements Comparable<TaskInstance> {
 	// the id of the workflow this task instance belongs to
 	protected UUID workflowId;
 
-	public TaskInstance(UUID workflowId, String taskName, long taskId) {
-		this(workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);
-	}
-
-	public TaskInstance(UUID workflowId, String taskName, long taskId, String languageLabel) {
-		this(runningId++, workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);
-	}
-	
 	public TaskInstance(long id, UUID workflowId, String taskName, long taskId, String languageLabel) {
 		this.id = id;
 		this.workflowId = workflowId;
@@ -124,6 +116,14 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		this.report = new HashSet<>();
 		this.parentTasks = new HashSet<>();
 		this.childTasks = new HashSet<>();
+	}
+
+	public TaskInstance(UUID workflowId, String taskName, long taskId) {
+		this(workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);
+	}
+
+	public TaskInstance(UUID workflowId, String taskName, long taskId, String languageLabel) {
+		this(runningId++, workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);
 	}
 
 	public void addChildTask(TaskInstance childTask) throws WorkflowStructureUnknownException {

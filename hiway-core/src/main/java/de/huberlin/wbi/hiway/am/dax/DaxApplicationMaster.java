@@ -30,16 +30,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app.am;
+package de.huberlin.wbi.hiway.am.dax;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -56,63 +54,12 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
+import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 public class DaxApplicationMaster extends HiWay {
-
-	public class DaxTaskInstance extends TaskInstance {
-
-		Map<Data, Long> fileSizes;
-		double runtime;
-
-		public DaxTaskInstance(String taskName) {
-			super(getRunId(), taskName, Math.abs(taskName.hashCode()));
-			fileSizes = new HashMap<>();
-			determineFileSizes = true;
-		}
-
-		public void addInputData(Data data, Long fileSize) {
-			super.addInputData(data);
-			fileSizes.put(data, fileSize);
-		}
-
-		public void addOutputData(Data data, Long fileSize) {
-			super.addOutputData(data);
-			fileSizes.put(data, fileSize);
-		}
-
-		@Override
-		public String getCommand() {
-			if (runtime > 0) {
-				StringBuilder sb = new StringBuilder("sleep " + runtime + "\n");
-				for (Data output : getOutputData()) {
-					sb.append("dd if=/dev/zero of=" + output.getLocalPath() + " bs=" + fileSizes.get(output) + " count=1\n");
-				}
-				return sb.toString();
-			}
-			return super.getCommand();
-		}
-
-		@Override
-		public Set<Data> getInputData() {
-			if (runtime > 0) {
-				Set<Data> intermediateData = new HashSet<>();
-				for (Data input : super.getInputData()) {
-					if (!input.isInput()) {
-						intermediateData.add(input);
-					}
-				}
-				return intermediateData;
-			}
-			return super.getInputData();
-		}
-
-		public void setRuntime(double runtime) {
-			this.runtime = runtime;
-		}
-	}
 
 	private static final Log log = LogFactory.getLog(DaxApplicationMaster.class);
 
@@ -122,19 +69,20 @@ public class DaxApplicationMaster extends HiWay {
 
 	@Override
 	public void parseWorkflow() {
+		setDetermineFileSizes();
 		Map<Object, TaskInstance> tasks = new HashMap<>();
-		log.info("Parsing Pegasus DAX " + workflowFile);
+		log.info("Parsing Pegasus DAX " + getWorkflowFile());
 
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-			Document doc = builder.parse(new File(workflowFile.getLocalPath()));
+			Document doc = builder.parse(new File(getWorkflowFile().getLocalPath()));
 			NodeList jobNds = doc.getElementsByTagName("job");
 
 			for (int i = 0; i < jobNds.getLength(); i++) {
 				Element jobEl = (Element) jobNds.item(i);
 				String id = jobEl.getAttribute("id");
 				String taskName = jobEl.getAttribute("name");
-				DaxTaskInstance task = new DaxTaskInstance(taskName);
+				DaxTaskInstance task = new DaxTaskInstance(getRunId(), taskName);
 				task.setRuntime(jobEl.hasAttribute("runtime") ? Double.parseDouble(jobEl.getAttribute("runtime")) : 0d);
 				tasks.put(id, task);
 
@@ -142,12 +90,12 @@ public class DaxApplicationMaster extends HiWay {
 				NodeList argumentNds = jobEl.getElementsByTagName("argument");
 				for (int j = 0; j < argumentNds.getLength(); j++) {
 					Element argumentEl = (Element) argumentNds.item(j);
-					
+
 					NodeList argumentChildNds = argumentEl.getChildNodes();
 					for (int k = 0; k < argumentChildNds.getLength(); k++) {
 						Node argumentChildNd = argumentChildNds.item(k);
 						String argument = "";
-						
+
 						switch (argumentChildNd.getNodeType()) {
 						case Node.ELEMENT_NODE:
 							Element argumentChildEl = (Element) argumentChildNd;
@@ -159,7 +107,7 @@ public class DaxApplicationMaster extends HiWay {
 							argument = argumentChildNd.getNodeValue().replaceAll("\\s+", " ").trim();
 							break;
 						}
-						
+
 						if (argument.length() > 0) {
 							arguments.append(" ").append(argument);
 						}
@@ -176,18 +124,18 @@ public class DaxApplicationMaster extends HiWay {
 
 					switch (link) {
 					case "input":
-						if (!files.containsKey(fileName)) {
+						if (!getFiles().containsKey(fileName)) {
 							Data data = new Data(fileName);
 							data.setInput(true);
-							files.put(fileName, data);
+							getFiles().put(fileName, data);
 						}
-						Data data = files.get(fileName);
+						Data data = getFiles().get(fileName);
 						task.addInputData(data, size);
 						break;
 					case "output":
-						if (!files.containsKey(fileName))
-							files.put(fileName, new Data(fileName));
-						data = files.get(fileName);
+						if (!getFiles().containsKey(fileName))
+							getFiles().put(fileName, new Data(fileName));
+						data = getFiles().get(fileName);
 						task.addOutputData(data, size);
 						data.setInput(false);
 						outputs.add(fileName);
@@ -240,7 +188,7 @@ public class DaxApplicationMaster extends HiWay {
 			onError(e);
 		}
 
-		scheduler.addTasks(tasks.values());
+		getScheduler().addTasks(tasks.values());
 	}
 
 }

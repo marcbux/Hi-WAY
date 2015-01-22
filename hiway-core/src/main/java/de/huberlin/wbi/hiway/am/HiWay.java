@@ -30,7 +30,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app.am;
+package de.huberlin.wbi.hiway.am;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -49,15 +49,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
-import java.util.Vector;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.cli.CommandLine;
@@ -75,22 +70,14 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.ContainerState;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.LocalResource;
-import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
@@ -100,24 +87,22 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
-import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.app.HiWayConfiguration;
-import de.huberlin.wbi.hiway.app.WFAppMetrics;
 import de.huberlin.wbi.hiway.common.Data;
+import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
+import de.huberlin.wbi.hiway.common.WFAppMetrics;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 import de.huberlin.wbi.hiway.scheduler.Scheduler;
-import de.huberlin.wbi.hiway.scheduler.C3PO;
-import de.huberlin.wbi.hiway.scheduler.GreedyQueue;
-import de.huberlin.wbi.hiway.scheduler.HEFT;
-import de.huberlin.wbi.hiway.scheduler.StaticRoundRobin;
+import de.huberlin.wbi.hiway.scheduler.c3po.C3PO;
+import de.huberlin.wbi.hiway.scheduler.gq.GreedyQueue;
+import de.huberlin.wbi.hiway.scheduler.heft.HEFT;
+import de.huberlin.wbi.hiway.scheduler.rr.RoundRobin;
 
 /**
  * <p>
@@ -145,418 +130,6 @@ import de.huberlin.wbi.hiway.scheduler.StaticRoundRobin;
  * </p>
  */
 public abstract class HiWay {
-
-	// an internal class that stores a task along with some additional information
-	private class HiWayInvocation {
-		final TaskInstance task;
-		final long timestamp;
-
-		public HiWayInvocation(TaskInstance task) {
-			this.task = task;
-			timestamp = System.currentTimeMillis();
-		}
-	}
-
-	/**
-	 * Thread to connect to the {@link ContainerManagementProtocol} and launch the container that will execute the shell command.
-	 */
-	private class LaunchContainerRunnable implements Runnable {
-		Container container;
-		NMCallbackHandler containerListener;
-		TaskInstance task;
-
-		/**
-		 * @param lcontainer
-		 *            Allocated container
-		 * @param containerListener
-		 *            Callback handler of the container
-		 */
-		public LaunchContainerRunnable(Container lcontainer, NMCallbackHandler containerListener, TaskInstance task) {
-			this.container = lcontainer;
-			this.containerListener = containerListener;
-			this.task = task;
-		}
-
-		/**
-		 * Connects to CM, sets up container launch context for shell command and eventually dispatches the container start request to the CM.
-		 */
-		@Override
-		public void run() {
-			log.info("Setting up container launch container for containerid=" + container.getId());
-			ContainerLaunchContext ctx = Records.newRecord(ContainerLaunchContext.class);
-
-			// Set the environment
-			StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$()).append(File.pathSeparatorChar).append("./*");
-			for (String c : conf.getStrings(YarnConfiguration.YARN_APPLICATION_CLASSPATH, YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
-				classPathEnv.append(':');
-				classPathEnv.append(File.pathSeparatorChar);
-				classPathEnv.append(c.trim());
-			}
-
-			if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
-				classPathEnv.append(':');
-				classPathEnv.append(System.getProperty("java.class.path"));
-			}
-
-			shellEnv.put("CLASSPATH", classPathEnv.toString());
-
-			// Set the environment
-			ctx.setEnvironment(shellEnv);
-
-			// Set the local resources
-			Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
-			try {
-				String containerId = container.getId().toString();
-				File script = new File(containerId + ".sh");
-				try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(script))) {
-					scriptWriter.write(task.getCommand());
-				} catch (IOException e) {
-					onError(e);
-				}
-				Data scriptData = new Data(script.getPath());
-				try {
-					scriptData.stageOut(fs, containerId);
-				} catch (IOException e) {
-					onError(e);
-				}
-				scriptData.addToLocalResourceMap(localResources, fs, containerId);
-			} catch (IOException e1) {
-				log.info("Error during Container startup. exiting");
-				onError(e1);
-			}
-			ctx.setLocalResources(localResources);
-
-			// Set the necessary command to execute on the allocated container
-			Vector<CharSequence> vargs = new Vector<CharSequence>(5);
-
-			vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
-			// Set Xmx based on am memory size
-			vargs.add("-Xmx" + containerMemory + "m");
-			// Set class name
-			vargs.add(HiWayConfiguration.HIWAY_WORKER_CLASS);
-
-			vargs.add("--appId " + appId.toString());
-			vargs.add("--containerId " + container.getId().toString());
-			vargs.add("--workflowId " + task.getWorkflowId());
-			vargs.add("--taskId " + task.getTaskId());
-			vargs.add("--taskName " + task.getTaskName());
-			vargs.add("--langLabel " + task.getLanguageLabel());
-			vargs.add("--id " + task.getId());
-			for (Data inputData : task.getInputData()) {
-				vargs.add("--input " + inputData.getLocalPath() + "," + inputData.isInput() + "," + Data.hdfsDirectoryMidfixes.get(inputData));
-			}
-			for (Data outputData : task.getOutputData()) {
-				vargs.add("--output " + outputData.getLocalPath());
-			}
-			if (determineFileSizes) {
-				vargs.add("--size");
-			}
-
-			// Get final commmand
-			StringBuilder command = new StringBuilder();
-			for (CharSequence str : vargs) {
-				command.append(str).append(" ");
-			}
-
-			List<String> commands = new ArrayList<String>();
-			commands.add(command.toString());
-			ctx.setCommands(commands);
-
-			/* Set up tokens for the container. For normal shell commands, the container in distribute-shell doesn't need any tokens. We are populating them
-			 * mainly for NodeManagers to be able to download any files in the distributed file-system. The tokens are otherwise also useful in cases, for e.g.,
-			 * when one is running a "hadoop dfs" command inside the distributed shell. */
-			ctx.setTokens(allTokens.duplicate());
-
-			containerListener.addContainer(container.getId(), container);
-			nmClientAsync.startContainerAsync(container, ctx);
-		}
-	}
-
-	private class NMCallbackHandler implements NMClientAsync.CallbackHandler {
-
-		private final HiWay applicationMaster;
-		private ConcurrentMap<ContainerId, Container> containers = new ConcurrentHashMap<ContainerId, Container>();
-
-		public NMCallbackHandler(HiWay applicationMaster) {
-			this.applicationMaster = applicationMaster;
-		}
-
-		public void addContainer(ContainerId containerId, Container container) {
-			containers.putIfAbsent(containerId, container);
-		}
-
-		@Override
-		public void onContainerStarted(ContainerId containerId, Map<String, ByteBuffer> allServiceResponse) {
-			if (log.isDebugEnabled()) {
-				log.debug("Succeeded to start Container " + containerId);
-			}
-			Container container = containers.get(containerId);
-			if (container != null) {
-				nmClientAsync.getContainerStatusAsync(containerId, container.getNodeId());
-			}
-		}
-
-		@Override
-		public void onContainerStatusReceived(ContainerId containerId, ContainerStatus containerStatus) {
-			if (log.isDebugEnabled()) {
-				log.debug("Container Status: id=" + containerId + ", status=" + containerStatus);
-			}
-		}
-
-		@Override
-		public void onContainerStopped(ContainerId containerId) {
-			if (log.isDebugEnabled()) {
-				log.debug("Succeeded to stop Container " + containerId);
-			}
-			containers.remove(containerId);
-		}
-
-		@Override
-		public void onGetContainerStatusError(ContainerId containerId, Throwable t) {
-			log.error("Failed to query the status of Container " + containerId);
-			onError(t);
-		}
-
-		@Override
-		public void onStartContainerError(ContainerId containerId, Throwable t) {
-			log.error("Failed to start Container " + containerId);
-			onError(t);
-			containers.remove(containerId);
-			applicationMaster.numCompletedContainers.incrementAndGet();
-			applicationMaster.numFailedContainers.incrementAndGet();
-		}
-
-		@Override
-		public void onStopContainerError(ContainerId containerId, Throwable t) {
-			log.error("Failed to stop Container " + containerId);
-			onError(t);
-			containers.remove(containerId);
-		}
-	}
-
-	protected class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
-		@SuppressWarnings("unchecked")
-		private ContainerRequest findFirstMatchingRequest(Container container) {
-			List<? extends Collection<ContainerRequest>> requestCollections = scheduler.relaxLocality() ? amRMClient.getMatchingRequests(
-					container.getPriority(), ResourceRequest.ANY, container.getResource()) : amRMClient.getMatchingRequests(container.getPriority(), container
-					.getNodeId().getHost(), container.getResource());
-
-			for (Collection<ContainerRequest> requestCollection : requestCollections) {
-				for (ContainerRequest request : requestCollection) {
-					return request;
-				}
-			}
-			return null;
-		}
-
-		@Override
-		public float getProgress() {
-			// set progress to deliver to RM on next heartbeat
-			if (scheduler == null)
-				return 0f;
-			int totalTasks = scheduler.getNumberOfTotalTasks();
-			float progress = (totalTasks == 0) ? 0 : (float) numCompletedContainers.get() / totalTasks;
-			return progress;
-		}
-
-		protected void launchTask(TaskInstance task, Container allocatedContainer) {
-			containerIdToInvocation.put(allocatedContainer.getId().getContainerId(), new HiWayInvocation(task));
-			log.info("Launching workflow task on a new container." + ", task=" + task + ", containerId=" + allocatedContainer.getId() + ", containerNode="
-					+ allocatedContainer.getNodeId().getHost() + ":" + allocatedContainer.getNodeId().getPort() + ", containerNodeURI="
-					+ allocatedContainer.getNodeHttpAddress() + ", containerResourceMemory" + allocatedContainer.getResource().getMemory());
-
-			LaunchContainerRunnable runnableLaunchContainer = new LaunchContainerRunnable(allocatedContainer, containerListener, task);
-			Thread launchThread = new Thread(runnableLaunchContainer);
-
-			/* launch and start the container on a separate thread to keep the main thread unblocked as all containers may not be allocated at one go. */
-			launchThreads.add(launchThread);
-			launchThread.start();
-			metrics.endWaitingTask();
-			metrics.runningTask(task);
-			metrics.launchedTask(task);
-
-		}
-
-		protected void launchTasks() {
-			while (!containerQueue.isEmpty() && !scheduler.nothingToSchedule()) {
-				Container allocatedContainer = containerQueue.remove();
-
-				long tic = System.currentTimeMillis();
-				TaskInstance task = scheduler.getNextTask(allocatedContainer);
-				long toc = System.currentTimeMillis();
-
-				if (task.getTries() == 1) {
-					JSONObject obj = new JSONObject();
-					try {
-						obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-					} catch (JSONException e) {
-						onError(e);
-					}
-					task.getReport().add(
-							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
-									HiwayDBI.KEY_INVOC_TIME_SCHED, obj));
-					task.getReport().add(
-							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
-									HiwayDBI.KEY_INVOC_HOST, allocatedContainer.getNodeId().getHost()));
-				}
-				launchTask(task, allocatedContainer);
-			}
-		}
-
-		@SuppressWarnings("unchecked")
-		@Override
-		public void onContainersAllocated(List<Container> allocatedContainers) {
-			log.info("Got response from RM for container ask, allocatedCnt=" + allocatedContainers.size());
-
-			for (Container container : allocatedContainers) {
-				JSONObject value = new JSONObject();
-				try {
-					value.put("type", "container-allocated");
-					value.put("container-id", container.getId());
-					value.put("node-id", container.getNodeId());
-					value.put("node-http", container.getNodeHttpAddress());
-					value.put("memory", container.getResource().getMemory());
-					value.put("vcores", container.getResource().getVirtualCores());
-					value.put("service", container.getContainerToken().getService());
-				} catch (JSONException e) {
-					onError(e);
-				}
-
-				writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
-				ContainerRequest request = findFirstMatchingRequest(container);
-
-				if (request != null) {
-					amRMClient.removeContainerRequest(request);
-					numAllocatedContainers.incrementAndGet();
-					containerQueue.add(container);
-				} else {
-					amRMClient.releaseAssignedContainer(container.getId());
-				}
-			}
-
-			launchTasks();
-		}
-
-		@Override
-		public void onContainersCompleted(List<ContainerStatus> completedContainers) {
-			log.info("Got response from RM for container ask, completedCnt=" + completedContainers.size());
-			for (ContainerStatus containerStatus : completedContainers) {
-
-				JSONObject value = new JSONObject();
-				try {
-					value.put("type", "container-completed");
-					value.put("container-id", containerStatus.getContainerId());
-					value.put("state", containerStatus.getState());
-					value.put("exit-code", containerStatus.getExitStatus());
-					value.put("diagnostics", containerStatus.getDiagnostics());
-				} catch (JSONException e) {
-					onError(e);
-				}
-
-				log.info("Got container status for containerID=" + containerStatus.getContainerId() + ", state=" + containerStatus.getState() + ", exitStatus="
-						+ containerStatus.getExitStatus() + ", diagnostics=" + containerStatus.getDiagnostics());
-				writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
-
-				// non complete containers should not be here
-				assert (containerStatus.getState() == ContainerState.COMPLETE);
-
-				// increment counters for completed/failed containers
-				int exitStatus = containerStatus.getExitStatus();
-				String diagnostics = containerStatus.getDiagnostics();
-				ContainerId containerId = containerStatus.getContainerId();
-
-				if (containerIdToInvocation.containsKey(containerId.getContainerId())) {
-
-					HiWayInvocation invocation = containerIdToInvocation.get(containerStatus.getContainerId().getContainerId());
-					TaskInstance finishedTask = invocation.task;
-
-					if (exitStatus == 0) {
-
-						log.info("Container completed successfully." + ", containerId=" + containerStatus.getContainerId());
-
-						// this task might have been completed previously (e.g., via speculative replication)
-						if (!finishedTask.isCompleted()) {
-							finishedTask.setCompleted();
-
-							evaluateReport(finishedTask, containerId);
-
-							for (JsonReportEntry entry : finishedTask.getReport()) {
-								writeEntryToLog(entry);
-							}
-
-							Collection<ContainerId> toBeReleasedContainers = scheduler.taskCompleted(finishedTask, containerStatus, System.currentTimeMillis()
-									- invocation.timestamp);
-							for (ContainerId toBeReleasedContainer : toBeReleasedContainers) {
-								log.info("Killing speculative copy of task " + finishedTask + " on container " + toBeReleasedContainer);
-								amRMClient.releaseAssignedContainer(toBeReleasedContainer);
-								numKilledContainers.incrementAndGet();
-							}
-
-							numCompletedContainers.incrementAndGet();
-							metrics.completedTask(finishedTask);
-							metrics.endRunningTask(finishedTask);
-
-							taskSuccess(finishedTask, containerId);
-						}
-					}
-
-					// The container was released by the framework (e.g., it was a speculative copy of a finished task)
-					else if (diagnostics.equals(SchedulerUtils.RELEASED_CONTAINER)) {
-						log.info("Container was released." + ", containerId=" + containerStatus.getContainerId());
-					}
-
-					else if (exitStatus == ExitCode.FORCE_KILLED.getExitCode()) {
-						log.info("Container was force killed." + ", containerId=" + containerStatus.getContainerId());
-					}
-
-					// The container failed horribly.
-					else {
-
-						taskFailure(finishedTask, containerId);
-						numFailedContainers.incrementAndGet();
-						metrics.failedTask(finishedTask);
-
-						if (exitStatus == ExitCode.TERMINATED.getExitCode()) {
-							log.info("Container was terminated." + ", containerId=" + containerStatus.getContainerId());
-						} else {
-							log.info("Container completed with failure." + ", containerId=" + containerStatus.getContainerId());
-
-							Collection<ContainerId> toBeReleasedContainers = scheduler.taskFailed(finishedTask, containerStatus);
-							for (ContainerId toBeReleasedContainer : toBeReleasedContainers) {
-								log.info("Killing speculative copy of task " + finishedTask + " on container " + toBeReleasedContainer);
-								amRMClient.releaseAssignedContainer(toBeReleasedContainer);
-								numKilledContainers.incrementAndGet();
-
-							}
-						}
-					}
-				}
-
-				/* The container was aborted by the framework without it having been assigned an invocation (e.g., because the RM allocated more containers than
-				 * requested) */
-				else {
-
-				}
-			}
-
-			launchTasks();
-		}
-
-		@Override
-		public void onError(Throwable e) {
-			onError(e);
-		}
-
-		@Override
-		public void onNodesUpdated(List<NodeReport> updatedNodes) {
-		}
-
-		@Override
-		public void onShutdownRequest() {
-			log.info("Shutdown Request.");
-			done = true;
-		}
-	}
 
 	// a handle to the log, in which any events are recorded
 	private static final Log log = LogFactory.getLog(HiWay.class);
@@ -589,81 +162,85 @@ public abstract class HiWay {
 		}
 	}
 
+	public static void onError(Throwable t) {
+		Writer writer = new StringWriter();
+		PrintWriter printWriter = new PrintWriter(writer);
+		t.printStackTrace(printWriter);
+		log.error(writer.toString());
+		System.exit(-1);
+	}
+
 	protected AMRMClientAsync.CallbackHandler allocListener;
 
 	// the yarn tokens to be passed to any launched containers
-	protected ByteBuffer allTokens;
+	private ByteBuffer allTokens;
 
 	// a handle to the YARN ResourceManager
 	@SuppressWarnings("rawtypes")
-	protected AMRMClientAsync amRMClient;
+	private AMRMClientAsync amRMClient;
 
 	// this application's attempt id (combination of attemptId and fail count)
-	protected ApplicationAttemptId appAttemptID;
+	private ApplicationAttemptId appAttemptID;
 
 	// the internal id assigned to this application by the YARN ResourceManager
-	protected String appId;
+	private String appId;
+
 	// the hostname of the container running the Hi-WAY ApplicationMaster
-	protected String appMasterHostname = "";
+	private String appMasterHostname = "";
 	// the port on which the ApplicationMaster listens for status updates from clients
-	protected int appMasterRpcPort = -1;
+	private int appMasterRpcPort = -1;
 	// the tracking URL to which the ApplicationMaster publishes info for clients to monitor
-	protected String appMasterTrackingUrl = "";
+	private String appMasterTrackingUrl = "";
 	// the configuration of the Hadoop installation
-	protected Configuration conf;
-	protected int containerCores = 1;
-	// a data structure storing the invocation launched by each container
-	protected Map<Long, HiWayInvocation> containerIdToInvocation = new HashMap<>();
+	private Configuration conf;
+	private int containerCores = 1;
 	// a listener for processing the responses from the NodeManagers
-	protected NMCallbackHandler containerListener;
+	private NMCallbackHandler containerListener;
 	// the memory and number of virtual cores to request for the container on which the workflow tasks are launched
-	protected int containerMemory = 4096;
-	// a queue for allocated containers that have yet to be assigned a task
-	protected Queue<Container> containerQueue = new LinkedList<>();
-	protected boolean determineFileSizes = false;
+	private int containerMemory = 4096;
+	private boolean determineFileSizes = false;
 	// flags denoting workflow execution has finished and been successful
-	protected volatile boolean done;
+	private volatile boolean done;
+
 	// the report, in which provenance information is stored
 	private Data federatedReport;
 	// private BufferedWriter federatedReportWriter;
-	protected Map<String, Data> files = new HashMap<>();
+	private Map<String, Data> files = new HashMap<>();
+
 	// a handle to the hdfs
-	protected FileSystem fs;
-	protected HiWayConfiguration hiWayConf;
+	private FileSystem fs;
+	private HiWayConfiguration hiWayConf;
 	// a list of threads, one for each container launch
-	protected List<Thread> launchThreads = new ArrayList<Thread>();
+	private List<Thread> launchThreads = new ArrayList<Thread>();
 	// a structure that stores various metrics during workflow execution
-	protected final WFAppMetrics metrics = WFAppMetrics.create();
+	private final WFAppMetrics metrics = WFAppMetrics.create();
 	// a handle to communicate with the YARN NodeManagers
-	protected NMClientAsync nmClientAsync;
+	private NMClientAsync nmClientAsync;
 	// a counter for allocated containers
-	protected AtomicInteger numAllocatedContainers = new AtomicInteger();
+	private AtomicInteger numAllocatedContainers = new AtomicInteger();
 	// a counter for completed containers (complete denotes successful or failed
-	protected AtomicInteger numCompletedContainers = new AtomicInteger();
+	private AtomicInteger numCompletedContainers = new AtomicInteger();
 	// a counter for failed containers
-	protected AtomicInteger numFailedContainers = new AtomicInteger();
+	private AtomicInteger numFailedContainers = new AtomicInteger();
 	// a counter for killed containers
-	protected AtomicInteger numKilledContainers = new AtomicInteger();
+	private AtomicInteger numKilledContainers = new AtomicInteger();
 	// a counter for requested containers
-	protected AtomicInteger numRequestedContainers = new AtomicInteger();
+	private AtomicInteger numRequestedContainers = new AtomicInteger();
 	// priority of the container request
-	protected int requestPriority;
+	private int requestPriority;
+	private UUID runId;
 	private String sandboxDir;
 	// the workflow scheduler, as defined at workflow launch time
-	protected Scheduler scheduler;
-	protected HiWayConfiguration.HIWAY_SCHEDULER_OPTS schedulerName;
+	private Scheduler scheduler;
+	private HiWayConfiguration.HIWAY_SCHEDULER_OPTS schedulerName;
 	// environment variables to be passed to any launched containers
-	protected Map<String, String> shellEnv = new HashMap<String, String>();
-	protected volatile boolean success;
+	private Map<String, String> shellEnv = new HashMap<String, String>();
+	private BufferedWriter statLog;
+	private volatile boolean success;
 	private String summaryFile;
-	protected Map<Long, JsonReportEntry> taskIdContainerAllocatedEvent = new HashMap<>();
-	protected Map<Long, JsonReportEntry> taskIdContainerRequestedEvent = new HashMap<>();
-	protected Data workflowFile;
-	// the workflow to be executed along with its format and path in the file
-	// system
-	protected String workflowPath;
-	protected BufferedWriter statLog;;
-	private UUID runId;
+	private Data workflowFile;
+	// the workflow to be executed along with its format and path in the filesystem
+	private String workflowPath;
 
 	public HiWay() {
 		conf = new YarnConfiguration();
@@ -677,7 +254,6 @@ public abstract class HiWay {
 		}
 		runId = UUID.randomUUID();
 	}
-	
 
 	/**
 	 * If the debug flag is set, dump out contents of current working directory and the environment to stdout for debugging.
@@ -738,8 +314,8 @@ public abstract class HiWay {
 				}
 				String s = sb.toString();
 				if (s.length() > 0) {
-					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
-							task.getId(), null, JsonReportEntry.KEY_INVOC_STDOUT, sb.toString());
+					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(),
+							null, JsonReportEntry.KEY_INVOC_STDOUT, sb.toString());
 					report.add(re);
 				}
 			}
@@ -751,8 +327,8 @@ public abstract class HiWay {
 				}
 				String s = sb.toString();
 				if (s.length() > 0) {
-					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
-							task.getId(), null, JsonReportEntry.KEY_INVOC_STDERR, sb.toString());
+					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(),
+							null, JsonReportEntry.KEY_INVOC_STDERR, sb.toString());
 					report.add(re);
 				}
 			}
@@ -848,6 +424,67 @@ public abstract class HiWay {
 		amRMClient.stop();
 	}
 
+	public ByteBuffer getAllTokens() {
+		return allTokens;
+	}
+
+	@SuppressWarnings("rawtypes")
+	public AMRMClientAsync getAmRMClient() {
+		return amRMClient;
+	}
+
+	public String getAppId() {
+		return appId;
+	}
+
+	public NMCallbackHandler getContainerListener() {
+		return containerListener;
+	}
+
+	public int getContainerMemory() {
+		return containerMemory;
+	}
+
+	public Map<String, Data> getFiles() {
+		return files;
+	}
+
+	public FileSystem getFs() {
+		return fs;
+	}
+
+	public HiWayConfiguration getHiWayConf() {
+		return hiWayConf;
+	}
+
+	public List<Thread> getLaunchThreads() {
+		return launchThreads;
+	}
+
+	public WFAppMetrics getMetrics() {
+		return metrics;
+	}
+
+	public NMClientAsync getNmClientAsync() {
+		return nmClientAsync;
+	}
+
+	public AtomicInteger getNumAllocatedContainers() {
+		return numAllocatedContainers;
+	}
+
+	public AtomicInteger getNumCompletedContainers() {
+		return numCompletedContainers;
+	}
+
+	public AtomicInteger getNumFailedContainers() {
+		return numFailedContainers;
+	}
+
+	public AtomicInteger getNumKilledContainers() {
+		return numKilledContainers;
+	}
+
 	public Collection<Data> getOutputFiles() {
 		Collection<Data> outputFiles = new ArrayList<>();
 
@@ -866,6 +503,14 @@ public abstract class HiWay {
 
 	public Scheduler getScheduler() {
 		return scheduler;
+	}
+
+	public Map<String, String> getShellEnv() {
+		return shellEnv;
+	}
+
+	public Data getWorkflowFile() {
+		return workflowFile;
 	}
 
 	public String getWorkflowName() {
@@ -983,6 +628,10 @@ public abstract class HiWay {
 		return true;
 	}
 
+	public boolean isDetermineFileSizes() {
+		return determineFileSizes;
+	}
+
 	public abstract void parseWorkflow();
 
 	/**
@@ -1018,7 +667,7 @@ public abstract class HiWay {
 		}
 		allTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 
-		allocListener = new RMCallbackHandler();
+		allocListener = new RMCallbackHandler(this);
 		amRMClient = AMRMClientAsync.createAMRMClientAsync(1000, allocListener);
 		amRMClient.init(conf);
 		amRMClient.start();
@@ -1038,7 +687,7 @@ public abstract class HiWay {
 		switch (schedulerName) {
 		case staticRoundRobin:
 		case heft:
-			scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new StaticRoundRobin(getWorkflowName(), fs, hiWayConf)
+			scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new RoundRobin(getWorkflowName(), fs, hiWayConf)
 					: new HEFT(getWorkflowName(), fs, hiWayConf);
 			break;
 		case greedyQueue:
@@ -1118,6 +767,14 @@ public abstract class HiWay {
 		return success;
 	}
 
+	public void setDetermineFileSizes() {
+		determineFileSizes = true;
+	}
+
+	public void setDone() {
+		this.done = true;
+	}
+
 	/**
 	 * Setup the request that will be sent to the RM for the container ask.
 	 * 
@@ -1154,7 +811,7 @@ public abstract class HiWay {
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 		return request;
 	}
-	
+
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
 		String line;
 
@@ -1189,7 +846,7 @@ public abstract class HiWay {
 
 		log.error("[end]");
 	}
-	
+
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
 		try {
 			for (TaskInstance childTask : task.getChildTasks()) {
@@ -1206,7 +863,7 @@ public abstract class HiWay {
 			done = true;
 		}
 	}
-	
+
 	public void writeEntryToLog(JsonReportEntry entry) {
 		try {
 			statLog.write(entry.toString());
@@ -1217,13 +874,5 @@ public abstract class HiWay {
 		}
 		scheduler.addEntryToDB(entry);
 	}
-	
-	public static void onError(Throwable t) {
-		Writer writer = new StringWriter();
-		PrintWriter printWriter = new PrintWriter(writer);
-		t.printStackTrace(printWriter);
-		log.error(writer.toString());
-		System.exit(-1);
-	}
-	
+
 }

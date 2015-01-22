@@ -30,7 +30,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.scheduler;
+package de.huberlin.wbi.hiway.scheduler.c3po;
 
 import java.io.IOException;
 import java.text.DecimalFormat;
@@ -53,9 +53,12 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
 import de.huberlin.hiwaydb.useDB.InvocStat;
-import de.huberlin.wbi.hiway.app.HiWayConfiguration;
-import de.huberlin.wbi.hiway.app.am.HiWay;
+import de.huberlin.wbi.hiway.am.HiWay;
+import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
+import de.huberlin.wbi.hiway.scheduler.Estimate;
+import de.huberlin.wbi.hiway.scheduler.RuntimeEstimate;
+import de.huberlin.wbi.hiway.scheduler.Scheduler;
 
 /**
  * A basic implementation of the <b>C</b>loning, <b>C</b>urious, <b>C</b>onservative, <b>P</b>lacement-aware, <b>O</b>utlooking (C3PO) workflow scheduler.
@@ -183,25 +186,6 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * </p>
  */
 public class C3PO extends Scheduler {
-
-	/**
-	 * 
-	 * for each task category, remember two figures: (1) how many task instances of this category have been successfully execute (2) how much time has been
-	 * spent in total for task instances of this category
-	 * 
-	 * @author Marc Bux
-	 * 
-	 */
-	protected class OutlookEstimate extends Estimate {
-		int finishedTasks;
-		int remainingTasks;
-		long timeSpent;
-	}
-
-	protected class PlacementAwarenessEstimate extends Estimate {
-		long localData;
-		long totalData;
-	}
 
 	private static final Log log = LogFactory.getLog(C3PO.class);
 	private double conservatismWeight = 1d;

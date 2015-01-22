@@ -30,11 +30,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.scheduler;
+package de.huberlin.wbi.hiway.scheduler.gq;
 
-import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Queue;
 
 import org.apache.commons.logging.Log;
@@ -44,73 +42,53 @@ import org.apache.hadoop.yarn.api.records.Container;
 
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
+import de.huberlin.wbi.hiway.scheduler.Scheduler;
 
 /**
- * An abstract implementation of a static workflow scheduler (i.e., a scheduler that build a static schedule of which task to assign to which resource prior to
- * workflow execution).
+ * A basic implementation of a scheduler that stores ready-to-execute tasks in a queue. Whenever a container has been allocated, this container is greedily
+ * assigned the first task from the queue.
  * 
  * @author Marc Bux
  * 
  */
-public abstract class StaticScheduler extends Scheduler {
+public class GreedyQueue extends Scheduler {
 
-	private static final Log log = LogFactory.getLog(StaticScheduler.class);
+	private static final Log log = LogFactory.getLog(GreedyQueue.class);
 
-	// the tasks per compute node that are ready to execute
-	protected Map<String, Queue<TaskInstance>> queues;
+	private Queue<TaskInstance> queue;
 
-	// the static schedule
-	protected Map<TaskInstance, String> schedule;
-
-	public StaticScheduler(String workflowName, FileSystem fs, HiWayConfiguration conf) {
+	public GreedyQueue(String workflowName, HiWayConfiguration conf, FileSystem fs) {
 		super(workflowName, conf, fs);
-		schedule = new HashMap<>();
-		queues = new HashMap<>();
+		queue = new LinkedList<>();
+	}
 
-		for (String node : runtimeEstimatesPerNode.keySet()) {
-			Queue<TaskInstance> queue = new LinkedList<>();
-			queues.put(node, queue);
-		}
+	@Override
+	protected void addTask(TaskInstance task) {
+		super.addTask(task);
+		if (task.readyToExecute())
+			addTaskToQueue(task);
 	}
 
 	@Override
 	public void addTaskToQueue(TaskInstance task) {
-		String node = schedule.get(task);
-		String[] nodes = new String[1];
-		nodes[0] = node;
-		unissuedNodeRequests.add(nodes);
-		queues.get(node).add(task);
-		log.info("Added task " + task + " to queue " + node);
+		super.addTaskToQueue(task);
+		queue.add(task);
+		log.info("Added task " + task + " to queue");
 	}
 
 	@Override
 	public TaskInstance getNextTask(Container container) {
 		super.getNextTask(container);
-		String node = container.getNodeId().getHost();
+		TaskInstance task = queue.remove();
 
-		log.info("Looking for task on container " + container.getId().getContainerId() + " on node " + node);
-		log.info("Queue: " + queues.get(node).toString());
-
-		TaskInstance task = queues.get(node).remove();
-
-		log.info("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + node);
+		log.info("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
 		task.incTries();
-
 		return task;
 	}
 
 	@Override
 	public int getNumberOfReadyTasks() {
-		int readyTasks = 0;
-		for (Queue<TaskInstance> queue : queues.values()) {
-			readyTasks += queue.size();
-		}
-		return readyTasks;
-	}
-
-	@Override
-	public boolean relaxLocality() {
-		return false;
+		return queue.size();
 	}
 
 }

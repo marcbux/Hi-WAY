@@ -30,7 +30,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app;
+package de.huberlin.wbi.hiway.common;
 
 import java.io.File;
 import java.io.IOException;
@@ -81,8 +81,7 @@ import org.apache.hadoop.yarn.util.Records;
 //import org.json.JSONObject;
 
 
-import de.huberlin.wbi.hiway.app.am.HiWay;
-import de.huberlin.wbi.hiway.common.Data;
+import de.huberlin.wbi.hiway.am.HiWay;
 
 /**
  * Hi-WAY Client for workflow submission to Hadoop YARN.
@@ -395,7 +394,7 @@ public class Client {
 		// Set Xmx based on am memory size
 		vargs.add("-Xmx" + amMemory + "m");
 		// Set class name
-		
+
 		switch (workflowType) {
 		case dax:
 			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS);

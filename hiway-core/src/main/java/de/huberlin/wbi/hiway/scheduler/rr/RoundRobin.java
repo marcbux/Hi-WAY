@@ -30,64 +30,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.scheduler;
+package de.huberlin.wbi.hiway.scheduler.rr;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Queue;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.yarn.api.records.Container;
 
-import de.huberlin.wbi.hiway.app.HiWayConfiguration;
+import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
+import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
 
 /**
- * A basic implementation of a scheduler that stores ready-to-execute tasks in a queue. Whenever a container has been allocated, this container is greedily
- * assigned the first task from the queue.
+ * The static round robin scheduler that traverses the workflow from the beginning to the end, assigning tasks to compute resources in turn.
  * 
  * @author Marc Bux
  * 
  */
-public class GreedyQueue extends Scheduler {
+public class RoundRobin extends StaticScheduler {
 
-	private static final Log log = LogFactory.getLog(GreedyQueue.class);
+	private static final Log log = LogFactory.getLog(RoundRobin.class);
 
-	private Queue<TaskInstance> queue;
+	private Iterator<String> nodeIterator;
 
-	public GreedyQueue(String workflowName, HiWayConfiguration conf, FileSystem fs) {
-		super(workflowName, conf, fs);
-		queue = new LinkedList<>();
+	public RoundRobin(String workflowName, FileSystem fs, HiWayConfiguration conf) {
+		super(workflowName, fs, conf);
+		nodeIterator = queues.keySet().iterator();
 	}
 
 	@Override
 	protected void addTask(TaskInstance task) {
 		super.addTask(task);
-		if (task.readyToExecute())
+		if (!nodeIterator.hasNext()) {
+			nodeIterator = queues.keySet().iterator();
+		}
+		String node = nodeIterator.next();
+		schedule.put(task, node);
+		log.info("Task " + task + " scheduled on node " + node);
+		if (task.readyToExecute()) {
 			addTaskToQueue(task);
+		}
 	}
 
 	@Override
-	public void addTaskToQueue(TaskInstance task) {
-		super.addTaskToQueue(task);
-		queue.add(task);
-		log.info("Added task " + task + " to queue");
-	}
-
-	@Override
-	public TaskInstance getNextTask(Container container) {
-		super.getNextTask(container);
-		TaskInstance task = queue.remove();
-
-		log.info("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
-		task.incTries();
-		return task;
-	}
-
-	@Override
-	public int getNumberOfReadyTasks() {
-		return queue.size();
+	public void addTasks(Collection<TaskInstance> tasks) {
+		List<TaskInstance> taskList = new LinkedList<>(tasks);
+		Collections.sort(taskList, TaskInstance.Comparators.DEPTH);
+		super.addTasks(taskList);
 	}
 
 }

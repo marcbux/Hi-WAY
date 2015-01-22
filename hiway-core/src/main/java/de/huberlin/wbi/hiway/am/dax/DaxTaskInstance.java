@@ -30,57 +30,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.scheduler;
+package de.huberlin.wbi.hiway.am.dax;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileSystem;
-
-import de.huberlin.wbi.hiway.app.HiWayConfiguration;
+import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
-/**
- * The static round robin scheduler that traverses the workflow from the beginning to the end, assigning tasks to compute resources in turn.
- * 
- * @author Marc Bux
- * 
- */
-public class StaticRoundRobin extends StaticScheduler {
+public class DaxTaskInstance extends TaskInstance {
 
-	private static final Log log = LogFactory.getLog(StaticRoundRobin.class);
+	private Map<Data, Long> fileSizes;
+	private double runtime;
 
-	private Iterator<String> nodeIterator;
+	public DaxTaskInstance(UUID workflowId, String taskName) {
+		super(workflowId, taskName, Math.abs(taskName.hashCode()));
+		fileSizes = new HashMap<>();
+	}
 
-	public StaticRoundRobin(String workflowName, FileSystem fs, HiWayConfiguration conf) {
-		super(workflowName, fs, conf);
-		nodeIterator = queues.keySet().iterator();
+	public void addInputData(Data data, Long fileSize) {
+		super.addInputData(data);
+		fileSizes.put(data, fileSize);
+	}
+
+	public void addOutputData(Data data, Long fileSize) {
+		super.addOutputData(data);
+		fileSizes.put(data, fileSize);
 	}
 
 	@Override
-	protected void addTask(TaskInstance task) {
-		super.addTask(task);
-		if (!nodeIterator.hasNext()) {
-			nodeIterator = queues.keySet().iterator();
+	public String getCommand() {
+		if (runtime > 0) {
+			StringBuilder sb = new StringBuilder("sleep " + runtime + "\n");
+			for (Data output : getOutputData()) {
+				sb.append("dd if=/dev/zero of=" + output.getLocalPath() + " bs=" + fileSizes.get(output) + " count=1\n");
+			}
+			return sb.toString();
 		}
-		String node = nodeIterator.next();
-		schedule.put(task, node);
-		log.info("Task " + task + " scheduled on node " + node);
-		if (task.readyToExecute()) {
-			addTaskToQueue(task);
-		}
+		return super.getCommand();
 	}
 
 	@Override
-	public void addTasks(Collection<TaskInstance> tasks) {
-		List<TaskInstance> taskList = new LinkedList<>(tasks);
-		Collections.sort(taskList, TaskInstance.Comparators.DEPTH);
-		super.addTasks(taskList);
+	public Set<Data> getInputData() {
+		if (runtime > 0) {
+			Set<Data> intermediateData = new HashSet<>();
+			for (Data input : super.getInputData()) {
+				if (!input.isInput()) {
+					intermediateData.add(input);
+				}
+			}
+			return intermediateData;
+		}
+		return super.getInputData();
 	}
 
+	public void setRuntime(double runtime) {
+		this.runtime = runtime;
+	}
 }

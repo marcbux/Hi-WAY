@@ -30,16 +30,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app.am;
+package de.huberlin.wbi.hiway.am.cuneiform;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -50,163 +47,24 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.json.JSONException;
 
 import de.huberlin.wbi.cuneiform.core.cre.BaseCreActor;
-import de.huberlin.wbi.cuneiform.core.cre.TicketReadyMsg;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.repl.BaseRepl;
-import de.huberlin.wbi.cuneiform.core.semanticmodel.CompoundExpr;
-import de.huberlin.wbi.cuneiform.core.semanticmodel.NotBoundException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
-import de.huberlin.wbi.cuneiform.core.semanticmodel.Ticket;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketFailedMsg;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketFinishedMsg;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketSrcActor;
-import de.huberlin.wbi.hiway.app.HiWayConfiguration;
+import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.Data;
+import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
-import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 public class CuneiformApplicationMaster extends HiWay {
 
-	public class CuneiformTaskInstance extends TaskInstance {
+	protected static final Log log = LogFactory.getLog(CuneiformApplicationMaster.class);
 
-		private Invocation invocation;
-
-		public CuneiformTaskInstance(Invocation invocation) {
-			super(invocation.getTicketId(), invocation.getRunId(), invocation.getTaskName(), invocation.getTaskId(), invocation.getLangLabel());
-			this.invocation = invocation;
-		}
-
-		@Override
-		public void addChildTask(TaskInstance childTask) throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
-		}
-
-		@Override
-		public void addParentTask(TaskInstance parentTask) throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
-		}
-
-		@Override
-		public Set<TaskInstance> getChildTasks() throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
-		}
-
-		@Override
-		public int getDepth() throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
-		}
-
-		public Invocation getInvocation() {
-			return invocation;
-		}
-
-		@Override
-		public Set<TaskInstance> getParentTasks() throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
-		}
-
-		@Override
-		public double getUpwardRank() throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
-		}
-
-		@Override
-		public boolean readyToExecute() {
-			return true;
-		}
-
-		@Override
-		public void setDepth(int depth) throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
-		}
-
-		@Override
-		public void setUpwardRank(double upwardRank) throws WorkflowStructureUnknownException {
-			throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
-		}
-
+	public static Log getLog() {
+		return log;
 	}
-
-	// Cre - Cuneiform Runtime Environment
-	public class HiWayCreActor extends BaseCreActor {
-
-		@Override
-		public void processMsg(TicketReadyMsg msg) {
-
-			Ticket ticket = msg.getTicket();
-
-			Invocation invoc = Invocation.createInvocation(ticket);
-			TaskInstance task = new CuneiformTaskInstance(invoc);
-
-			try {
-				for (String inputName : invoc.getStageInList()) {
-
-					if (!files.containsKey(inputName)) {
-						Data data = new Data(inputName);
-						data.setInput(true);
-						files.put(inputName, data);
-					}
-					Data data = files.get(inputName);
-					task.addInputData(data);
-				}
-			} catch (NotDerivableException e) {
-				onError(e);
-			}
-
-			try {
-				task.setCommand(invoc.toScript());
-				writeEntryToLog(invoc.getExecutableLogEntry());
-				writeEntryToLog(invoc.getScriptLogEntry());
-			} catch (NotBoundException | NotDerivableException e) {
-				onError(e);
-			}
-
-			Collection<TaskInstance> tasks = new ArrayList<>();
-			tasks.add(task);
-			scheduler.addTasks(tasks);
-		}
-
-		@Override
-		protected void shutdown() {
-		}
-
-	}
-
-	// Repl - Read evaluation print loop
-	public class HiWayRepl extends BaseRepl {
-
-		public HiWayRepl(TicketSrcActor ticketSrc) {
-			super(ticketSrc, null);
-		}
-
-		@Override
-		public void queryFailedPost(UUID queryId, Long ticketId, Exception e, String script, String stdOut, String stdErr) {
-			log.info("Query failed.");
-			done = true;
-		}
-
-		@Override
-		public void queryFinishedPost(UUID queryId, CompoundExpr result) {
-			log.info("Query finished.");
-			done = true;
-			try {
-				for (String output : result.normalize()) {
-					if (files.containsKey(output)) {
-						files.get(output).setOutput(true);
-					}
-				}
-			} catch (NotDerivableException e) {
-				onError(e);
-			}
-		}
-
-		@Override
-		public void queryStartedPost(UUID runId) {
-		}
-
-	}
-
-	private static final Log log = LogFactory.getLog(CuneiformApplicationMaster.class);
 
 	public static void main(String[] args) {
 		HiWay.loop(new CuneiformApplicationMaster(), args);
@@ -220,7 +78,7 @@ public class CuneiformApplicationMaster extends HiWay {
 		super();
 		ExecutorService executor = Executors.newCachedThreadPool();
 
-		creActor = new HiWayCreActor();
+		creActor = new HiWayCreActor(this);
 		executor.submit(creActor);
 
 		ticketSrc = new TicketSrcActor(creActor);
@@ -235,13 +93,13 @@ public class CuneiformApplicationMaster extends HiWay {
 
 	@Override
 	public void parseWorkflow() {
-		log.info("Parsing Cuneiform workflow " + workflowFile);
-		BaseRepl repl = new HiWayRepl(ticketSrc);
+		log.info("Parsing Cuneiform workflow " + getWorkflowFile());
+		BaseRepl repl = new HiWayRepl(ticketSrc, this);
 
 		StringBuffer buf = new StringBuffer();
 
 		try {
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(workflowFile.getLocalPath())))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(getWorkflowFile().getLocalPath())))) {
 				String line;
 				while ((line = reader.readLine()) != null) {
 					buf.append(line).append('\n');
@@ -254,11 +112,11 @@ public class CuneiformApplicationMaster extends HiWay {
 		}
 		repl.interpret(buf.toString());
 	}
-	
+
 	@Override
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
 		super.taskFailure(task, containerId);
-		
+
 		String line;
 		try {
 			StringBuffer buf = new StringBuffer();
@@ -267,7 +125,7 @@ public class CuneiformApplicationMaster extends HiWay {
 					buf.append(line).append('\n');
 			}
 			String stdOut = buf.toString();
-			
+
 			buf = new StringBuffer();
 			try (BufferedReader reader = new BufferedReader(new FileReader(new File(Invocation.STDERR_FILENAME)))) {
 				while ((line = reader.readLine()) != null)
@@ -275,14 +133,14 @@ public class CuneiformApplicationMaster extends HiWay {
 			}
 			String stdErr = buf.toString();
 			Invocation invocation = ((CuneiformTaskInstance) task).getInvocation();
-			if (!task.retry(hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
+			if (!task.retry(getHiWayConf().getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
 				ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, task.getCommand(), stdOut, stdErr));
-			}			
+			}
 		} catch (IOException e) {
 			onError(e);
 		}
 	}
-	
+
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
 		try {
@@ -293,11 +151,11 @@ public class CuneiformApplicationMaster extends HiWay {
 
 			// set output files
 			for (String outputName : invocation.getStageOutList()) {
-				if (!files.containsKey(outputName)) {
+				if (!getFiles().containsKey(outputName)) {
 					Data output = new Data(outputName);
-					files.put(outputName, output);
+					getFiles().put(outputName, output);
 				}
-				Data output = files.get(outputName);
+				Data output = getFiles().get(outputName);
 				Data.hdfsDirectoryMidfixes.put(output, containerId.toString());
 
 				task.addOutputData(output);
@@ -309,5 +167,5 @@ public class CuneiformApplicationMaster extends HiWay {
 			onError(e);
 		}
 	}
-	
+
 }

@@ -30,7 +30,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.app;
+package de.huberlin.wbi.hiway.common;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -57,7 +57,6 @@ import org.json.JSONObject;
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.common.Data;
 
 public class Worker {
 
@@ -78,11 +77,11 @@ public class Worker {
 	private Path dir;
 	FileSystem fs;
 	protected HiWayConfiguration hiWayConf;
-	private Set<Data> inputFiles;
-	private String langLabel;
-
-	private Set<Data> outputFiles;
 	private long id;
+	private Set<Data> inputFiles;
+
+	private String langLabel;
+	private Set<Data> outputFiles;
 
 	private long taskId;
 	private String taskName;
@@ -208,8 +207,7 @@ public class Worker {
 			long toc = System.currentTimeMillis();
 			JSONObject obj = new JSONObject();
 			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, input.getLocalPath(), HiwayDBI.KEY_FILE_TIME_STAGEIN,
-					obj));
+			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, input.getLocalPath(), HiwayDBI.KEY_FILE_TIME_STAGEIN, obj));
 			if (determineFileSizes) {
 				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, input.getLocalPath(),
 						JsonReportEntry.KEY_FILE_SIZE_STAGEIN, Long.toString((new File(input.getLocalPath())).length())));
@@ -237,8 +235,7 @@ public class Worker {
 			long toc = System.currentTimeMillis();
 			JSONObject obj = new JSONObject();
 			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, output.getLocalPath(),
-					HiwayDBI.KEY_FILE_TIME_STAGEOUT, obj));
+			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, output.getLocalPath(), HiwayDBI.KEY_FILE_TIME_STAGEOUT, obj));
 			if (determineFileSizes) {
 				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, output.getLocalPath(),
 						JsonReportEntry.KEY_FILE_SIZE_STAGEOUT, Long.toString((new File(output.getLocalPath())).length())));
