@@ -75,7 +75,7 @@ public class Worker {
 	private String containerId;
 	private boolean determineFileSizes = false;
 	private Path dir;
-	FileSystem fs;
+	private FileSystem fs;
 	protected HiWayConfiguration hiWayConf;
 	private long id;
 	private Set<Data> inputFiles;
@@ -87,6 +87,7 @@ public class Worker {
 	private String taskName;
 
 	private UUID workflowId;
+	private String invocScript = "";
 
 	public Worker() {
 		inputFiles = new HashSet<>();
@@ -130,6 +131,7 @@ public class Worker {
 		opts.addOption("input", true, "");
 		opts.addOption("output", true, "");
 		opts.addOption("size", false, "");
+		opts.addOption("invocScript", true, "if set, this parameter provides the Worker with the path to the script that is to be stored in invoc-script");
 
 		CommandLine cliParser = new GnuParser().parse(opts, args);
 		appId = cliParser.getOptionValue("appId");
@@ -156,6 +158,9 @@ public class Worker {
 				outputFiles.add(new Data(output));
 			}
 		}
+		if (cliParser.hasOption("invocScript")) {
+			invocScript = cliParser.getOptionValue("invocScript");
+		}
 
 		Data.setHdfsDirectoryPrefix(hiWayConf.get(HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY, HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT) + "/"
 				+ appId);
@@ -181,6 +186,21 @@ public class Worker {
 		tic = System.currentTimeMillis();
 		int exitValue = exec();
 		toc = System.currentTimeMillis();
+
+		if (invocScript.length() > 0) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(invocScript))) {
+				String line;
+				StringBuilder sb = new StringBuilder();
+				while ((line = reader.readLine()) != null) {
+					sb.append(line).append("\n");
+				}
+				writeEntryToLog(new JsonReportEntry(workflowId, taskId, taskName, langLabel, id, JsonReportEntry.KEY_INVOC_SCRIPT, sb.toString()));
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			}
+		}
+
 		obj = new JSONObject();
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, JsonReportEntry.KEY_INVOC_TIME, obj));

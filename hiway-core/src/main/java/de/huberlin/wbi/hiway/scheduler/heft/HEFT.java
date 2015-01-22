@@ -67,10 +67,10 @@ import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
 public class HEFT extends StaticScheduler {
 
 	private static final Log log = LogFactory.getLog(HEFT.class);
-	Map<String, Map<Double, Double>> freeTimeSlotLengthsPerNode;
-	Map<String, TreeSet<Double>> freeTimeSlotStartsPerNode;
+	private Map<String, Map<Double, Double>> freeTimeSlotLengthsPerNode;
+	private Map<String, TreeSet<Double>> freeTimeSlotStartsPerNode;
 
-	Map<TaskInstance, Double> readyTimePerTask;
+	private Map<TaskInstance, Double> readyTimePerTask;
 
 	public HEFT(String workflowName, FileSystem fs, HiWayConfiguration conf) {
 		super(workflowName, fs, conf);

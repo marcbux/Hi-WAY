@@ -25,14 +25,9 @@
  */
 package de.huberlin.wbi.hiway.am;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Vector;
 
 import org.apache.commons.logging.Log;
@@ -41,7 +36,6 @@ import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
-import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -100,29 +94,8 @@ public class LaunchContainerRunnable implements Runnable {
 
 		// Set the environment
 		ctx.setEnvironment(am.getShellEnv());
-
-		// Set the local resources
-		Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
-		try {
-			String containerId = container.getId().toString();
-			File script = new File(containerId + ".sh");
-			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(script))) {
-				scriptWriter.write(task.getCommand());
-			} catch (IOException e) {
-				HiWay.onError(e);
-			}
-			Data scriptData = new Data(script.getPath());
-			try {
-				scriptData.stageOut(am.getFs(), containerId);
-			} catch (IOException e) {
-				HiWay.onError(e);
-			}
-			scriptData.addToLocalResourceMap(localResources, am.getFs(), containerId);
-		} catch (IOException e1) {
-			log.info("Error during Container startup. exiting");
-			HiWay.onError(e1);
-		}
-		ctx.setLocalResources(localResources);
+		
+		ctx.setLocalResources(task.buildScriptsAndSetResources(am.getFs(), container));
 
 		// Set the necessary command to execute on the allocated container
 		Vector<CharSequence> vargs = new Vector<CharSequence>(5);
@@ -148,6 +121,11 @@ public class LaunchContainerRunnable implements Runnable {
 		}
 		if (am.isDetermineFileSizes()) {
 			vargs.add("--size");
+		}
+		
+		String invocScript = task.getInvocScript();
+		if (invocScript.length() > 0) {
+			vargs.add("--invocScript " + invocScript);
 		}
 
 		// Get final commmand

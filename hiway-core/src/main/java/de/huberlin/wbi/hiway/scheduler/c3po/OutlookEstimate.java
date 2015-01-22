@@ -35,7 +35,7 @@ package de.huberlin.wbi.hiway.scheduler.c3po;
 import de.huberlin.wbi.hiway.scheduler.Estimate;
 
 public class OutlookEstimate extends Estimate {
-	int finishedTasks;
-	int remainingTasks;
-	long timeSpent;
+	public int finishedTasks;
+	public int remainingTasks;
+	public long timeSpent;
 }

@@ -43,6 +43,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import de.huberlin.wbi.hiway.am.HiWay;
+
 public class GalaxyTool {
 	private String env;
 	private final String id;
@@ -105,7 +107,7 @@ public class GalaxyTool {
 				jo.putOpt(name, fileJo);
 			}
 		} catch (JSONException e) {
-			e.printStackTrace();
+			HiWay.onError(e);
 		}
 	}
 

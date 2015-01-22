@@ -28,8 +28,8 @@ package de.huberlin.wbi.hiway.am;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 public class HiWayInvocation {
-	final TaskInstance task;
-	final long timestamp;
+	public final TaskInstance task;
+	public final long timestamp;
 
 	public HiWayInvocation(TaskInstance task) {
 		this.task = task;

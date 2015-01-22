@@ -39,6 +39,8 @@ import java.util.Set;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import de.huberlin.wbi.hiway.am.HiWay;
+
 public class GalaxyDataTable {
 	private final String[] columns;
 	private final String comment_char;
@@ -77,7 +79,7 @@ public class GalaxyDataTable {
 		try {
 			outer.put("fields", inner);
 		} catch (JSONException e) {
-			e.printStackTrace();
+			HiWay.onError(e);
 		}
 		return outer;
 	}

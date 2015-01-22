@@ -36,19 +36,25 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.ForeignLambdaExpr;
+import de.huberlin.wbi.hiway.am.HiWay;
+import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 public class GalaxyTaskInstance extends TaskInstance {
 	private GalaxyTool galaxyTool;
-	Set<GalaxyData> inputs;
-	StringBuilder pickleScript;
+	private Set<GalaxyData> inputs;
+	private StringBuilder paramScript;
 	private String postScript;
 
 	private JSONObject toolState;
@@ -57,20 +63,30 @@ public class GalaxyTaskInstance extends TaskInstance {
 		super(id, UUID.randomUUID(), taskName, Math.abs(taskName.hashCode()), ForeignLambdaExpr.LANGID_BASH);
 		this.galaxyTool = galaxyTool;
 		toolState = new JSONObject();
-		pickleScript = new StringBuilder("import os, ast\nimport cPickle as pickle\nimport galaxy.app\n");
+		paramScript = new StringBuilder("import os, ast\nimport cPickle as pickle\nimport galaxy.app\n");
 		this.postScript = "";
 		inputs = new HashSet<>();
+		
+		setInvocScript(id + ".sh");
+		
+		StringBuilder commandSb = new StringBuilder();
+		commandSb.append("python ").append(id).append(".params.py\n");
+		commandSb.append("cat ").append(id).append(".pre.sh > ").append(id).append(".sh\n");
+		commandSb.append("echo `cheetah fill ").append(id).append(".template.tmpl --pickle ").append(id).append(".pickle.p -p` >> ").append(id).append(".sh\n");
+		commandSb.append("cat ").append(id).append(".post.sh >> ").append(id).append(".sh\n");
+		commandSb.append("bash ").append(getInvocScript()).append("\n");
+		setCommand(commandSb.toString());
 	}
 
 	public void addFile(String name, boolean computeMetadata, GalaxyData data) {
 		galaxyTool.addFile(name, data, toolState);
 		if (computeMetadata && data.hasDataType()) {
 			GalaxyDataType dataType = data.getDataType();
-			pickleScript.append("from ");
-			pickleScript.append(dataType.getFile());
-			pickleScript.append(" import ");
-			pickleScript.append(dataType.getName());
-			pickleScript.append("\n");
+			paramScript.append("from ");
+			paramScript.append(dataType.getFile());
+			paramScript.append(" import ");
+			paramScript.append(dataType.getName());
+			paramScript.append("\n");
 			inputs.add(data);
 		}
 	}
@@ -95,7 +111,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 		try {
 			this.toolState = new JSONObject(toolState_json);
 		} catch (JSONException e) {
-			e.printStackTrace();
+			HiWay.onError(e);
 		}
 	}
 
@@ -103,88 +119,89 @@ public class GalaxyTaskInstance extends TaskInstance {
 		postScript = postScript + (post.endsWith("\n") ? post : post + "\n");
 	}
 
-	public void buildPickleScript() throws JSONException {
+	public void prepareParamScript() throws JSONException {
 		galaxyTool.populateToolState(toolState);
-		pickleScript.append("\ntool_state = ");
-		pickleScript.append(toolState.toString());
-		pickleScript.append("\n\nclass Dict(dict):");
-		pickleScript.append("\n    def __init__(self, *args, **kwargs):");
-		pickleScript.append("\n        super(Dict, self).__init__(*args, **kwargs)");
-		pickleScript.append("\n        self.__dict__ = self");
-		pickleScript.append("\n\nclass Dataset(Dict):");
-		pickleScript.append("\n    def has_data(self):");
-		pickleScript.append("\n        return True");
-		pickleScript.append("\n    def get_size(self):");
-		pickleScript.append("\n        return os.path.getsize(self.file_name)");
-		pickleScript.append("\n\ndef expandToolState(src, dest):");
-		pickleScript.append("\n    for k, v in src.iteritems():");
-		pickleScript.append("\n        if isinstance (v, dict):");
-		pickleScript.append("\n            dest[k] = Dataset() if 'path' in v else Dict()");
-		pickleScript.append("\n            expandToolState(v, dest[k])");
+		paramScript.append("\ntool_state = ");
+		paramScript.append(toolState.toString());
+		paramScript.append("\n\nclass Dict(dict):");
+		paramScript.append("\n    def __init__(self, *args, **kwargs):");
+		paramScript.append("\n        super(Dict, self).__init__(*args, **kwargs)");
+		paramScript.append("\n        self.__dict__ = self");
+		paramScript.append("\n\nclass Dataset(Dict):");
+		paramScript.append("\n    def has_data(self):");
+		paramScript.append("\n        return True");
+		paramScript.append("\n    def get_size(self):");
+		paramScript.append("\n        return os.path.getsize(self.file_name)");
+		paramScript.append("\n\ndef expandToolState(src, dest):");
+		paramScript.append("\n    for k, v in src.iteritems():");
+		paramScript.append("\n        if isinstance (v, dict):");
+		paramScript.append("\n            dest[k] = Dataset() if 'path' in v else Dict()");
+		paramScript.append("\n            expandToolState(v, dest[k])");
 		for (GalaxyData input : inputs) {
-			pickleScript.append("\n            if 'path' in v and v['path'] == '");
-			pickleScript.append(input.getName());
-			pickleScript.append("':");
-			pickleScript.append("\n                dest[k]['file_name'] = v['path']");
-			pickleScript.append("\n                datatype = ");
-			pickleScript.append(input.getDataType().getName());
-			pickleScript.append("()");
-			pickleScript.append("\n                for key in datatype.metadata_spec.keys():");
-			pickleScript.append("\n                    value = datatype.metadata_spec[key]");
-			pickleScript.append("\n                    default = value.get(\"default\")");
-			pickleScript.append("\n                    dest[k].metadata[key] = default");
-			pickleScript.append("\n                try:");
-			pickleScript.append("\n                    datatype.set_meta(dataset=dest[k])");
-			pickleScript.append("\n                except:");
-			pickleScript.append("\n                    pass");
-			pickleScript.append("\n                for key in dest[k].metadata.keys():");
-			pickleScript.append("\n                    value = dest[k].metadata[key]");
-			pickleScript.append("\n                    if isinstance (value, list):");
-			pickleScript.append("\n                        dest[k].metadata[key] = ', '.join(str(item) for item in value)");
+			paramScript.append("\n            if 'path' in v and v['path'] == '");
+			paramScript.append(input.getName());
+			paramScript.append("':");
+			paramScript.append("\n                dest[k]['file_name'] = v['path']");
+			paramScript.append("\n                datatype = ");
+			paramScript.append(input.getDataType().getName());
+			paramScript.append("()");
+			paramScript.append("\n                for key in datatype.metadata_spec.keys():");
+			paramScript.append("\n                    value = datatype.metadata_spec[key]");
+			paramScript.append("\n                    default = value.get(\"default\")");
+			paramScript.append("\n                    dest[k].metadata[key] = default");
+			paramScript.append("\n                try:");
+			paramScript.append("\n                    datatype.set_meta(dataset=dest[k])");
+			paramScript.append("\n                except:");
+			paramScript.append("\n                    pass");
+			paramScript.append("\n                for key in dest[k].metadata.keys():");
+			paramScript.append("\n                    value = dest[k].metadata[key]");
+			paramScript.append("\n                    if isinstance (value, list):");
+			paramScript.append("\n                        dest[k].metadata[key] = ', '.join(str(item) for item in value)");
 		}
-		pickleScript.append("\n        elif isinstance (v, list):");
-		pickleScript.append("\n            dest[k] = list()");
-		pickleScript.append("\n            for i in v:");
-		pickleScript.append("\n                j = Dict()");
-		pickleScript.append("\n                dest[k].append(j)");
-		pickleScript.append("\n                expandToolState(i, j)");
-		pickleScript.append("\n        else:");
-		pickleScript.append("\n            dest[k] = v");
-		pickleScript.append("\n\nexpanded_tool_state = Dict()");
-		pickleScript.append("\nexpandToolState(tool_state, expanded_tool_state)");
-		pickleScript.append("\nwith open(\"");
-		pickleScript.append(id);
-		pickleScript.append(".pickle.p\", \"wb\") as picklefile:");
-		pickleScript.append("\n    pickle.dump(ast.literal_eval(str(expanded_tool_state)), picklefile)\n");
-		try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(id + ".params.py"))) {
-			scriptWriter.write(pickleScript.toString());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		paramScript.append("\n        elif isinstance (v, list):");
+		paramScript.append("\n            dest[k] = list()");
+		paramScript.append("\n            for i in v:");
+		paramScript.append("\n                j = Dict()");
+		paramScript.append("\n                dest[k].append(j)");
+		paramScript.append("\n                expandToolState(i, j)");
+		paramScript.append("\n        else:");
+		paramScript.append("\n            dest[k] = v");
+		paramScript.append("\n\nexpanded_tool_state = Dict()");
+		paramScript.append("\nexpandToolState(tool_state, expanded_tool_state)");
+		paramScript.append("\nwith open(\"");
+		paramScript.append(id);
+		paramScript.append(".pickle.p\", \"wb\") as picklefile:");
+		paramScript.append("\n    pickle.dump(ast.literal_eval(str(expanded_tool_state)), picklefile)\n");
 	}
 
-	public void buildTemplate() {
-		String preScript = galaxyTool.getEnv();
-		String template = galaxyTool.getTemplate();
-		String postScript = getPostScript();
-
-		try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(id + ".pre.sh"))) {
-			scriptWriter.write(preScript);
+	@Override
+	public Map<String, LocalResource> buildScriptsAndSetResources(FileSystem fs, Container container) {
+		Map<String, LocalResource> localResources = super.buildScriptsAndSetResources(fs, container);
+		String containerId = container.getId().toString();
+		
+		Data preSriptData = new Data(id + ".pre.sh");
+		Data paramScriptData = new Data(id + ".params.py");
+		Data templateData = new Data(id + ".template.tmpl");
+		Data postSriptData = new Data(id + ".post.sh");
+		
+		try (BufferedWriter preScriptWriter = new BufferedWriter(new FileWriter(preSriptData.getLocalPath()));
+				BufferedWriter paramScriptWriter = new BufferedWriter(new FileWriter(paramScriptData.getLocalPath()));
+				BufferedWriter templateWriter = new BufferedWriter(new FileWriter(templateData.getLocalPath()));
+				BufferedWriter postScriptWriter = new BufferedWriter(new FileWriter(postSriptData.getLocalPath()))) {
+			preScriptWriter.write(galaxyTool.getEnv());
+			paramScriptWriter.write(paramScript.toString());
+			templateWriter.write(galaxyTool.getTemplate());
+			postScriptWriter.write(getPostScript());
+			
+			preSriptData.addToLocalResourceMap(localResources, fs, containerId);
+			paramScriptData.addToLocalResourceMap(localResources, fs, containerId);
+			templateData.addToLocalResourceMap(localResources, fs, containerId);
+			postSriptData.addToLocalResourceMap(localResources, fs, containerId);
 		} catch (IOException e) {
-			e.printStackTrace();
+			HiWay.onError(e);
 		}
-
-		try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(id + ".template.tmpl"))) {
-			scriptWriter.write(template);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(id + ".post.sh"))) {
-			scriptWriter.write(postScript);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		
+		return localResources;
 	}
 
 	public GalaxyTool getGalaxyTool() {

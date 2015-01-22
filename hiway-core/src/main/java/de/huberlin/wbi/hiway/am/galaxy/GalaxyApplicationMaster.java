@@ -218,7 +218,7 @@ public class GalaxyApplicationMaster extends HiWay {
 					datatypes_config_file = line.split("=")[1].trim();
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			HiWay.onError(e);
 		}
 		String[] tool_config_files = tool_config_file.split(",");
 
@@ -236,7 +236,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			}
 
 		} catch (FactoryConfigurationError e) {
-			e.printStackTrace();
+			HiWay.onError(e);
 		}
 
 		return true;
@@ -338,13 +338,13 @@ public class GalaxyApplicationMaster extends HiWay {
 			return tool;
 
 		} catch (SAXException | IOException | TransformerException | XPathExpressionException e) {
+			HiWay.onError(e);
 			return null;
 		}
 	}
 
 	@Override
 	public void parseWorkflow() {
-		Map<String, GalaxyData> files = new HashMap<>();
 		log.info("Parsing Galaxy workflow " + getWorkflowFile());
 		Map<Long, TaskInstance> tasks = new HashMap<>();
 		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath()))) {
@@ -378,7 +378,7 @@ public class GalaxyApplicationMaster extends HiWay {
 
 						String idName = id + "_output";
 						data.setInput(true);
-						files.put(idName, data);
+						getFiles().put(idName, data);
 					}
 				} else if (type.equals("tool")) {
 					String toolVersion = step.getString("tool_version");
@@ -439,9 +439,9 @@ public class GalaxyApplicationMaster extends HiWay {
 						if (galaxyDataTypes.containsKey(outputTypeString)) {
 							dataType = galaxyDataTypes.get(outputTypeString);
 						} else if (inputNameToIdName.containsKey(outputTypeString)) {
-							dataType = files.get(inputNameToIdName.get(outputTypeString)).getDataType();
+							dataType = ((GalaxyData) getFiles().get(inputNameToIdName.get(outputTypeString))).getDataType();
 						} else if (outputTypeString.equals("input")) {
-							dataType = files.get(inputNameToIdName.values().iterator().next()).getDataType();
+							dataType = ((GalaxyData) getFiles().get(inputNameToIdName.values().iterator().next())).getDataType();
 						}
 
 						if (dataType != null) {
@@ -463,7 +463,7 @@ public class GalaxyApplicationMaster extends HiWay {
 						if (!hideOutputs.contains(outputName)) {
 							data.setOutput(true);
 						}
-						files.put(idName, data);
+						getFiles().put(idName, data);
 						task.addOutputData(data);
 						task.addFile(outputName, false, data);
 						outputFiles.add(fileName);
@@ -495,20 +495,19 @@ public class GalaxyApplicationMaster extends HiWay {
 							task.addParentTask(parentTask);
 							parentTask.addChildTask(task);
 						}
-						task.addInputData(files.get(idName));
-						task.addFile(input_connection_key, true, files.get(idName));
+						task.addInputData(getFiles().get(idName));
+						task.addFile(input_connection_key, true, (GalaxyData) getFiles().get(idName));
 						continue;
 					}
 
 					// (a) Build pickle python script
-					task.buildPickleScript();
-					task.buildTemplate();
+					task.prepareParamScript();
 				}
 			}
 
 		} catch (IOException | JSONException | WorkflowStructureUnknownException e) {
 			e.printStackTrace();
-			// onError(e);
+			HiWay.onError(e);
 		}
 
 		getScheduler().addTasks(tasks.values());
@@ -535,7 +534,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			}
 
 		} catch (SAXException | IOException | ParserConfigurationException e) {
-			e.printStackTrace();
+			HiWay.onError(e);
 		}
 	}
 
@@ -553,7 +552,7 @@ public class GalaxyApplicationMaster extends HiWay {
 				galaxyDataTypes.put(extension, new GalaxyDataType(splitType[0], splitType[1], extension));
 			}
 		} catch (SAXException | IOException | ParserConfigurationException e) {
-			e.printStackTrace();
+			HiWay.onError(e);
 		}
 	}
 
@@ -569,7 +568,7 @@ public class GalaxyApplicationMaster extends HiWay {
 				galaxyDataTable.addContent(content);
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			HiWay.onError(e);
 		}
 	}
 
@@ -600,7 +599,7 @@ public class GalaxyApplicationMaster extends HiWay {
 				macrosByName.put(name, macro);
 			}
 		} catch (SAXException | IOException | TransformerException e) {
-			e.printStackTrace();
+			HiWay.onError(e);
 		}
 		return true;
 	}
@@ -646,7 +645,7 @@ public class GalaxyApplicationMaster extends HiWay {
 
 			}
 		} catch (SAXException | IOException | ParserConfigurationException e) {
-			e.printStackTrace();
+			HiWay.onError(e);
 		}
 	}
 }

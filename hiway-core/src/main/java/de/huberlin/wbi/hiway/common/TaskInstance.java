@@ -32,20 +32,37 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.common;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.LocalResource;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.ForeignLambdaExpr;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
+import de.huberlin.wbi.hiway.am.HiWay;
 
 public class TaskInstance implements Comparable<TaskInstance> {
 
+	private String invocScript = "";
+	
+	public void setInvocScript(String invocScript) {
+		this.invocScript = invocScript;
+	}
+	
+	public String getInvocScript() {
+		return invocScript;
+	}
+	
 	public static class Comparators {
 
 		public static Comparator<TaskInstance> DEPTH = new Comparator<TaskInstance>() {
@@ -169,6 +186,29 @@ public class TaskInstance implements Comparable<TaskInstance> {
 
 	public String getCommand() {
 		return command;
+	}
+
+	public Map<String, LocalResource> buildScriptsAndSetResources(FileSystem fs, Container container) {
+		Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
+		try {
+			String containerId = container.getId().toString();
+			File script = new File(containerId + ".sh");
+			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(script))) {
+				scriptWriter.write(getCommand());
+			} catch (IOException e) {
+				HiWay.onError(e);
+			}
+			Data scriptData = new Data(script.getPath());
+			try {
+				scriptData.stageOut(fs, containerId);
+			} catch (IOException e) {
+				HiWay.onError(e);
+			}
+			scriptData.addToLocalResourceMap(localResources, fs, containerId);
+		} catch (IOException e1) {
+			HiWay.onError(e1);
+		}
+		return localResources;
 	}
 
 	public int getDepth() throws WorkflowStructureUnknownException {

@@ -38,8 +38,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class GalaxyConditional extends GalaxyParam {
-	GalaxyParamValue condition;
-	Map<String, Set<GalaxyParam>> conditionalParams;
+	private GalaxyParamValue condition;
+	private Map<String, Set<GalaxyParam>> conditionalParams;
 
 	public GalaxyConditional(String name) {
 		super(name);

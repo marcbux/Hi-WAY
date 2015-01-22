@@ -36,7 +36,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class GalaxyRepeat extends GalaxyParam {
-	Set<GalaxyParam> params;
+	private Set<GalaxyParam> params;
 
 	public GalaxyRepeat(String name) {
 		super(name);

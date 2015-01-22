@@ -85,7 +85,7 @@ public class HiWayConfiguration extends Configuration {
 
 	public static final String HIWAY_SITE_XML = "hiway-site.xml";
 
-	public static final String HIWAY_WORKER_CLASS = "de.huberlin.wbi.hiway.app.Worker";
+	public static final String HIWAY_WORKER_CLASS = "de.huberlin.wbi.hiway.common.Worker";
 	public static final String HIWAY_WORKER_MEMORY = "hiway.worker.memory";
 	public static final int HIWAY_WORKER_MEMORY_DEFAULT = 1024;
 	public static final String HIWAY_WORKER_PRIORITY = "hiway.worker.priority";
@@ -95,10 +95,10 @@ public class HiWayConfiguration extends Configuration {
 	public static final String HIWAY_WORKER_VCORES = "hiway.worker.vcores";
 	public static final int HIWAY_WORKER_VCORES_DEFAULT = 1;
 
-	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS = "de.huberlin.wbi.hiway.app.am.cuneiform.CuneiformApplicationMaster";
-	public static final String HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS = "de.huberlin.wbi.hiway.app.am.dax.DaxApplicationMaster";
-	public static final String HIWAY_WORKFLOW_LANGUAGE_GALAXY_CLASS = "de.huberlin.wbi.hiway.app.am.galaxy.GalaxyApplicationMaster";
-	public static final String HIWAY_WORKFLOW_LANGUAGE_LOG_CLASS = "de.huberlin.wbi.hiway.app.am.log.LogApplicationMaster";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS = "de.huberlin.wbi.hiway.am.cuneiform.CuneiformApplicationMaster";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS = "de.huberlin.wbi.hiway.am.dax.DaxApplicationMaster";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_GALAXY_CLASS = "de.huberlin.wbi.hiway.am.galaxy.GalaxyApplicationMaster";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_LOG_CLASS = "de.huberlin.wbi.hiway.am.log.LogApplicationMaster";
 
 	static {
 		addDefaultResource(HIWAY_SITE_XML);

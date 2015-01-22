@@ -241,7 +241,9 @@ public abstract class HiWay {
 	private Data workflowFile;
 	// the workflow to be executed along with its format and path in the filesystem
 	private String workflowPath;
-
+	
+	
+	
 	public HiWay() {
 		conf = new YarnConfiguration();
 		conf.addResource("core-site.xml");

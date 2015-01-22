@@ -53,17 +53,17 @@ public class WFAppMetrics {
 	}
 
 	@Metric
-	MutableCounterInt tasksCompleted;
+	private MutableCounterInt tasksCompleted;
 	@Metric
-	MutableCounterInt tasksFailed;
+	private MutableCounterInt tasksFailed;
 	@Metric
-	MutableCounterInt tasksKilled;
+	private MutableCounterInt tasksKilled;
 	@Metric
-	MutableCounterInt tasksLaunched;
+	private MutableCounterInt tasksLaunched;
 	@Metric
-	MutableGaugeInt tasksRunning;
+	private MutableGaugeInt tasksRunning;
 	@Metric
-	MutableGaugeInt tasksWaiting;
+	private MutableGaugeInt tasksWaiting;
 
 	public void completedTask(TaskInstance task) {
 		tasksCompleted.incr();
