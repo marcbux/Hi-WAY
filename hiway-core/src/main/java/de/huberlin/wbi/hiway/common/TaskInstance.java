@@ -53,16 +53,6 @@ import de.huberlin.wbi.hiway.am.HiWay;
 
 public class TaskInstance implements Comparable<TaskInstance> {
 
-	private String invocScript = "";
-	
-	public void setInvocScript(String invocScript) {
-		this.invocScript = invocScript;
-	}
-	
-	public String getInvocScript() {
-		return invocScript;
-	}
-	
 	public static class Comparators {
 
 		public static Comparator<TaskInstance> DEPTH = new Comparator<TaskInstance>() {
@@ -92,11 +82,14 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		};
 
 	}
-
+	
 	protected static int runningId = 1;
+	
 	protected Set<TaskInstance> childTasks;
+	
 	// the command to be executed
 	protected String command;
+
 	// whether this task is completed yet
 	protected boolean completed;
 	protected int depth = 0;
@@ -104,6 +97,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 	protected final long id;
 	// input and output data
 	protected Set<Data> inputData;
+	private String invocScript = "";
 	// the programming language of this task (default: bash)
 	protected String languageLabel;
 	protected Set<Data> outputData;
@@ -119,7 +113,6 @@ public class TaskInstance implements Comparable<TaskInstance> {
 	protected double upwardRank = 0d;
 	// the id of the workflow this task instance belongs to
 	protected UUID workflowId;
-
 	public TaskInstance(long id, UUID workflowId, String taskName, long taskId, String languageLabel) {
 		this.id = id;
 		this.workflowId = workflowId;
@@ -134,7 +127,6 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		this.parentTasks = new HashSet<>();
 		this.childTasks = new HashSet<>();
 	}
-
 	public TaskInstance(UUID workflowId, String taskName, long taskId) {
 		this(workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);
 	}
@@ -158,6 +150,29 @@ public class TaskInstance implements Comparable<TaskInstance> {
 	public void addParentTask(TaskInstance parentTask) throws WorkflowStructureUnknownException {
 		parentTasks.add(parentTask);
 		this.setDepth(parentTask.getDepth() + 1);
+	}
+
+	public Map<String, LocalResource> buildScriptsAndSetResources(FileSystem fs, Container container) {
+		Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
+		try {
+			String containerId = container.getId().toString();
+			File script = new File(containerId + ".sh");
+			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(script))) {
+				scriptWriter.write(getCommand());
+			} catch (IOException e) {
+				HiWay.onError(e);
+			}
+			Data scriptData = new Data(script.getPath());
+			try {
+				scriptData.stageOut(fs, containerId);
+			} catch (IOException e) {
+				HiWay.onError(e);
+			}
+			scriptData.addToLocalResourceMap(localResources, fs, containerId);
+		} catch (IOException e1) {
+			HiWay.onError(e1);
+		}
+		return localResources;
 	}
 
 	public int compareTo(TaskInstance other) {
@@ -188,29 +203,6 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		return command;
 	}
 
-	public Map<String, LocalResource> buildScriptsAndSetResources(FileSystem fs, Container container) {
-		Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
-		try {
-			String containerId = container.getId().toString();
-			File script = new File(containerId + ".sh");
-			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(script))) {
-				scriptWriter.write(getCommand());
-			} catch (IOException e) {
-				HiWay.onError(e);
-			}
-			Data scriptData = new Data(script.getPath());
-			try {
-				scriptData.stageOut(fs, containerId);
-			} catch (IOException e) {
-				HiWay.onError(e);
-			}
-			scriptData.addToLocalResourceMap(localResources, fs, containerId);
-		} catch (IOException e1) {
-			HiWay.onError(e1);
-		}
-		return localResources;
-	}
-
 	public int getDepth() throws WorkflowStructureUnknownException {
 		return depth;
 	}
@@ -221,6 +213,10 @@ public class TaskInstance implements Comparable<TaskInstance> {
 
 	public Set<Data> getInputData() {
 		return inputData;
+	}
+
+	public String getInvocScript() {
+		return invocScript;
 	}
 
 	public String getLanguageLabel() {
@@ -294,6 +290,10 @@ public class TaskInstance implements Comparable<TaskInstance> {
 				child.setDepth(depth + 1);
 			}
 		}
+	}
+
+	public void setInvocScript(String invocScript) {
+		this.invocScript = invocScript;
 	}
 
 	public void setUpwardRank(double upwardRank) throws WorkflowStructureUnknownException {

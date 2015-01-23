@@ -80,14 +80,14 @@ public class Worker {
 	private long id;
 	private Set<Data> inputFiles;
 
-	private String langLabel;
-	private Set<Data> outputFiles;
-
-	private long taskId;
-	private String taskName;
-
-	private UUID workflowId;
 	private String invocScript = "";
+	private String langLabel;
+
+	private Set<Data> outputFiles;
+	private long taskId;
+
+	private String taskName;
+	private UUID workflowId;
 
 	public Worker() {
 		inputFiles = new HashSet<>();

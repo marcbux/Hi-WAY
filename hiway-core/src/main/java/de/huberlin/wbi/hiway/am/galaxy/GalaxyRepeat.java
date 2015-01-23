@@ -35,6 +35,12 @@ package de.huberlin.wbi.hiway.am.galaxy;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * Repeats are parameters consisting of a set of parameters.
+ * 
+ * @author Marc Bux
+ *
+ */
 public class GalaxyRepeat extends GalaxyParam {
 	private Set<GalaxyParam> params;
 

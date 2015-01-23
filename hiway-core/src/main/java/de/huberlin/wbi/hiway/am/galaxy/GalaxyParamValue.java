@@ -37,10 +37,19 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * An atomic parameter of a Galaxy tool.
+ * 
+ * @author Marc Bux
+ *
+ */
 public class GalaxyParamValue extends GalaxyParam {
+	// this parameter's data type extension, if any
 	private String dataType;
-	private String defaultValue;
+	// some parameters describe files produced in a working dir, which will have to be moved after computation; this parameter stores where to obtain the data
 	private String from_work_dir;
+	// some parameters are set to a certain value (e.g. "true", "false"), yet in order to invoke the Galaxy tool, they have to be mapped to a different notation
+	// (e.g. "1", "0"); this map stores all the mappings for values of this parameter.
 	private Map<Object, Object> mappings;
 
 	public GalaxyParamValue(String name) {
@@ -54,10 +63,6 @@ public class GalaxyParamValue extends GalaxyParam {
 
 	public String getDataType() {
 		return dataType;
-	}
-
-	public String getDefaultValue() {
-		return defaultValue;
 	}
 
 	public String getFrom_work_dir() {
@@ -75,10 +80,6 @@ public class GalaxyParamValue extends GalaxyParam {
 		return paramValues;
 	}
 
-	public boolean hasDefaultValue() {
-		return defaultValue != null && defaultValue.length() > 0 && !defaultValue.equals("");
-	}
-
 	public boolean hasFrom_work_dir() {
 		return from_work_dir != null && from_work_dir.length() > 0;
 	}
@@ -90,11 +91,6 @@ public class GalaxyParamValue extends GalaxyParam {
 
 	public void setDataType(String dataType) {
 		this.dataType = dataType;
-	}
-
-	public void setDefaultValue(String value) {
-		this.defaultValue = value;
-		addMapping("", value);
 	}
 
 	public void setFrom_work_dir(String from_work_dir) {

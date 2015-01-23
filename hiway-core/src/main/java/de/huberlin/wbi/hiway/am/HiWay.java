@@ -170,21 +170,16 @@ public abstract class HiWay {
 		System.exit(-1);
 	}
 
-	protected AMRMClientAsync.CallbackHandler allocListener;
-
+	private AMRMClientAsync.CallbackHandler allocListener;
 	// the yarn tokens to be passed to any launched containers
 	private ByteBuffer allTokens;
-
 	// a handle to the YARN ResourceManager
 	@SuppressWarnings("rawtypes")
 	private AMRMClientAsync amRMClient;
-
 	// this application's attempt id (combination of attemptId and fail count)
 	private ApplicationAttemptId appAttemptID;
-
 	// the internal id assigned to this application by the YARN ResourceManager
 	private String appId;
-
 	// the hostname of the container running the Hi-WAY ApplicationMaster
 	private String appMasterHostname = "";
 	// the port on which the ApplicationMaster listens for status updates from clients
@@ -201,12 +196,10 @@ public abstract class HiWay {
 	private boolean determineFileSizes = false;
 	// flags denoting workflow execution has finished and been successful
 	private volatile boolean done;
-
 	// the report, in which provenance information is stored
 	private Data federatedReport;
 	// private BufferedWriter federatedReportWriter;
 	private Map<String, Data> files = new HashMap<>();
-
 	// a handle to the hdfs
 	private FileSystem fs;
 	private HiWayConfiguration hiWayConf;
@@ -241,9 +234,7 @@ public abstract class HiWay {
 	private Data workflowFile;
 	// the workflow to be executed along with its format and path in the filesystem
 	private String workflowPath;
-	
-	
-	
+
 	public HiWay() {
 		conf = new YarnConfiguration();
 		conf.addResource("core-site.xml");

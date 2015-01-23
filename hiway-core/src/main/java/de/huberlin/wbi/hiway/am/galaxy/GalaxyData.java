@@ -34,6 +34,12 @@ package de.huberlin.wbi.hiway.am.galaxy;
 
 import de.huberlin.wbi.hiway.common.Data;
 
+/**
+ * An object that extends the Hi-WAY data object with a Galaxy data type.
+ * 
+ * @author Marc Bux
+ *
+ */
 public class GalaxyData extends Data {
 	private GalaxyDataType dataType;
 

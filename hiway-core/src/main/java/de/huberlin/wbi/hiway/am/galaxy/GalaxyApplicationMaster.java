@@ -90,21 +90,33 @@ public class GalaxyApplicationMaster extends HiWay {
 		HiWay.loop(new GalaxyApplicationMaster(), args);
 	}
 
+	/* a data structure that stores the data tables of the local Galaxy installation; data tables contain references to installed data sets (e.g., genome
+	 * indices) */
 	private Map<String, GalaxyDataTable> galaxyDataTables;
-
+	/* a data structure that stores the data types of the local Galaxy installation; data types are associated with metadata information that is required to
+	 * invoke the tools provided by Galaxy */
 	private Map<String, GalaxyDataType> galaxyDataTypes;
-
+	/* the path of the local Galaxy installation, as specifified in the hiway-site.xml */
 	public final String galaxyPath;
-
+	/* a data structure that stores the tools of the local Galaxy installation; these tools include the library tools pre-installed in Galaxy as well as
+	 * additional tools installed via Galaxy's tool shed functionality */
 	private Map<String, Map<String, GalaxyTool>> galaxyTools;
-
-	private Map<String, String> macrosByName = new HashMap<>();
 
 	public GalaxyApplicationMaster() {
 		super();
 		galaxyPath = getHiWayConf().get(HiWayConfiguration.HIWAY_GALAXY_PATH);
+		galaxyDataTables = new HashMap<>();
+		galaxyDataTypes = new HashMap<>();
+		galaxyTools = new HashMap<>();
 	}
 
+	/**
+	 * A helper function for setting and obtaining tools from their data structure
+	 * 
+	 * @param id
+	 *            the identifier of the tool, as specified in the root element of the tool's description XML
+	 * @return a map storing instances of the tool by their version number
+	 */
 	private Map<String, GalaxyTool> addAndGetToolMap(String id) {
 		if (!galaxyTools.containsKey(id)) {
 			Map<String, GalaxyTool> toolMap = new HashMap<>();
@@ -113,19 +125,31 @@ public class GalaxyApplicationMaster extends HiWay {
 		return galaxyTools.get(id);
 	}
 
+	/**
+	 * A (recursive) helper function for parsing the parameters of a tool from their XML specification
+	 * 
+	 * @param el
+	 *            the XML element from which to commence the parsing
+	 * @return the set of parameters under this element
+	 * @throws XPathExpressionException
+	 */
 	private Set<GalaxyParam> getParams(Element el) throws XPathExpressionException {
 		Set<GalaxyParam> params = new HashSet<>();
 		XPath xpath = XPathFactory.newInstance().newXPath();
+
+		// there are three different types of parameters in Galaxy's tool descriptions: atomic parameters, conditionals and repeats
 		NodeList paramNds = (NodeList) xpath.evaluate("param", el, XPathConstants.NODESET);
 		NodeList conditionalNds = (NodeList) xpath.evaluate("conditional", el, XPathConstants.NODESET);
 		NodeList repeatNds = (NodeList) xpath.evaluate("repeat", el, XPathConstants.NODESET);
 
+		// (1) parse atomic parameters
 		for (int i = 0; i < paramNds.getLength(); i++) {
 			Element paramEl = (Element) paramNds.item(i);
 			String name = paramEl.getAttribute("name");
 			GalaxyParamValue param = new GalaxyParamValue(name);
 			params.add(param);
 
+			// (a) determine default values and mappings of values
 			String type = paramEl.getAttribute("type");
 			switch (type) {
 			case "boolean":
@@ -135,12 +159,9 @@ public class GalaxyApplicationMaster extends HiWay {
 				param.addMapping("False", falseValue);
 			case "select":
 				param.addMapping("", "None");
-			default:
-				String defaultValue = paramEl.getAttribute("value");
-				if (defaultValue != null && defaultValue.length() > 0)
-					param.setDefaultValue(defaultValue);
 			}
 
+			// (b) resolve references to Galaxy data tables
 			NodeList optionNds = (NodeList) xpath.evaluate("option", paramEl, XPathConstants.NODESET);
 			NodeList optionsNds = (NodeList) xpath.evaluate("options", paramEl, XPathConstants.NODESET);
 			for (int j = 0; j < optionNds.getLength() + optionsNds.getLength(); j++) {
@@ -155,6 +176,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			}
 		}
 
+		// (2) parse conditionals, which consist of a single condition parameter and several "when condition equals" parameters
 		for (int i = 0; i < conditionalNds.getLength(); i++) {
 			Element conditionalEl = (Element) conditionalNds.item(i);
 			String name = conditionalEl.getAttribute("name");
@@ -179,6 +201,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			params.add(conditional);
 		}
 
+		// (3) parse repeats, which consist of a list of parameters
 		for (int i = 0; i < repeatNds.getLength(); i++) {
 			Element repeatEl = (Element) repeatNds.item(i);
 			String name = repeatEl.getAttribute("name");
@@ -195,6 +218,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	public boolean init(String[] args) throws ParseException {
 		super.init(args);
 
+		// (1) determine the config files that are to be parsed
 		String tool_data_table_config_path = "config/tool_data_table_conf.xml.sample";
 		String shed_tool_data_table_config = "config/shed_tool_data_table_conf.xml.sample";
 		String tool_dependency_dir = "dependencies";
@@ -222,19 +246,14 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 		String[] tool_config_files = tool_config_file.split(",");
 
+		// (2) parse the config files for Galaxy's data types, data tables, and tool libraries
 		try {
-			galaxyDataTypes = new HashMap<>();
 			processDataTypes(new File(galaxyPath + "/" + datatypes_config_file));
-
-			galaxyDataTables = new HashMap<>();
 			processDataTables(new File(galaxyPath + "/" + tool_data_table_config_path));
 			processDataTables(new File(galaxyPath + "/" + shed_tool_data_table_config));
-
-			galaxyTools = new HashMap<>();
 			for (String config_file : tool_config_files) {
 				processToolLibraries(new File(galaxyPath + "/" + config_file.trim()), tool_path, tool_dependency_dir);
 			}
-
 		} catch (FactoryConfigurationError e) {
 			HiWay.onError(e);
 		}
@@ -242,8 +261,16 @@ public class GalaxyApplicationMaster extends HiWay {
 		return true;
 	}
 
-	private GalaxyTool parseToolFile(File file, DocumentBuilder builder) {
+	/**
+	 * A helper function for parsing a Galaxy tool's XML file
+	 * 
+	 * @param file
+	 *            the XML file to be parsed
+	 * @return the Galaxy tools described in the XML file
+	 */
+	private GalaxyTool parseToolFile(File file) {
 		try {
+			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			String path = file.getCanonicalPath();
 			String dir = path.substring(0, path.lastIndexOf("/"));
 			Document doc = builder.parse(file);
@@ -255,12 +282,15 @@ public class GalaxyApplicationMaster extends HiWay {
 			transformer.transform(source, result);
 			String toolDescription = result.getWriter().toString();
 
+			// (1) parse macros, if any
 			NodeList macrosNds = (NodeList) rootEl.getElementsByTagName("macros");
+			Map<String, String> macrosByName = new HashMap<>();
 			for (int i = 0; i < macrosNds.getLength(); i++) {
 				Node macrosNd = macrosNds.item(i);
-				processMacros(macrosNd, builder, dir);
+				macrosByName.putAll(processMacros(macrosNd, dir));
 			}
 
+			// (2) insert macros into the XML and parse the document
 			Pattern p = Pattern.compile("<expand macro=\"([^\"]*)\"(>.*?</expand>|/>)", Pattern.DOTALL);
 			Matcher m = p.matcher(toolDescription);
 			while (m.find()) {
@@ -274,14 +304,14 @@ public class GalaxyApplicationMaster extends HiWay {
 				if (with != null)
 					toolDescription = toolDescription.replace(replace, with);
 			}
-
 			doc = builder.parse(new InputSource(new StringReader(toolDescription)));
 			rootEl = doc.getDocumentElement();
-
 			String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
 			String id = rootEl.getAttribute("id");
 			GalaxyTool tool = new GalaxyTool(id, version, dir, galaxyPath);
 
+			// (3) determine requirements (libraries and executables) of this tool; requirements have to be parsed such that the environment of the task can be
+			// set to include them
 			NodeList requirementNds = rootEl.getElementsByTagName("requirement");
 			for (int i = 0; i < requirementNds.getLength(); i++) {
 				Element requirementEl = (Element) requirementNds.item(i);
@@ -290,6 +320,7 @@ public class GalaxyApplicationMaster extends HiWay {
 				tool.addRequirement(requirementName, requirementVersion);
 			}
 
+			// (4) determine and set the template for the command of the task; this template will be compiled at runtime by Cheetah
 			Element commandEl = (Element) rootEl.getElementsByTagName("command").item(0);
 			if (commandEl != null) {
 				String command = commandEl.getChildNodes().item(0).getNodeValue().trim();
@@ -304,10 +335,12 @@ public class GalaxyApplicationMaster extends HiWay {
 				tool.setTemplate(command);
 			}
 
+			// (5) determine the parameters (atomic, conditional and repeat) of this tool
 			Element inputsEl = (Element) rootEl.getElementsByTagName("inputs").item(0);
 			if (inputsEl != null)
 				tool.setParams(getParams(inputsEl));
 
+			// (6) determine the output files produced by this tool
 			Element outputsEl = (Element) rootEl.getElementsByTagName("outputs").item(0);
 			if (outputsEl != null) {
 				NodeList dataNds = outputsEl.getElementsByTagName("data");
@@ -330,14 +363,14 @@ public class GalaxyApplicationMaster extends HiWay {
 				}
 			}
 
+			// (7) register the tool in the Galaxy tool data structure
 			if (tool.getTemplate() != null) {
 				Map<String, GalaxyTool> toolMap = addAndGetToolMap(id);
 				toolMap.put(version, tool);
 			}
 
 			return tool;
-
-		} catch (SAXException | IOException | TransformerException | XPathExpressionException e) {
+		} catch (SAXException | IOException | TransformerException | XPathExpressionException | ParserConfigurationException e) {
 			HiWay.onError(e);
 			return null;
 		}
@@ -356,12 +389,13 @@ public class GalaxyApplicationMaster extends HiWay {
 			JSONObject workflow = new JSONObject(sb.toString());
 			JSONObject steps = workflow.getJSONObject("steps");
 
-			// (1) Parse Nodes
+			// (1) First pass: Parse Nodes
 			for (int i = 0; i < steps.length(); i++) {
 				JSONObject step = steps.getJSONObject(Integer.toString(i));
 				long id = step.getLong("id");
 				String type = step.getString("type");
 
+				// (a) input nodes are nodes that do not invoke a task, but simply specify where an input file is located
 				if (type.equals("data_input")) {
 					JSONArray inputs = step.getJSONArray("inputs");
 					for (int j = 0; j < inputs.length(); j++) {
@@ -380,7 +414,10 @@ public class GalaxyApplicationMaster extends HiWay {
 						data.setInput(true);
 						getFiles().put(idName, data);
 					}
+
+					// (b) tool nodes are the actual nodes comprising the workflow
 				} else if (type.equals("tool")) {
+					// (i) obtain the tool description and generate a task instance object
 					String toolVersion = step.getString("tool_version");
 					String toolId = step.getString("tool_id");
 					String[] splitId = toolId.split("/");
@@ -391,10 +428,10 @@ public class GalaxyApplicationMaster extends HiWay {
 						System.err.println("Tool " + toolId + "/" + toolVersion + " could not be located in local Galaxy installation.");
 						HiWay.onError(new RuntimeException());
 					}
-
 					GalaxyTaskInstance task = new GalaxyTaskInstance(id, tool.getName(), tool);
 					tasks.put(id, task);
 
+					// (ii) determine the and incorporate post job actions apecified in the workflow (e.g., renaming the task's output data)
 					Map<String, String> renameOutputs = new HashMap<>();
 					Set<String> hideOutputs = new HashSet<>();
 					if (step.has("post_job_actions")) {
@@ -416,8 +453,10 @@ public class GalaxyApplicationMaster extends HiWay {
 						}
 					}
 
+					// (iii) set the tool state (i.e., the parameter settings) of the task
 					task.addToolState(step.getString("tool_state"));
 
+					// (iv) resolve the file names of input data
 					Map<String, String> inputNameToIdName = new HashMap<>();
 					JSONObject input_connections = step.getJSONObject("input_connections");
 					for (String input_name : JSONObject.getNames(input_connections)) {
@@ -425,15 +464,15 @@ public class GalaxyApplicationMaster extends HiWay {
 						inputNameToIdName.put(input_name, input_connection.getString("id") + "_" + input_connection.getString("output_name"));
 					}
 
+					// (v) handle output data
 					JSONArray outputs = step.getJSONArray("outputs");
 					List<String> outputFiles = new LinkedList<>();
 					for (int j = 0; j < outputs.length(); j++) {
 						JSONObject output = outputs.getJSONObject(j);
 						String outputName = output.getString("name");
 
-						String fileName = id + "_" + outputName;
+						// determine the output file's data type
 						GalaxyDataType dataType = null;
-
 						GalaxyParamValue param = tool.getFirstMatchingParamByName(outputName);
 						String outputTypeString = param.getDataType();
 						if (galaxyDataTypes.containsKey(outputTypeString)) {
@@ -444,6 +483,8 @@ public class GalaxyApplicationMaster extends HiWay {
 							dataType = ((GalaxyData) getFiles().get(inputNameToIdName.values().iterator().next())).getDataType();
 						}
 
+						// determine the output file's name
+						String fileName = id + "_" + outputName;
 						if (dataType != null) {
 							String extension = dataType.getExtension();
 							if (extension != null && extension.length() > 0) {
@@ -453,12 +494,13 @@ public class GalaxyApplicationMaster extends HiWay {
 						if (renameOutputs.containsKey(outputName))
 							fileName = renameOutputs.get(outputName);
 
+						// if the output file is to moved from a (temporary) working directory, append a command in the task's post script
 						if (param.hasFrom_work_dir())
 							task.addToPostScript("mv " + param.getFrom_work_dir() + " " + fileName);
 
+						// create the data object and add it to the task object and data structures
 						GalaxyData data = new GalaxyData(fileName);
 						data.setDataType(dataType);
-
 						String idName = id + "_" + outputName;
 						if (!hideOutputs.contains(outputName)) {
 							data.setOutput(true);
@@ -475,32 +517,34 @@ public class GalaxyApplicationMaster extends HiWay {
 				}
 			}
 
-			// (2) Parse Edges and determine command
+			// (2) Second pass: Parse Edges
 			for (int i = 0; i < steps.length(); i++) {
 				JSONObject step = steps.getJSONObject(Integer.toString(i));
 				long id = step.getLong("id");
 				String type = step.getString("type");
-
 				if (type.equals("tool")) {
 					GalaxyTaskInstance task = (GalaxyTaskInstance) tasks.get(id);
-
 					JSONObject input_connections = step.getJSONObject("input_connections");
 					for (Iterator<?> it = input_connections.keys(); it.hasNext();) {
 						String input_connection_key = (String) it.next();
 						JSONObject input_connection = input_connections.getJSONObject(input_connection_key);
 						long parentId = input_connection.getLong("id");
 						String idName = parentId + "_" + input_connection.getString("output_name");
+
+						// (a) register workflow edges
 						TaskInstance parentTask = tasks.get(parentId);
 						if (parentTask != null) {
 							task.addParentTask(parentTask);
 							parentTask.addChildTask(task);
 						}
+
+						// (b) obtain the data object and add it to the task object
 						task.addInputData(getFiles().get(idName));
 						task.addFile(input_connection_key, true, (GalaxyData) getFiles().get(idName));
 						continue;
 					}
 
-					// (a) Build pickle python script
+					// (c) Prepare the python script that populates the tool state with remaining parameter settings required to invoke the tool
 					task.prepareParamScript();
 				}
 			}
@@ -513,6 +557,12 @@ public class GalaxyApplicationMaster extends HiWay {
 		getScheduler().addTasks(tasks.values());
 	}
 
+	/**
+	 * A helper function for processing the Galaxy config file that specifies metadata for data tables along with the location of their loc files
+	 * 
+	 * @param file
+	 *            the Galaxy data table config file
+	 */
 	private void processDataTables(File file) {
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
@@ -538,6 +588,12 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 	}
 
+	/**
+	 * A helper function for processing the Galaxy config file that specifies the extensions and python script locations for Galaxy's data types
+	 * 
+	 * @param file
+	 *            the Galaxy data type config file
+	 */
 	private void processDataTypes(File file) {
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
@@ -556,6 +612,15 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 	}
 
+	/**
+	 * A helper function for processing the loc file of a single Galaxy data table; the loc file stores information on any registered data (e.g., genomic
+	 * indices)
+	 * 
+	 * @param file
+	 *            a data table's loc file
+	 * @param galaxyDataTable
+	 *            the data table object corresponding to this loc file
+	 */
 	private void processLocFile(File file, GalaxyDataTable galaxyDataTable) {
 		if (!file.exists())
 			return;
@@ -572,18 +637,32 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 	}
 
-	private boolean processMacros(Node macrosNd, DocumentBuilder builder, String dir) {
+	/**
+	 * A (recursive) helper function for parsing the macros used by the XML files describing Galaxy's tools
+	 * 
+	 * @param macrosNd
+	 *            an XML node that specifies a set of macros
+	 * @param dir
+	 *            the directory in which the currently processed macros are located
+	 * @return processed macros accessible by their name
+	 */
+	private Map<String, String> processMacros(Node macrosNd, String dir) {
+		Map<String, String> macrosByName = new HashMap<>();
 		try {
+			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			Element macrosEl = (Element) macrosNd;
+
+			// (1) if additional macro files are to be imported, open the files and recursively invoke this method
 			NodeList importNds = macrosEl.getElementsByTagName("import");
 			for (int j = 0; j < importNds.getLength(); j++) {
 				Element importEl = (Element) importNds.item(j);
 				String importFileName = importEl.getChildNodes().item(0).getNodeValue().trim();
 				File file = new File(dir, importFileName);
 				Document doc = builder.parse(file);
-				processMacros(doc.getDocumentElement(), builder, dir);
+				macrosByName.putAll(processMacros(doc.getDocumentElement(), dir));
 			}
 
+			// (2) parse all macros in this set
 			NodeList macroNds = macrosEl.getElementsByTagName("macro");
 			for (int j = 0; j < macroNds.getLength(); j++) {
 				Element macroEl = (Element) macroNds.item(j);
@@ -598,12 +677,22 @@ public class GalaxyApplicationMaster extends HiWay {
 				macro = macro.substring(macro.indexOf('\n') + 1, macro.lastIndexOf('\n') - 1);
 				macrosByName.put(name, macro);
 			}
-		} catch (SAXException | IOException | TransformerException e) {
+		} catch (SAXException | IOException | TransformerException | ParserConfigurationException e) {
 			HiWay.onError(e);
 		}
-		return true;
+		return macrosByName;
 	}
 
+	/**
+	 * A helper function for processing a Galaxy config file that lists the tools within a single library
+	 * 
+	 * @param file
+	 *            the Galaxy tool library config file
+	 * @param defaultPath
+	 *            the directory in which pre-installed Galaxy tools are located
+	 * @param dependencyDir
+	 *            the directory in which the tool's dependencies are located
+	 */
 	private void processToolLibraries(File file, String defaultPath, String dependencyDir) {
 		try {
 			File galaxyPathFile = new File(galaxyPath);
@@ -617,10 +706,12 @@ public class GalaxyApplicationMaster extends HiWay {
 
 			NodeList tools = toolboxEl.getElementsByTagName("tool");
 			for (int i = 0; i < tools.getLength(); i++) {
+				// (1) parse a single XML tool file
 				Element toolEl = (Element) tools.item(i);
 				String toolFile = toolEl.getAttribute("file");
-				GalaxyTool tool = parseToolFile(new File(dir, toolFile), builder);
+				GalaxyTool tool = parseToolFile(new File(dir, toolFile));
 
+				// (2) go over the tool's dependencies and determine the environment-setting pre-script accordingly
 				NodeList repositoryNameNds = toolEl.getElementsByTagName("repository_name");
 				String repositoryName = repositoryNameNds.getLength() > 0 ? repositoryNameNds.item(0).getChildNodes().item(0).getNodeValue().trim() : "";
 				NodeList ownerNds = toolEl.getElementsByTagName("repository_owner");

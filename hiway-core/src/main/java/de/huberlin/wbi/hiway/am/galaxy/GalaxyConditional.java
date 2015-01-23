@@ -37,6 +37,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * Conditionals are parameters consisting of a condition parameter and several "when this conditional is set to" when parameters.
+ * 
+ * @author Marc Bux
+ *
+ */
 public class GalaxyConditional extends GalaxyParam {
 	private GalaxyParamValue condition;
 	private Map<String, Set<GalaxyParam>> conditionalParams;

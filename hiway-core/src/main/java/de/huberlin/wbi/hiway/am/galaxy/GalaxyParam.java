@@ -34,6 +34,13 @@ package de.huberlin.wbi.hiway.am.galaxy;
 
 import java.util.Set;
 
+/**
+ * An abstract class for the parameters of a Galaxy tool. A parameter can either be atomic, or it can be composite in the form of a repeat or conditional
+ * parameter.
+ * 
+ * @author Marc Bux
+ *
+ */
 public abstract class GalaxyParam {
 	protected final String name;
 
@@ -45,5 +52,10 @@ public abstract class GalaxyParam {
 		return name;
 	}
 
+	/**
+	 * This function recursively iterates over the children of this parameter and gathers all descendants
+	 * 
+	 * @return the set of atomic parameters that are descendants of this parameter (including the parameter itself, if it is atomic)
+	 */
 	public abstract Set<GalaxyParamValue> getParamValues();
 }

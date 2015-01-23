@@ -32,9 +32,18 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.am.galaxy;
 
+/**
+ * Files processed by a Galaxy workflow always have their own data type. This data type determines the files' metadata, e.g. how many columns a CSV file has.
+ * 
+ * @author Marc Bux
+ *
+ */
 public class GalaxyDataType {
+	// the extension for files of this data type (e.g., CSV)
 	private final String extension;
+	// the path to the python file associated with this data type; this python file can be used to determine a to-be-processed file's metadata
 	private final String file;
+	// this data types (python class) name (e.g., Tabular)
 	private final String name;
 
 	public GalaxyDataType(String file, String name, String extension) {

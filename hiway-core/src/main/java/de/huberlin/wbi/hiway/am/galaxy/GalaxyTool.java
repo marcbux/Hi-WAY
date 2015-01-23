@@ -36,21 +36,28 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import de.huberlin.wbi.hiway.am.HiWay;
-
+/**
+ * An object that provides information an tools registered in a Galaxy installation.
+ * 
+ * @author Marc Bux
+ *
+ */
 public class GalaxyTool {
+	// the environment that has to be set prior to running this tool
 	private String env;
+	// this tool's id, as provided in its XML description file
 	private final String id;
+	// these tool's parameters
 	private Set<GalaxyParam> params;
+	// the packages that are required to be installed for this tool to run; these requirements are parsed to determine the tool's environment
 	private Map<String, String> requirements;
+	// the template for the command to run this tool; the template will have to be compiled by Cheetah at runtime to resolve parameters
 	private String template;
+	// this tool's version number, as provided in its XML description file
 	private final String version;
 
 	public GalaxyTool(String id, String version, String dir, String galaxyPath) {
@@ -65,50 +72,15 @@ public class GalaxyTool {
 		this.env = this.env + (env.endsWith("\n") ? env : env + "\n");
 	}
 
-	public void addFile(String name, GalaxyData data, JSONObject jo) {
-		try {
-			Pattern p = Pattern.compile("(_[0-9]*)?\\|");
-			Matcher m = p.matcher(name);
-			if (m.find()) {
-				String prefix = name.substring(0, m.start());
-				String suffix = name.substring(m.end());
-				if (m.end() - m.start() > 2) {
-					int index = Integer.parseInt(name.substring(m.start() + 1, m.end() - 1));
-					JSONArray repeatJa = jo.getJSONArray(prefix);
-					for (int i = 0; i < repeatJa.length(); i++) {
-						JSONObject repeatJo = repeatJa.getJSONObject(i);
-						if (repeatJo.getInt("__index__") == index) {
-							addFile(suffix, data, repeatJo);
-							break;
-						}
-					}
-				} else {
-					addFile(suffix, data, jo.getJSONObject(prefix));
-				}
-			} else {
-				template = template.replaceAll("(\\$[^\\s]*)" + name + "([\\}'\"\\s]+)($|[^i]|i[^n]|in[^\\s])", "$1" + name + ".path$2$3");
-
-				String fileName = data.getName();
-				JSONObject fileJo = new JSONObject();
-				fileJo.putOpt("path", fileName);
-				fileJo.putOpt("name", fileName.split("\\.(?=[^\\.]+$)")[0]);
-				fileJo.putOpt("files_path", data.getLocalDirectory());
-
-				if (data.hasDataType()) {
-					GalaxyDataType dataType = data.getDataType();
-					String fileExt = dataType.getExtension();
-					fileJo.putOpt("extension", fileExt);
-					fileJo.putOpt("ext", fileExt);
-				}
-
-				if (data.hasDataType())
-					fileJo.putOpt("metadata", new JSONObject());
-
-				jo.putOpt(name, fileJo);
-			}
-		} catch (JSONException e) {
-			HiWay.onError(e);
-		}
+	/**
+	 * A function that appends the string ".path" to all occurrences of a file parameter name in the template; this is done since a file parameter has a whole
+	 * JSON object / Python dictionary of attributes (e.g., its path, its metadata, its extension) and therefore can't be accessed directly by its name
+	 * 
+	 * @param name
+	 *            the name of a file parameter
+	 */
+	public void addFile(String name) {
+		template = template.replaceAll("(\\$[^\\s]*)" + name + "([\\}'\"\\s]+)($|[^i]|i[^n]|in[^\\s])", "$1" + name + ".path$2$3");
 	}
 
 	public void addParam(String name, GalaxyParam param) {
