@@ -105,6 +105,10 @@ public class GalaxyApplicationMaster extends HiWay {
 	public GalaxyApplicationMaster() {
 		super();
 		galaxyPath = getHiWayConf().get(HiWayConfiguration.HIWAY_GALAXY_PATH);
+		if (galaxyPath == null) {
+			log.error(HiWayConfiguration.HIWAY_GALAXY_PATH + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+			HiWay.onError(new RuntimeException());
+		}
 		galaxyDataTables = new HashMap<>();
 		galaxyDataTypes = new HashMap<>();
 		galaxyTools = new HashMap<>();
@@ -248,7 +252,7 @@ public class GalaxyApplicationMaster extends HiWay {
 		}
 		String[] tool_config_files = tool_config_file.split(",");
 
-		// (2) parse the config files for Galaxy's data types, data tables, and tool libraries
+		// (2) parse the config files for Galaxy's data types, data tables, and tool libraries		
 		try {
 			processDataTypes(new File(galaxyPath + "/" + datatypes_config_file));
 			processDataTables(new File(galaxyPath + "/" + tool_data_table_config_path));
@@ -271,6 +275,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	 * @return the Galaxy tools described in the XML file
 	 */
 	private GalaxyTool parseToolFile(File file) {
+		log.info("Parsing Galaxy tool file " + file);
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			String path = file.getCanonicalPath();
@@ -306,11 +311,12 @@ public class GalaxyApplicationMaster extends HiWay {
 				if (with != null)
 					toolDescription = toolDescription.replace(replace, with);
 			}
+			
 			doc = builder.parse(new InputSource(new StringReader(toolDescription)));
 			rootEl = doc.getDocumentElement();
 			String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
 			String id = rootEl.getAttribute("id");
-			GalaxyTool tool = new GalaxyTool(id, version, dir, galaxyPath);
+			GalaxyTool tool = new GalaxyTool(id, version, dir);
 
 			// (3) determine requirements (libraries and executables) of this tool; requirements have to be parsed such that the environment of the task can be
 			// set to include them
@@ -428,10 +434,10 @@ public class GalaxyApplicationMaster extends HiWay {
 						toolId = splitId[splitId.length - 2];
 					GalaxyTool tool = galaxyTools.get(toolId).get(toolVersion);
 					if (tool == null) {
-						System.err.println("Tool " + toolId + "/" + toolVersion + " could not be located in local Galaxy installation.");
+						log.error("Tool " + toolId + "/" + toolVersion + " could not be located in local Galaxy installation.");
 						HiWay.onError(new RuntimeException());
 					}
-					GalaxyTaskInstance task = new GalaxyTaskInstance(id, tool.getId(), tool);
+					GalaxyTaskInstance task = new GalaxyTaskInstance(id, tool.getId(), tool, galaxyPath);
 					tasks.put(id, task);
 
 					// (ii) determine the and incorporate post job actions apecified in the workflow (e.g., renaming the task's output data)
@@ -568,6 +574,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	 */
 	private void processDataTables(File file) {
 		try {
+			log.info("Processing Galaxy data table config file " + file.getCanonicalPath());
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			Document doc = builder.parse(file);
 			NodeList tables = doc.getElementsByTagName("table");
@@ -599,6 +606,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	 */
 	private void processDataTypes(File file) {
 		try {
+			log.info("Processing Galaxy data type config file " + file.getCanonicalPath());
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			Document doc = builder.parse(file);
 			NodeList datatypeNds = doc.getElementsByTagName("datatype");
@@ -628,6 +636,7 @@ public class GalaxyApplicationMaster extends HiWay {
 		if (!file.exists())
 			return;
 		try (BufferedReader locBr = new BufferedReader(new FileReader(file))) {
+			log.info("Processing Galaxy data table loc file " + file.getCanonicalPath());
 			String line;
 			while ((line = locBr.readLine()) != null) {
 				if (line.startsWith(galaxyDataTable.getComment_char()))
@@ -677,7 +686,7 @@ public class GalaxyApplicationMaster extends HiWay {
 				DOMSource source = new DOMSource(macroEl);
 				transformer.transform(source, result);
 				String macro = result.getWriter().toString();
-				macro = macro.substring(macro.indexOf('\n') + 1, macro.lastIndexOf('\n') - 1);
+				macro = macro.substring(macro.indexOf('\n') + 1, macro.lastIndexOf('\n'));
 				macrosByName.put(name, macro);
 			}
 		} catch (SAXException | IOException | TransformerException | ParserConfigurationException e) {
@@ -698,6 +707,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	 */
 	private void processToolLibraries(File file, String defaultPath, String dependencyDir) {
 		try {
+			log.info("Processing Galaxy tool library config file " + file.getCanonicalPath());
 			File galaxyPathFile = new File(galaxyPath);
 			File dir = new File(galaxyPathFile, defaultPath);
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();

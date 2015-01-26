@@ -58,8 +58,6 @@ public class HiWayConfiguration extends Configuration {
 	public static final String HIWAY_AM_QUEUE_DEFAULT = "default";
 	public static final String HIWAY_AM_SANDBOX_DIRECTORY = "hiway.am.sandbox.directory";
 	public static final String HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT = "hiway";
-	public static final String HIWAY_AM_STATLOG = "hiway.am.statlog";
-	public static final String HIWAY_AM_STATLOG_DEFAULT = "stat.log";
 	public static final String HIWAY_AM_TASK_RETRIES = "hiway.am.task.retries";
 	public static final int HIWAY_AM_TASK_RETRIES_DEFAULT = 1;
 	public static final String HIWAY_AM_VCORES = "hiway.am.vcores";

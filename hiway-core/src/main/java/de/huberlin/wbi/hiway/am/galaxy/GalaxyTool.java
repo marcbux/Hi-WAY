@@ -60,11 +60,11 @@ public class GalaxyTool {
 	// this tool's version number, as provided in its XML description file
 	private final String version;
 
-	public GalaxyTool(String id, String version, String dir, String galaxyPath) {
+	public GalaxyTool(String id, String version, String dir) {
 		this.id = id;
 		this.version = version;
 		params = new HashSet<>();
-		this.env = "PATH=" + dir + ":$PATH; export PATH\n" + "PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n";
+		this.env = "PATH=" + dir + ":$PATH; export PATH\n";
 		requirements = new HashMap<>();
 	}
 

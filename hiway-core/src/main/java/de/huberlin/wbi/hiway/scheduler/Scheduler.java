@@ -181,17 +181,53 @@ public abstract class Scheduler {
 		switch (dbType) {
 		case SQL:
 			String sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			if (sqlUser == null) {
+				log.error(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				HiWay.onError(new RuntimeException());
+			}
 			String sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			if (sqlPassword == null) {
+				log.error(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				HiWay.onError(new RuntimeException());
+			}
 			String sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+			if (sqlURL == null) {
+				log.error(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				HiWay.onError(new RuntimeException());
+			}
 			dbInterface = new HiwayDB(sqlUser, sqlPassword, sqlURL);
 			break;
 		case NoSQL:
 			sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			if (sqlUser == null) {
+				log.error(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				HiWay.onError(new RuntimeException());
+			}
 			sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			if (sqlPassword == null) {
+				log.error(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				HiWay.onError(new RuntimeException());
+			}
 			sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+			if (sqlURL == null) {
+				log.error(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				HiWay.onError(new RuntimeException());
+			}
 			String noSqlBucket = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
+			if (noSqlBucket == null) {
+				log.error(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				HiWay.onError(new RuntimeException());
+			}
 			String noSqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
+			if (noSqlPassword == null) {
+				log.error(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				HiWay.onError(new RuntimeException());
+			}
 			String noSqlURIs = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
+			if (noSqlURIs == null) {
+				log.error(HiWayConfiguration.HIWAY_DB_NOSQL_URLS + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				HiWay.onError(new RuntimeException());
+			}
 			List<URI> noSqlURIList = new ArrayList<>();
 			for (String uri : noSqlURIs.split(",")) {
 				noSqlURIList.add(URI.create(uri));
@@ -277,7 +313,8 @@ public abstract class Scheduler {
 			log.info("Retrying task " + task + ".");
 			addTask(task);
 		} else {
-			log.info("Task " + task + " has exceeded maximum number of allowed retries. Aborting task.");
+			log.info("Task " + task + " has exceeded maximum number of allowed retries. Aborting workflow.");
+			HiWay.onError(new RuntimeException());
 		}
 
 		return new ArrayList<>();

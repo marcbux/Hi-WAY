@@ -240,7 +240,7 @@ public abstract class HiWay {
 		conf.addResource("core-site.xml");
 		hiWayConf = new HiWayConfiguration();
 		try {
-			statLog = new BufferedWriter(new FileWriter(hiWayConf.get(HiWayConfiguration.HIWAY_AM_STATLOG, HiWayConfiguration.HIWAY_AM_STATLOG_DEFAULT)));
+			statLog = new BufferedWriter(new FileWriter(hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT)));
 			fs = FileSystem.get(conf);
 		} catch (IOException e) {
 			onError(e);
@@ -256,7 +256,6 @@ public abstract class HiWay {
 		Map<String, String> envs = System.getenv();
 		for (Map.Entry<String, String> env : envs.entrySet()) {
 			log.info("System env: key=" + env.getKey() + ", val=" + env.getValue());
-			System.out.println("System env: key=" + env.getKey() + ", val=" + env.getValue());
 		}
 
 		String cmd = "ls -al";
@@ -270,7 +269,6 @@ public abstract class HiWay {
 			String line = "";
 			while ((line = buf.readLine()) != null) {
 				log.info("System CWD content: " + line);
-				System.out.println("System CWD content: " + line);
 			}
 			buf.close();
 		} catch (IOException | InterruptedException e) {

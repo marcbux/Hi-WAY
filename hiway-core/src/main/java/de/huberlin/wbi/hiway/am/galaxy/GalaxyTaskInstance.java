@@ -73,7 +73,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 	// the tool state (i.e., the parameter settings in JSON format) of this task instance
 	private JSONObject toolState;
 
-	public GalaxyTaskInstance(long id, String taskName, GalaxyTool galaxyTool) {
+	public GalaxyTaskInstance(long id, String taskName, GalaxyTool galaxyTool, String galaxyPath) {
 		super(id, UUID.randomUUID(), taskName, Math.abs(taskName.hashCode()), ForeignLambdaExpr.LANGID_BASH);
 		this.galaxyTool = galaxyTool;
 		toolState = new JSONObject();
@@ -87,6 +87,8 @@ public class GalaxyTaskInstance extends TaskInstance {
 
 		// As opposed to other Hi-WAY applciation masters, the Galaxy AM ha a fairly static command that can be build at task instance creation time
 		StringBuilder commandSb = new StringBuilder();
+		commandSb.append("PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n");
+		commandSb.append("PYTHON_EGG_CACHE=.; export PYTHON_EGG_CACHE\n");
 		commandSb.append("python ").append(id).append(".params.py\n");
 		commandSb.append("cat ").append(id).append(".pre.sh > ").append(id).append(".sh\n");
 		commandSb.append("echo `cheetah fill ").append(id).append(".template.tmpl --pickle ").append(id).append(".pickle.p -p` >> ").append(id).append(".sh\n");
@@ -233,10 +235,10 @@ public class GalaxyTaskInstance extends TaskInstance {
 
 		// The task isntance's bash script is built by appending the pre script, the template compiled by Cheetah using the parameters set in the params Python
 		// script, and the post script
-		Data preSriptData = new Data(id + ".pre.sh");
-		Data paramScriptData = new Data(id + ".params.py");
-		Data templateData = new Data(id + ".template.tmpl");
-		Data postSriptData = new Data(id + ".post.sh");
+		Data preSriptData = new Data("pre.sh");
+		Data paramScriptData = new Data("params.py");
+		Data templateData = new Data("template.tmpl");
+		Data postSriptData = new Data("post.sh");
 
 		try (BufferedWriter preScriptWriter = new BufferedWriter(new FileWriter(preSriptData.getLocalPath()));
 				BufferedWriter paramScriptWriter = new BufferedWriter(new FileWriter(paramScriptData.getLocalPath()));
@@ -246,6 +248,15 @@ public class GalaxyTaskInstance extends TaskInstance {
 			paramScriptWriter.write(paramScript.toString());
 			templateWriter.write(galaxyTool.getTemplate());
 			postScriptWriter.write(getPostScript());
+		} catch (IOException e) {
+			HiWay.onError(e);
+		}
+
+		try {
+			preSriptData.stageOut(fs, containerId);
+			paramScriptData.stageOut(fs, containerId);
+			templateData.stageOut(fs, containerId);
+			postSriptData.stageOut(fs, containerId);
 
 			preSriptData.addToLocalResourceMap(localResources, fs, containerId);
 			paramScriptData.addToLocalResourceMap(localResources, fs, containerId);
