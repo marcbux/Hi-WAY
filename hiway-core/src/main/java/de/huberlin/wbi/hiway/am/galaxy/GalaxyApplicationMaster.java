@@ -133,7 +133,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	 * @return the set of parameters under this element
 	 * @throws XPathExpressionException
 	 */
-	private Set<GalaxyParam> getParams(Element el) throws XPathExpressionException {
+	private Set<GalaxyParam> getParams(Element el, GalaxyTool tool) throws XPathExpressionException {
 		Set<GalaxyParam> params = new HashSet<>();
 		XPath xpath = XPathFactory.newInstance().newXPath();
 
@@ -152,6 +152,8 @@ public class GalaxyApplicationMaster extends HiWay {
 			// (a) determine default values and mappings of values
 			String type = paramEl.getAttribute("type");
 			switch (type) {
+			case "data":
+				tool.setPath(name);
 			case "boolean":
 				String trueValue = paramEl.getAttribute("truevalue");
 				param.addMapping("True", trueValue);
@@ -195,7 +197,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			for (int j = 0; j < whenNds.getLength(); j++) {
 				Element whenEl = (Element) whenNds.item(j);
 				String conditionValue = whenEl.getAttribute("value");
-				conditional.setConditionalParams(conditionValue, getParams(whenEl));
+				conditional.setConditionalParams(conditionValue, getParams(whenEl, tool));
 			}
 
 			params.add(conditional);
@@ -208,7 +210,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			GalaxyRepeat repeat = new GalaxyRepeat(name);
 			params.add(repeat);
 
-			repeat.setParams(getParams(repeatEl));
+			repeat.setParams(getParams(repeatEl, tool));
 		}
 
 		return params;
@@ -338,7 +340,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			// (5) determine the parameters (atomic, conditional and repeat) of this tool
 			Element inputsEl = (Element) rootEl.getElementsByTagName("inputs").item(0);
 			if (inputsEl != null)
-				tool.setParams(getParams(inputsEl));
+				tool.setParams(getParams(inputsEl, tool));
 
 			// (6) determine the output files produced by this tool
 			Element outputsEl = (Element) rootEl.getElementsByTagName("outputs").item(0);
@@ -348,6 +350,7 @@ public class GalaxyApplicationMaster extends HiWay {
 					Element dataEl = (Element) dataNds.item(i);
 					String name = dataEl.getAttribute("name");
 					GalaxyParamValue param = new GalaxyParamValue(name);
+					tool.setPath(name);
 					tool.addParam(name, param);
 
 					String format = dataEl.getAttribute("format");
@@ -428,7 +431,7 @@ public class GalaxyApplicationMaster extends HiWay {
 						System.err.println("Tool " + toolId + "/" + toolVersion + " could not be located in local Galaxy installation.");
 						HiWay.onError(new RuntimeException());
 					}
-					GalaxyTaskInstance task = new GalaxyTaskInstance(id, tool.getName(), tool);
+					GalaxyTaskInstance task = new GalaxyTaskInstance(id, tool.getId(), tool);
 					tasks.put(id, task);
 
 					// (ii) determine the and incorporate post job actions apecified in the workflow (e.g., renaming the task's output data)

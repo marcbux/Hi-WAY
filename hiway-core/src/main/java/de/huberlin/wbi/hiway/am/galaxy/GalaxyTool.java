@@ -53,7 +53,7 @@ public class GalaxyTool {
 	private final String id;
 	// these tool's parameters
 	private Set<GalaxyParam> params;
-	// the packages that are required to be installed for this tool to run; these requirements are parsed to determine the tool's environment
+	// the packages (name, version) that are required to be installed for this tool to run; these requirements are parsed to determine the tool's environment
 	private Map<String, String> requirements;
 	// the template for the command to run this tool; the template will have to be compiled by Cheetah at runtime to resolve parameters
 	private String template;
@@ -68,19 +68,14 @@ public class GalaxyTool {
 		requirements = new HashMap<>();
 	}
 
+	/**
+	 * A method for adding commands to be executed before the tool is invoked, e.g., to set the environment in which the toolis to be run
+	 * 
+	 * @param env
+	 *            the shell command to be executed before the tool is invoked
+	 */
 	public void addEnv(String env) {
 		this.env = this.env + (env.endsWith("\n") ? env : env + "\n");
-	}
-
-	/**
-	 * A function that appends the string ".path" to all occurrences of a file parameter name in the template; this is done since a file parameter has a whole
-	 * JSON object / Python dictionary of attributes (e.g., its path, its metadata, its extension) and therefore can't be accessed directly by its name
-	 * 
-	 * @param name
-	 *            the name of a file parameter
-	 */
-	public void addFile(String name) {
-		template = template.replaceAll("(\\$[^\\s]*)" + name + "([\\}'\"\\s]+)($|[^i]|i[^n]|in[^\\s])", "$1" + name + ".path$2$3");
 	}
 
 	public void addParam(String name, GalaxyParam param) {
@@ -95,6 +90,13 @@ public class GalaxyTool {
 		return env;
 	}
 
+	/**
+	 * A function that recursively iterates through the parameters of this tool and returns the first parameter matching the specified name.
+	 * 
+	 * @param name
+	 *            the name of the parameter to be retrieved
+	 * @return the first atomic parameter matching the specified name
+	 */
 	public GalaxyParamValue getFirstMatchingParamByName(String name) {
 		for (GalaxyParam param : params)
 			for (GalaxyParamValue paramValue : param.getParamValues())
@@ -105,10 +107,6 @@ public class GalaxyTool {
 
 	public String getId() {
 		return id;
-	}
-
-	public String getName() {
-		return getId() + "/" + getVersion();
 	}
 
 	public Set<String> getRequirements() {
@@ -123,16 +121,27 @@ public class GalaxyTool {
 		return template;
 	}
 
+	public String getUniqueId() {
+		return getId() + "/" + getVersion();
+	}
+
 	public String getVersion() {
 		return version;
 	}
 
 	@Override
 	public int hashCode() {
-		return getName().hashCode();
+		return getUniqueId().hashCode();
 	}
 
-	private void mapParams(JSONObject jo) throws JSONException {
+	/**
+	 * A function that maps the values of a given JSON object (e.g. an invocation's tool state) according to the mappings defined in this Galaxy Tool
+	 * 
+	 * @param jo
+	 *            the JSON object whose values are to be mapped
+	 * @throws JSONException
+	 */
+	public void mapParams(JSONObject jo) throws JSONException {
 		if (jo.length() == 0)
 			return;
 		for (String name : JSONObject.getNames(jo)) {
@@ -150,13 +159,19 @@ public class GalaxyTool {
 		}
 	}
 
-	public void populateToolState(JSONObject toolState) throws JSONException {
-		mapParams(toolState);
-		toolState.put("__new_file_path__", ".");
-	}
-
 	public void setParams(Set<GalaxyParam> params) {
 		this.params = params;
+	}
+
+	/**
+	 * A function that appends the string ".path" to all occurrences of a file parameter name in the template; this is done since a file parameter has a whole
+	 * JSON object / Python dictionary of attributes (e.g., its path, its metadata, its extension) and therefore can't be accessed directly by its name
+	 * 
+	 * @param name
+	 *            the name of a file parameter
+	 */
+	public void setPath(String fileName) {
+		template = template.replaceAll("(\\$[^\\s]*)" + fileName + "([\\}'\"\\s]+)($|[^i]|i[^n]|in[^\\s])", "$1" + fileName + ".path$2$3");
 	}
 
 	public void setTemplate(String template) {
@@ -165,6 +180,6 @@ public class GalaxyTool {
 
 	@Override
 	public String toString() {
-		return getName();
+		return getId();
 	}
 }

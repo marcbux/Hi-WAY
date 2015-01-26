@@ -94,7 +94,7 @@ public class LaunchContainerRunnable implements Runnable {
 
 		// Set the environment
 		ctx.setEnvironment(am.getShellEnv());
-		
+
 		ctx.setLocalResources(task.buildScriptsAndSetResources(am.getFs(), container));
 
 		// Set the necessary command to execute on the allocated container
@@ -122,7 +122,7 @@ public class LaunchContainerRunnable implements Runnable {
 		if (am.isDetermineFileSizes()) {
 			vargs.add("--size");
 		}
-		
+
 		String invocScript = task.getInvocScript();
 		if (invocScript.length() > 0) {
 			vargs.add("--invocScript " + invocScript);

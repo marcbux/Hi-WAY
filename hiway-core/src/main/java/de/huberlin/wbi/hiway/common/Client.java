@@ -80,7 +80,6 @@ import org.apache.hadoop.yarn.util.Records;
 //import org.json.JSONException;
 //import org.json.JSONObject;
 
-
 import de.huberlin.wbi.hiway.am.HiWay;
 
 /**

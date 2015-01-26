@@ -63,8 +63,6 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 public class GalaxyTaskInstance extends TaskInstance {
 	// the Galaxy tool invoked by this task instance
 	private GalaxyTool galaxyTool;
-	// the tool state (i.e., the parameter settings in JSON format) of this task instance
-	private JSONObject toolState;
 	// input data, which the task instance has to know about for determining the metadata using the Python classes provided by Galaxy
 	private Set<GalaxyData> inputs;
 	// the Python script run before the actual task instance execution that is responsible for populating the tool state with metadata
@@ -72,6 +70,8 @@ public class GalaxyTaskInstance extends TaskInstance {
 	// the post script that is to be run subsequent to the actual task invocation and that may involve the moving of files from temporary fodlers to their
 	// destination
 	private String postScript;
+	// the tool state (i.e., the parameter settings in JSON format) of this task instance
+	private JSONObject toolState;
 
 	public GalaxyTaskInstance(long id, String taskName, GalaxyTool galaxyTool) {
 		super(id, UUID.randomUUID(), taskName, Math.abs(taskName.hashCode()), ForeignLambdaExpr.LANGID_BASH);
@@ -149,10 +149,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 				// (2) fix both the template of this tool and the tool state of the task instance calling this method, such that they are in compliance with one
 				// another when the tool state is used to set the parameters of the task instance at execution time
 			} else {
-				// (a) adjust the galaxy tool's template such that it is conform with the tool state
-				galaxyTool.addFile(name);
-
-				// (b) add several properties for this parameter to the tool state
+				// (a) add several properties for this parameter to the tool state
 				String fileName = data.getName();
 				JSONObject fileJo = new JSONObject();
 				fileJo.putOpt("path", fileName);
@@ -170,7 +167,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 					fileJo.putOpt("metadata", new JSONObject());
 				jo.putOpt(name, fileJo);
 
-				// (c) adjust the Python script for setting parameters at runtime to compute metadata for this file, given the computeMetadata parameter is set
+				// (b) adjust the Python script for setting parameters at runtime to compute metadata for this file, given the computeMetadata parameter is set
 				if (computeMetadata && data.hasDataType()) {
 					GalaxyDataType dataType = data.getDataType();
 					paramScript.append("from ");
@@ -218,6 +215,13 @@ public class GalaxyTaskInstance extends TaskInstance {
 		}
 	}
 
+	/**
+	 * A method for adding commands to be executed after the task instance (e.g., for moving files from a temporary folder to their destination, as specified in
+	 * the tool description)
+	 * 
+	 * @param post
+	 *            the shell command to be executed after the task instance
+	 */
 	public void addToPostScript(String post) {
 		postScript = postScript + (post.endsWith("\n") ? post : post + "\n");
 	}
@@ -227,6 +231,8 @@ public class GalaxyTaskInstance extends TaskInstance {
 		Map<String, LocalResource> localResources = super.buildScriptsAndSetResources(fs, container);
 		String containerId = container.getId().toString();
 
+		// The task isntance's bash script is built by appending the pre script, the template compiled by Cheetah using the parameters set in the params Python
+		// script, and the post script
 		Data preSriptData = new Data(id + ".pre.sh");
 		Data paramScriptData = new Data(id + ".params.py");
 		Data templateData = new Data(id + ".template.tmpl");
@@ -267,24 +273,35 @@ public class GalaxyTaskInstance extends TaskInstance {
 	 * @throws JSONException
 	 */
 	public void prepareParamScript() throws JSONException {
-		galaxyTool.populateToolState(toolState);
+		// (1) populate the tool state by mapping parameters and adding additional parameters
+		galaxyTool.mapParams(toolState);
+		toolState.put("__new_file_path__", ".");
+		// (2) Set the tool state to the tool state as parsed from the workflow description and populated in step 1
 		paramScript.append("\ntool_state = ");
 		paramScript.append(toolState.toString());
+		// (3) Define the Dict class, which is a Python dict whose members are accessible like functions of a class (via a "dot")
 		paramScript.append("\n\nclass Dict(dict):");
 		paramScript.append("\n    def __init__(self, *args, **kwargs):");
 		paramScript.append("\n        super(Dict, self).__init__(*args, **kwargs)");
 		paramScript.append("\n        self.__dict__ = self");
+		// (4) The Dataset class inherits from the Dict class and provides some functions; in order to utilize the Python scripts describing the Galaxy data
+		// types, a Dataset object has to be created; unfortunately, the Dataset object provided by Galaxy requires Galaxy to run, hence a custom Dataset class
+		// had to be created
 		paramScript.append("\n\nclass Dataset(Dict):");
 		paramScript.append("\n    def has_data(self):");
 		paramScript.append("\n        return True");
 		paramScript.append("\n    def get_size(self):");
 		paramScript.append("\n        return os.path.getsize(self.file_name)");
+		// (5) The expandToolState method traverses the tool state recursively and, when encountering an input data item, determines and adds its metadata
 		paramScript.append("\n\ndef expandToolState(src, dest):");
 		paramScript.append("\n    for k, v in src.iteritems():");
+		// (6) recusrively parse dicts of parameters (conditionals and the root parameter list)
 		paramScript.append("\n        if isinstance (v, dict):");
 		paramScript.append("\n            dest[k] = Dataset() if 'path' in v else Dict()");
 		paramScript.append("\n            expandToolState(v, dest[k])");
+		// for each input data item
 		for (GalaxyData input : inputs) {
+			// (a) instantiate the Python class corresponding to this data item's data type
 			paramScript.append("\n            if 'path' in v and v['path'] == '");
 			paramScript.append(input.getName());
 			paramScript.append("':");
@@ -292,27 +309,33 @@ public class GalaxyTaskInstance extends TaskInstance {
 			paramScript.append("\n                datatype = ");
 			paramScript.append(input.getDataType().getName());
 			paramScript.append("()");
+			// (b) set the default values of this data item, as defined in its Python class
 			paramScript.append("\n                for key in datatype.metadata_spec.keys():");
 			paramScript.append("\n                    value = datatype.metadata_spec[key]");
 			paramScript.append("\n                    default = value.get(\"default\")");
 			paramScript.append("\n                    dest[k].metadata[key] = default");
 			paramScript.append("\n                try:");
+			// (c) attempt to determine additional metadata, as defined in the set_meta method of the Galaxy data type's Python classes
 			paramScript.append("\n                    datatype.set_meta(dataset=dest[k])");
 			paramScript.append("\n                except:");
 			paramScript.append("\n                    pass");
+			// (d) metadata information in Python list format has to converted to a string and formatted before it can be added to the tool state
 			paramScript.append("\n                for key in dest[k].metadata.keys():");
 			paramScript.append("\n                    value = dest[k].metadata[key]");
 			paramScript.append("\n                    if isinstance (value, list):");
 			paramScript.append("\n                        dest[k].metadata[key] = ', '.join(str(item) for item in value)");
 		}
+		// (7) recursively parse lists of parameters (repeats)
 		paramScript.append("\n        elif isinstance (v, list):");
 		paramScript.append("\n            dest[k] = list()");
 		paramScript.append("\n            for i in v:");
 		paramScript.append("\n                j = Dict()");
 		paramScript.append("\n                dest[k].append(j)");
 		paramScript.append("\n                expandToolState(i, j)");
+		// (8) if the encountered item is neither of type dict nor of type list (and hence atomic), just add it to the expanded dest dict
 		paramScript.append("\n        else:");
 		paramScript.append("\n            dest[k] = v");
+		// (9) invoke the expandToolState method and write its result to a pickle file, which Cheetah can interpret to compile the template
 		paramScript.append("\n\nexpanded_tool_state = Dict()");
 		paramScript.append("\nexpandToolState(tool_state, expanded_tool_state)");
 		paramScript.append("\nwith open(\"");

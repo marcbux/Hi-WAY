@@ -82,11 +82,11 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		};
 
 	}
-	
+
 	protected static int runningId = 1;
-	
+
 	protected Set<TaskInstance> childTasks;
-	
+
 	// the command to be executed
 	protected String command;
 
@@ -113,6 +113,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 	protected double upwardRank = 0d;
 	// the id of the workflow this task instance belongs to
 	protected UUID workflowId;
+
 	public TaskInstance(long id, UUID workflowId, String taskName, long taskId, String languageLabel) {
 		this.id = id;
 		this.workflowId = workflowId;
@@ -127,6 +128,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		this.parentTasks = new HashSet<>();
 		this.childTasks = new HashSet<>();
 	}
+
 	public TaskInstance(UUID workflowId, String taskName, long taskId) {
 		this(workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);
 	}
