@@ -134,7 +134,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 	}
 
 	public TaskInstance(UUID workflowId, String taskName, long taskId, String languageLabel) {
-		this(runningId++, workflowId, taskName, taskId, ForeignLambdaExpr.LANGID_BASH);
+		this(runningId++, workflowId, taskName, taskId, languageLabel);
 	}
 
 	public void addChildTask(TaskInstance childTask) throws WorkflowStructureUnknownException {

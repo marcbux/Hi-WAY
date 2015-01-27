@@ -69,7 +69,7 @@ public class LogApplicationMaster extends HiWay {
 					JsonReportEntry entry = new JsonReportEntry(line);
 					Long invocId = entry.getInvocId();
 					if (invocId != null && !tasks.containsKey(invocId)) {
-						tasks.put(invocId, new TaskInstance(getRunId(), entry.getTaskName(), entry.getTaskId(), entry.getLang()));
+						tasks.put(invocId, new TaskInstance(invocId, getRunId(), entry.getTaskName(), entry.getTaskId(), entry.getLang()));
 					}
 					TaskInstance task = tasks.get(invocId);
 
@@ -99,7 +99,6 @@ public class LogApplicationMaster extends HiWay {
 						break;
 					case JsonReportEntry.KEY_INVOC_SCRIPT:
 						task.setCommand(entry.getValueRawString());
-					case JsonReportEntry.KEY_INVOC_OUTPUT:
 					case JsonReportEntry.KEY_INVOC_EXEC:
 					case JsonReportEntry.KEY_INVOC_USER:
 						entry.setRunId(getRunId());
