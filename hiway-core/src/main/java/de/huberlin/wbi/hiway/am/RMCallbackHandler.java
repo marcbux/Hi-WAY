@@ -276,7 +276,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 	@Override
 	public void onError(Throwable e) {
-		onError(e);
+		HiWay.onError(e);
 	}
 
 	@Override

@@ -74,18 +74,17 @@ import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
  */
 public class LogParser {
 
+	public class JsonReportEntryComparatorByTimestamp implements Comparator<JsonReportEntry> {
+		@Override
+		public int compare(JsonReportEntry o1, JsonReportEntry o2) {
+			return Long.compare(o1.getTimestamp(), o2.getTimestamp());
+		}
+	}
+
 	public class OnsetTimestampComparator implements Comparator<Invocation> {
 		@Override
 		public int compare(Invocation o1, Invocation o2) {
 			return Long.compare(o1.getExecTimestamp(), o2.getExecTimestamp());
-		}
-	}
-
-	public class JsonReportEntryComparatorByTimestamp implements
-			Comparator<JsonReportEntry> {
-		@Override
-		public int compare(JsonReportEntry o1, JsonReportEntry o2) {
-			return Long.compare(o1.getTimestamp(), o2.getTimestamp());
 		}
 	}
 
@@ -99,7 +98,6 @@ public class LogParser {
 			} catch (JSONException | IOException e) {
 				e.printStackTrace();
 			}
-			// logParser.printIncrements("bowtie2-align", "dbis11:8042");
 			logParser.printStatistics(i == 0);
 		}
 	}
@@ -115,45 +113,9 @@ public class LogParser {
 		file = new File(fileName);
 		invocations = new HashMap<>();
 		run = new WorkfowRun();
-		// invocationsByContainer = new HashMap<>();
 	}
 
-	private void removeDuplicates() {
-		entries = new LinkedList<>(new LinkedHashSet<>(entries));
-	}
-
-	private void removeBadContainers() throws JSONException {
-		Set<String> badContainers = new HashSet<>();
-		List<JsonReportEntry> badEntries = new LinkedList<>();
-
-		for (JsonReportEntry entry : entries) {
-			if (entry.getKey().equals(HiwayDBI.KEY_HIWAY_EVENT)) {
-				JSONObject value = entry.getValueJsonObj();
-				if (value.getString("type").equals("container-completed")) {
-					if (value.getInt("exit-code") != 0) {
-						badContainers.add(value.getString("container-id"));
-						badEntries.add(entry);
-					}
-				}
-			}
-		}
-
-		for (JsonReportEntry entry : entries) {
-			if (entry.getKey().equals(HiwayDBI.KEY_HIWAY_EVENT)) {
-				JSONObject value = entry.getValueJsonObj();
-				if (value.getString("type").equals("container-allocated")) {
-					if (badContainers.contains(value.getString("container-id"))) {
-						badEntries.add(entry);
-					}
-				}
-			}
-		}
-
-		entries.removeAll(badEntries);
-	}
-
-	private void expandEntry(JsonReportEntry incomplete,
-			JsonReportEntry complete) {
+	private static void expandEntry(JsonReportEntry incomplete, JsonReportEntry complete) {
 		incomplete.setInvocId(complete.getInvocId());
 		incomplete.setLang(complete.getLang());
 		incomplete.setTaskId(complete.getTaskId());
@@ -170,32 +132,29 @@ public class LogParser {
 			case JsonReportEntry.KEY_INVOC_EXEC:
 				execQ.add(entry);
 				break;
-
 			case JsonReportEntry.KEY_INVOC_TIME:
 				JsonReportEntry completed = completedQ.remove();
 				JSONObject value = completed.getValueJsonObj();
-				JsonReportEntry allocated = allocatedMap.get(value
-						.getString("container-id"));
+				JsonReportEntry allocated = allocatedMap.get(value.getString("container-id"));
 				expandEntry(completed, entry);
 				expandEntry(allocated, entry);
 				break;
-
 			case HiwayDBI.KEY_HIWAY_EVENT:
 				value = entry.getValueJsonObj();
 				switch (value.getString("type")) {
 				case "container-requested":
 					expandEntry(entry, execQ.remove());
 					break;
-
 				case "container-allocated":
 					allocatedMap.put(value.getString("container-id"), entry);
 					break;
-
 				case "container-completed":
 					completedQ.add(entry);
 					break;
+				default:
 				}
 				break;
+			default:
 			}
 		}
 	}
@@ -233,20 +192,15 @@ public class LogParser {
 			stageout += invoc.getStageoutTime();
 			shutdown += invoc.getShutdownTime();
 		}
-		String lifecycle = sched + "\t" + startup + "\t" + stagein + "\t"
-				+ exec + "\t" + stageout + "\t" + shutdown + "\t";
-		long idle = run.getMaxConcurrentNodes()
-				* (run.getRuntime())
-				- run.getNoTaskReadyTime() - sched - startup - stagein - exec
-				- stageout - shutdown;
+		String lifecycle = sched + "\t" + startup + "\t" + stagein + "\t" + exec + "\t" + stageout + "\t" + shutdown + "\t";
+		long idle = run.getMaxConcurrentNodes() * (run.getRuntime()) - run.getNoTaskReadyTime() - sched - startup - stagein - exec - stageout - shutdown;
 		return idleTime ? idle + "\t" + lifecycle : lifecycle;
 	}
 
-	private String lifecycleHeaders(String category, boolean idleTime) {
+	private static String lifecycleHeaders(String category, boolean idleTime) {
 		String pre = category + " idle\t";
-		String post = category + " scheduling\t" + category + " startup\t"
-				+ category + " stage-in\t" + category + " execution\t"
-				+ category + " stage-out\t" + category + " shutdown\t";
+		String post = category + " scheduling\t" + category + " startup\t" + category + " stage-in\t" + category + " execution\t" + category + " stage-out\t"
+				+ category + " shutdown\t";
 		return idleTime ? pre + post : post;
 	}
 
@@ -273,17 +227,13 @@ public class LogParser {
 			invocs.add(invocation);
 		}
 
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(
-				new File("output"), true))) {
-			List<Invocation> invocs = invocsByHostAndTask.get(printTask).get(
-					printHost);
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File("output"), true))) {
+			List<Invocation> invocs = invocsByHostAndTask.get(printTask).get(printHost);
 			Collections.sort(invocs, new OnsetTimestampComparator());
 			for (int i = 0; i < invocs.size() - 1; i++) {
 				Invocation invocA = invocs.get(i);
 				Invocation invocB = invocs.get(i + 1);
-				writer.write((invocB.getExecTime() - invocA.getExecTime())
-						+ "\t" + (invocB.getFileSize() - invocA.getFileSize())
-						+ "\n");
+				writer.write((invocB.getExecTime() - invocA.getExecTime()) + "\t" + (invocB.getFileSize() - invocA.getFileSize()) + "\n");
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -300,7 +250,7 @@ public class LogParser {
 			}
 			invocationsByTaskname.get(taskname).add(invocation);
 		}
-		
+
 		List<String> taskNames = new LinkedList<>(invocationsByTaskname.keySet());
 		Collections.sort(taskNames);
 
@@ -316,8 +266,7 @@ public class LogParser {
 		System.out.print(run.getRuntime() + "\t");
 		System.out.print(lifecycle(invocations.values(), true));
 		for (String taskname : taskNames) {
-			System.out.print(lifecycle(invocationsByTaskname.get(taskname),
-					false));
+			System.out.print(lifecycle(invocationsByTaskname.get(taskname), false));
 		}
 		System.out.println();
 	}
@@ -330,14 +279,46 @@ public class LogParser {
 		}
 	}
 
+	private void removeBadContainers() throws JSONException {
+		Set<String> badContainers = new HashSet<>();
+		List<JsonReportEntry> badEntries = new LinkedList<>();
+
+		for (JsonReportEntry entry : entries) {
+			if (entry.getKey().equals(HiwayDBI.KEY_HIWAY_EVENT)) {
+				JSONObject value = entry.getValueJsonObj();
+				if (value.getString("type").equals("container-completed")) {
+					if (value.getInt("exit-code") != 0) {
+						badContainers.add(value.getString("container-id"));
+						badEntries.add(entry);
+					}
+				}
+			}
+		}
+
+		for (JsonReportEntry entry : entries) {
+			if (entry.getKey().equals(HiwayDBI.KEY_HIWAY_EVENT)) {
+				JSONObject value = entry.getValueJsonObj();
+				if (value.getString("type").equals("container-allocated")) {
+					if (badContainers.contains(value.getString("container-id"))) {
+						badEntries.add(entry);
+					}
+				}
+			}
+		}
+
+		entries.removeAll(badEntries);
+	}
+
+	private void removeDuplicates() {
+		entries = new LinkedList<>(new LinkedHashSet<>(entries));
+	}
+
 	public void secondPass() throws JSONException {
 		int maxContainers = 0;
 		int currentContainers = 0;
 		for (JsonReportEntry entry : entries) {
-			if (entry.getInvocId() != null
-					&& !invocations.containsKey(entry.getInvocId())) {
-				invocations.put(entry.getInvocId(),
-						new Invocation(entry.getTaskName()));
+			if (entry.getInvocId() != null && !invocations.containsKey(entry.getInvocId())) {
+				invocations.put(entry.getInvocId(), new Invocation(entry.getTaskName()));
 			}
 			Invocation invocation = invocations.get(entry.getInvocId());
 			switch (entry.getKey()) {
@@ -354,12 +335,12 @@ public class LogParser {
 					invocation.setShutdownTimestamp(entry.getTimestamp());
 					currentContainers--;
 					break;
+				default:
 				}
 				break;
 
 			case HiwayDBI.KEY_INVOC_TIME_SCHED:
-				invocation.setSchedTime(entry.getValueJsonObj().getLong(
-						"realTime"));
+				invocation.setSchedTime(entry.getValueJsonObj().getLong("realTime"));
 				break;
 
 			case HiwayDBI.KEY_INVOC_HOST:
@@ -367,20 +348,17 @@ public class LogParser {
 				break;
 
 			case JsonReportEntry.KEY_INVOC_TIME:
-				invocation.setExecTime(entry.getValueJsonObj().getLong(
-						"realTime"));
+				invocation.setExecTime(entry.getValueJsonObj().getLong("realTime"));
 				invocation.setExecTimestamp(entry.getTimestamp());
 				break;
 
 			case HiwayDBI.KEY_INVOC_TIME_STAGEIN:
-				invocation.setStageinTime(entry.getValueJsonObj().getLong(
-						"realTime"));
+				invocation.setStageinTime(entry.getValueJsonObj().getLong("realTime"));
 				invocation.setStageinTimestamp(entry.getTimestamp());
 				break;
 
 			case HiwayDBI.KEY_INVOC_TIME_STAGEOUT:
-				invocation.setStageoutTime(entry.getValueJsonObj().getLong(
-						"realTime"));
+				invocation.setStageoutTime(entry.getValueJsonObj().getLong("realTime"));
 				invocation.setStageoutTimestamp(entry.getTimestamp());
 				break;
 
@@ -393,9 +371,12 @@ public class LogParser {
 				break;
 
 			case JsonReportEntry.KEY_FILE_SIZE_STAGEIN:
-				invocations.get(entry.getInvocId()).addFileSize(
-						Long.parseLong(entry.getValueRawString()));
+				invocations.get(entry.getInvocId()).addFileSize(Long.parseLong(entry.getValueRawString()));
+				break;
+
+			default:
 			}
+
 		}
 
 		run.setMaxConcurrentNodes(maxContainers);
@@ -421,13 +402,13 @@ public class LogParser {
 				case "container-completed":
 					readyTasks--;
 					break;
+				default:
 				}
 				break;
+			default:
 			}
 			long timestamp = entry.getTimestamp();
-			noTaskReadyTime += Math.max(0, run.getMaxConcurrentNodes()
-					- readyTasks)
-					* (timestamp - lastTimestamp);
+			noTaskReadyTime += Math.max(0, run.getMaxConcurrentNodes() - readyTasks) * (timestamp - lastTimestamp);
 			lastTimestamp = timestamp;
 		}
 

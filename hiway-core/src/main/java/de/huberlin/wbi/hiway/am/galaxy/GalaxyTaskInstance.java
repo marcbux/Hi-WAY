@@ -74,7 +74,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 	private JSONObject toolState;
 
 	public GalaxyTaskInstance(long id, UUID workflowId, String taskName, GalaxyTool galaxyTool, String galaxyPath) {
-		super(id, workflowId, taskName, Math.abs(taskName.hashCode()), ForeignLambdaExpr.LANGID_BASH);
+		super(id, workflowId, taskName, Math.abs(taskName.hashCode() + 1), ForeignLambdaExpr.LANGID_BASH);
 		this.galaxyTool = galaxyTool;
 		toolState = new JSONObject();
 		paramScript = new StringBuilder("import os, ast\nimport cPickle as pickle\nimport galaxy.app\n");

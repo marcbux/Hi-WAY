@@ -36,8 +36,8 @@ public class WorkfowRun {
 
 	private int maxConcurrentNodes;
 	private long noTaskReadyTime;
-	private long runtime;
 	private long runOnsetTimestamp;
+	private long runtime;
 
 	public WorkfowRun() {
 	}
@@ -50,12 +50,12 @@ public class WorkfowRun {
 		return noTaskReadyTime;
 	}
 
-	public long getRuntime() {
-		return runtime;
-	}
-	
 	public long getRunOnsetTimestamp() {
 		return runOnsetTimestamp;
+	}
+
+	public long getRuntime() {
+		return runtime;
 	}
 
 	public void setMaxConcurrentNodes(int maxConcurrentNodes) {
@@ -65,13 +65,13 @@ public class WorkfowRun {
 	public void setNoTaskReadyTime(long noTaskReadyTime) {
 		this.noTaskReadyTime = noTaskReadyTime;
 	}
-	
-	public void setRuntime(long runtime) {
-		this.runtime = runtime;
-	}
 
 	public void setRunOnsetTimestamp(long runOnsetTimestamp) {
 		this.runOnsetTimestamp = runOnsetTimestamp;
+	}
+
+	public void setRuntime(long runtime) {
+		this.runtime = runtime;
 	}
 
 }

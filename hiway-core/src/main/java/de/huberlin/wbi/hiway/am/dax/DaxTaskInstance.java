@@ -47,7 +47,7 @@ public class DaxTaskInstance extends TaskInstance {
 	private double runtime;
 
 	public DaxTaskInstance(UUID workflowId, String taskName) {
-		super(workflowId, taskName, Math.abs(taskName.hashCode()));
+		super(workflowId, taskName, Math.abs(taskName.hashCode() + 1));
 		fileSizes = new HashMap<>();
 	}
 
