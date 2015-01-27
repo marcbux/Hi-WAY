@@ -71,6 +71,12 @@ public class Worker {
 		}
 	}
 
+	protected static void writeEntryToLog(JsonReportEntry entry) throws IOException {
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(Invocation.REPORT_FILENAME), true))) {
+			writer.write(entry.toString() + "\n");
+		}
+	}
+
 	private String appId;
 	private String containerId;
 	private boolean determineFileSizes = false;
@@ -79,13 +85,10 @@ public class Worker {
 	protected HiWayConfiguration hiWayConf;
 	private long id;
 	private Set<Data> inputFiles;
-
 	private String invocScript = "";
 	private String langLabel;
-
 	private Set<Data> outputFiles;
 	private long taskId;
-
 	private String taskName;
 	private UUID workflowId;
 
@@ -260,12 +263,6 @@ public class Worker {
 				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, output.getLocalPath(),
 						JsonReportEntry.KEY_FILE_SIZE_STAGEOUT, Long.toString((new File(output.getLocalPath())).length())));
 			}
-		}
-	}
-
-	protected void writeEntryToLog(JsonReportEntry entry) throws IOException {
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(Invocation.REPORT_FILENAME), true))) {
-			writer.write(entry.toString() + "\n");
 		}
 	}
 

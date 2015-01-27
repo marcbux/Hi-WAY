@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileSystem;
 
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
+import de.huberlin.wbi.hiway.scheduler.DepthComparator;
 import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
 
 /**
@@ -65,7 +66,7 @@ public class RoundRobin extends StaticScheduler {
 
 	@Override
 	protected void addTask(TaskInstance task) {
-		super.addTask(task);
+		numberOfRemainingTasks++;
 		if (!nodeIterator.hasNext()) {
 			nodeIterator = queues.keySet().iterator();
 		}
@@ -80,7 +81,7 @@ public class RoundRobin extends StaticScheduler {
 	@Override
 	public void addTasks(Collection<TaskInstance> tasks) {
 		List<TaskInstance> taskList = new LinkedList<>(tasks);
-		Collections.sort(taskList, TaskInstance.Comparators.DEPTH);
+		Collections.sort(taskList, new DepthComparator());
 		super.addTasks(taskList);
 	}
 

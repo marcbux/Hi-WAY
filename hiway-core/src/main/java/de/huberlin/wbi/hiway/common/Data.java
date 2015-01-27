@@ -60,7 +60,6 @@ public class Data implements Comparable<Data> {
 	/* The hdfs directory midfixes (usually application and container id) for non-input files, e.g. for a non-input-file: local: my_folder/my_file.txt hdfs:
 	 * sandbox/app_01/container_01/my_folder/my_file.txt */
 	public static Map<Data, String> hdfsDirectoryMidfixes = new HashMap<>();
-
 	// The hdfs directory prefix (usually the Hi-WAY sandbox folder) for non-input files
 	protected static String hdfsDirectoryPrefix = "";
 	protected static final Log log = LogFactory.getLog(Data.class);
@@ -74,32 +73,29 @@ public class Data implements Comparable<Data> {
 	}
 
 	protected String absoluteLocalDirectoryPrefix = "";
-
 	// The local directory and name of the file. The local directory is also the suffix of the directoy in HDFS.
 	protected String directorySuffix = "";
 	// is the file input or output of the workflow (otherwise, its an intermediate and possibly temporary file product)
 	protected boolean input;
-
 	protected String name;
-
 	protected boolean output;
 
 	public Data(String path) {
-		path = path.replaceAll("[\\[\\]:]", "_");
+		String escaped_path = path.replaceAll("[\\[\\]:]", "_");
 		input = false;
 		output = false;
 
-		int lastSlash = path.lastIndexOf("/");
+		int lastSlash = escaped_path.lastIndexOf("/");
 		int endDirectory = (lastSlash > -1) ? lastSlash : 0;
 		int startName = (lastSlash > -1) ? lastSlash + 1 : 0;
-		String prefix = path.substring(0, endDirectory);
+		String prefix = escaped_path.substring(0, endDirectory);
 
-		if (path.startsWith("/")) {
+		if (escaped_path.startsWith("/")) {
 			this.absoluteLocalDirectoryPrefix = prefix;
 		} else {
 			this.directorySuffix = prefix;
 		}
-		this.name = path.substring(startName);
+		this.name = escaped_path.substring(startName);
 	}
 
 	public void addToLocalResourceMap(Map<String, LocalResource> localResources, FileSystem fs, String hdfsDirectoryMidfix) throws IOException {

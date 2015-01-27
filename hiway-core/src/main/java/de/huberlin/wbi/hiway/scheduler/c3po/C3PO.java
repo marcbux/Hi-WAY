@@ -188,27 +188,27 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
 public class C3PO extends Scheduler {
 
 	private static final Log log = LogFactory.getLog(C3PO.class);
+
+	private static void normalizeWeights(Collection<? extends Estimate> statistics) {
+		double sum = 0d;
+		for (Estimate statistic : statistics)
+			sum += statistic.weight;
+		for (Estimate statistic : statistics)
+			statistic.weight /= (sum != 0d) ? sum : statistics.size();
+	}
+
 	private double conservatismWeight = 1d;
 	protected Map<Long, PlacementAwarenessEstimate> dataLocalityStatistics;
 	private final DecimalFormat df;
-
 	protected Map<Long, OutlookEstimate> jobStatistics;
-
 	private int nClones = 0;
-
 	private final Random numGen;
-
 	private double outlookWeight = 1d;
-
 	private double placementAwarenessWeight = 1d;
-
 	// One queue of ready-to-execute tasks for each job, identified by its unique job name.
 	protected Map<Long, Queue<TaskInstance>> readyTasks;
-
 	protected Map<Long, Queue<TaskInstance>> runningTasks;
-
 	protected Map<Long, String> taskIdToName;
-
 	protected Map<TaskInstance, List<Container>> taskToContainers;
 
 	public C3PO(String workflowName, FileSystem fs, HiWayConfiguration conf) {
@@ -244,7 +244,7 @@ public class C3PO extends Scheduler {
 
 		log.info("Adding task of id " + task.getTaskId() + " and name " + task.getTaskName());
 
-		super.addTask(task);
+		numberOfRemainingTasks++;
 		long taskId = task.getTaskId();
 		if (!getTaskIds().contains(taskId)) {
 			newTask(taskId);
@@ -259,7 +259,7 @@ public class C3PO extends Scheduler {
 
 	@Override
 	public void addTaskToQueue(TaskInstance task) {
-		super.addTaskToQueue(task);
+		unissuedNodeRequests.add(new String[0]);
 		readyTasks.get(task.getTaskId()).add(task);
 		log.info("Added task " + task + " to queue " + task.getTaskName());
 	}
@@ -330,7 +330,8 @@ public class C3PO extends Scheduler {
 	public TaskInstance getNextTask(Container container) {
 		TaskInstance task = null;
 
-		super.getNextTask(container);
+		numberOfRemainingTasks--;
+		numberOfRunningTasks++;
 
 		boolean replicate = getNumberOfReadyTasks() == 0;
 
@@ -427,11 +428,10 @@ public class C3PO extends Scheduler {
 	@Override
 	public void initialize() {
 		super.initialize();
-
 		log.info("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
-		Collection<Long> taskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
-		log.info("HiwayDB: Retrieved Task Ids " + taskIds.toString() + " from database.");
-		for (long taskId : taskIds) {
+		Collection<Long> newTaskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
+		log.info("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
+		for (long taskId : newTaskIds) {
 			log.info("HiwayDB: Querying Task Name for Task Id " + taskId + " from database.");
 			String taskName = dbInterface.getTaskName(taskId);
 			taskIdToName.put(taskId, taskName);
@@ -444,6 +444,7 @@ public class C3PO extends Scheduler {
 			weights.get(taskId).weight *= Math.pow(statistics.get(taskId).weight, factor);
 	}
 
+	@Override
 	protected void newTask(long taskId) {
 		super.newTask(taskId);
 		for (Map<Long, RuntimeEstimate> runtimeEstimates : runtimeEstimatesPerNode.values()) {
@@ -453,14 +454,6 @@ public class C3PO extends Scheduler {
 		dataLocalityStatistics.put(taskId, new PlacementAwarenessEstimate());
 		readyTasks.put(taskId, new LinkedList<TaskInstance>());
 		runningTasks.put(taskId, new LinkedList<TaskInstance>());
-	}
-
-	private void normalizeWeights(Collection<? extends Estimate> statistics) {
-		double sum = 0d;
-		for (Estimate statistic : statistics)
-			sum += statistic.weight;
-		for (Estimate statistic : statistics)
-			statistic.weight /= (sum != 0d) ? sum : statistics.size();
 	}
 
 	@Override
@@ -605,7 +598,7 @@ public class C3PO extends Scheduler {
 		super.updateRuntimeEstimate(stat);
 		OutlookEstimate jobStatistic = jobStatistics.get(stat.getTaskId());
 		jobStatistic.finishedTasks++;
-		jobStatistic.timeSpent += stat.getRealTime().longValue();
+		jobStatistic.timeSpent += stat.getRealTime();
 	}
 
 }

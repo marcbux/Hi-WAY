@@ -268,22 +268,19 @@ public class Client {
 					log.info("Application has completed successfully. Breaking monitoring loop");
 					log.info(report.getDiagnostics());
 					return true;
-				} else {
-					log.info("Application did finish unsuccessfully." + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
-							+ ". Breaking monitoring loop");
-					return false;
 				}
+				log.info("Application did finish unsuccessfully." + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
+						+ ". Breaking monitoring loop");
 			} else if (YarnApplicationState.KILLED == state || YarnApplicationState.FAILED == state) {
 				log.info("Application did not finish." + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
 						+ ". Breaking monitoring loop");
-				return false;
 			}
 
 			if (System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
 				log.info("Reached client specified timeout for application. Killing application");
 				forceKillApplication(appId);
-				return false;
 			}
+			return false;
 		}
 	}
 
@@ -353,134 +350,135 @@ public class Client {
 		ContainerLaunchContext amContainer = Records.newRecord(ContainerLaunchContext.class);
 
 		// set local resources for the application master
-		Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
+		Map<String, LocalResource> localResources = new HashMap<>();
 
 		// Copy the application master jar to the filesystem
 		log.info("Copy App Master jar from local filesystem and add to local environment");
-		FileSystem fs = FileSystem.get(conf);
+		try (FileSystem fs = FileSystem.get(conf)) {
 
-		workflow.stageOut(fs, "");
+			workflow.stageOut(fs, "");
 
-		// set local resource info into app master container launch context
-		amContainer.setLocalResources(localResources);
+			// set local resource info into app master container launch context
+			amContainer.setLocalResources(localResources);
 
-		/* set the env variables to be setup in the env where the application master will be run */
-		log.info("Set the environment for the application master");
-		Map<String, String> env = new HashMap<String, String>();
+			/* set the env variables to be setup in the env where the application master will be run */
+			log.info("Set the environment for the application master");
+			Map<String, String> env = new HashMap<>();
 
-		StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$()).append(File.pathSeparatorChar).append("./*");
-		for (String c : conf.getStrings(YarnConfiguration.YARN_APPLICATION_CLASSPATH, YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
-			classPathEnv.append(':');
-			classPathEnv.append(File.pathSeparatorChar);
-			classPathEnv.append(c.trim());
-		}
-
-		if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
-			classPathEnv.append(':');
-			classPathEnv.append(System.getProperty("java.class.path"));
-		}
-
-		env.put("CLASSPATH", classPathEnv.toString());
-
-		amContainer.setEnvironment(env);
-
-		// Set the necessary command to execute the application master
-		Vector<CharSequence> vargs = new Vector<CharSequence>(30);
-
-		// Set java executable command
-		log.info("Setting up app master command");
-		vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
-		// Set Xmx based on am memory size
-		vargs.add("-Xmx" + amMemory + "m");
-		// Set class name
-
-		switch (workflowType) {
-		case dax:
-			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS);
-			break;
-		case log:
-			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_LOG_CLASS);
-			break;
-		case galaxy:
-			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_GALAXY_CLASS);
-			break;
-		default:
-			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS);
-		}
-
-		vargs.add("--workflow " + workflow.getLocalPath());
-		if (summary != null) {
-			vargs.add("--summary " + summary.getLocalPath());
-		}
-		vargs.add("--appid " + appId.toString());
-
-		if (debugFlag) {
-			vargs.add("--debug");
-		}
-
-		vargs.add("1>&1 | tee AppMaster.stdout > " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout");
-		vargs.add("2>&2 | tee AppMaster.stderr > " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stderr");
-
-		// Get final command
-		StringBuilder command = new StringBuilder();
-		for (CharSequence str : vargs) {
-			command.append(str).append(" ");
-		}
-
-		log.info("Completed setting up app master command " + command.toString());
-		List<String> commands = new ArrayList<String>();
-		commands.add(command.toString());
-		amContainer.setCommands(commands);
-
-		// Set up resource type requirements
-		Resource capability = Records.newRecord(Resource.class);
-		capability.setMemory(amMemory);
-		appContext.setResource(capability);
-
-		// Setup security tokens
-		if (UserGroupInformation.isSecurityEnabled()) {
-			Credentials credentials = new Credentials();
-			String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
-			if (tokenRenewer == null || tokenRenewer.length() == 0) {
-				throw new IOException("Can't get Master Kerberos principal for the RM to use as renewer");
+			StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$()).append(File.pathSeparatorChar).append("./*");
+			for (String c : conf.getStrings(YarnConfiguration.YARN_APPLICATION_CLASSPATH, YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
+				classPathEnv.append(':');
+				classPathEnv.append(File.pathSeparatorChar);
+				classPathEnv.append(c.trim());
 			}
 
-			// For now, only getting tokens for the default file-system.
-			final Token<?> tokens[] = fs.addDelegationTokens(tokenRenewer, credentials);
-			if (tokens != null) {
-				for (Token<?> token : tokens) {
-					log.info("Got dt for " + fs.getUri() + "; " + token);
+			if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+				classPathEnv.append(':');
+				classPathEnv.append(System.getProperty("java.class.path"));
+			}
+
+			env.put("CLASSPATH", classPathEnv.toString());
+
+			amContainer.setEnvironment(env);
+
+			// Set the necessary command to execute the application master
+			Vector<CharSequence> vargs = new Vector<>(30);
+
+			// Set java executable command
+			log.info("Setting up app master command");
+			vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
+			// Set Xmx based on am memory size
+			vargs.add("-Xmx" + amMemory + "m");
+			// Set class name
+
+			switch (workflowType) {
+			case dax:
+				vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS);
+				break;
+			case log:
+				vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_LOG_CLASS);
+				break;
+			case galaxy:
+				vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_GALAXY_CLASS);
+				break;
+			default:
+				vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS);
+			}
+
+			vargs.add("--workflow " + workflow.getLocalPath());
+			if (summary != null) {
+				vargs.add("--summary " + summary.getLocalPath());
+			}
+			vargs.add("--appid " + appId.toString());
+
+			if (debugFlag) {
+				vargs.add("--debug");
+			}
+
+			vargs.add("1>&1 | tee AppMaster.stdout > " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout");
+			vargs.add("2>&2 | tee AppMaster.stderr > " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stderr");
+
+			// Get final command
+			StringBuilder command = new StringBuilder();
+			for (CharSequence str : vargs) {
+				command.append(str).append(" ");
+			}
+
+			log.info("Completed setting up app master command " + command.toString());
+			List<String> commands = new ArrayList<>();
+			commands.add(command.toString());
+			amContainer.setCommands(commands);
+
+			// Set up resource type requirements
+			Resource capability = Records.newRecord(Resource.class);
+			capability.setMemory(amMemory);
+			appContext.setResource(capability);
+
+			// Setup security tokens
+			if (UserGroupInformation.isSecurityEnabled()) {
+				Credentials credentials = new Credentials();
+				String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
+				if (tokenRenewer == null || tokenRenewer.length() == 0) {
+					throw new IOException("Can't get Master Kerberos principal for the RM to use as renewer");
+				}
+
+				// For now, only getting tokens for the default file-system.
+				final Token<?> tokens[] = fs.addDelegationTokens(tokenRenewer, credentials);
+				if (tokens != null) {
+					for (Token<?> token : tokens) {
+						log.info("Got dt for " + fs.getUri() + "; " + token);
+					}
+				}
+				try (DataOutputBuffer dob = new DataOutputBuffer()) {
+					credentials.writeTokenStorageToStream(dob);
+					ByteBuffer fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+					amContainer.setTokens(fsTokens);
 				}
 			}
-			DataOutputBuffer dob = new DataOutputBuffer();
-			credentials.writeTokenStorageToStream(dob);
-			ByteBuffer fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
-			amContainer.setTokens(fsTokens);
+
+			appContext.setAMContainerSpec(amContainer);
+
+			// Set the priority for the application master
+			Priority pri = Records.newRecord(Priority.class);
+			pri.setPriority(amPriority);
+			appContext.setPriority(pri);
+
+			// Set the queue to which this application is to be submitted in the RM
+			appContext.setQueue(amQueue);
+
+			// Submit the application to the applications manager
+			log.info("Submitting application to ASM");
+			yarnClient.submitApplication(appContext);
+
+			// Monitor the application
+			boolean success = monitorApplication(appId);
+
+			if (summary != null) {
+				summary.stageIn(fs, "");
+			}
+
+			return success;
 		}
-
-		appContext.setAMContainerSpec(amContainer);
-
-		// Set the priority for the application master
-		Priority pri = Records.newRecord(Priority.class);
-		pri.setPriority(amPriority);
-		appContext.setPriority(pri);
-
-		// Set the queue to which this application is to be submitted in the RM
-		appContext.setQueue(amQueue);
-
-		// Submit the application to the applications manager
-		log.info("Submitting application to ASM");
-		yarnClient.submitApplication(appContext);
-
-		// Monitor the application
-		boolean success = monitorApplication(appId);
-
-		if (summary != null) {
-			summary.stageIn(fs, "");
-		}
-
-		return success;
-
 	}
 
 }

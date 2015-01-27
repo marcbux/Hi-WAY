@@ -48,7 +48,7 @@ import org.json.JSONObject;
  */
 public class GalaxyTool {
 	// the environment that has to be set prior to running this tool
-	private String env;
+	private String environment;
 	// this tool's id, as provided in its XML description file
 	private final String id;
 	// these tool's parameters
@@ -64,7 +64,7 @@ public class GalaxyTool {
 		this.id = id;
 		this.version = version;
 		params = new HashSet<>();
-		this.env = "PATH=" + dir + ":$PATH; export PATH\n";
+		this.environment = "PATH=" + dir + ":$PATH; export PATH\n";
 		requirements = new HashMap<>();
 	}
 
@@ -75,19 +75,19 @@ public class GalaxyTool {
 	 *            the shell command to be executed before the tool is invoked
 	 */
 	public void addEnv(String env) {
-		this.env = this.env + (env.endsWith("\n") ? env : env + "\n");
+		environment = environment + (env.endsWith("\n") ? env : env + "\n");
 	}
 
-	public void addParam(String name, GalaxyParam param) {
+	public void addParam(GalaxyParam param) {
 		params.add(param);
 	}
 
-	public void addRequirement(String name, String version) {
-		requirements.put(name, version);
+	public void addRequirement(String reqname, String reqversion) {
+		requirements.put(reqname, reqversion);
 	}
 
 	public String getEnv() {
-		return env;
+		return environment;
 	}
 
 	/**

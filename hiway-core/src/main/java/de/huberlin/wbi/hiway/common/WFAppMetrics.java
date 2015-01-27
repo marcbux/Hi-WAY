@@ -65,11 +65,11 @@ public class WFAppMetrics {
 	@Metric
 	private MutableGaugeInt tasksWaiting;
 
-	public void completedTask(TaskInstance task) {
+	public void completedTask() {
 		tasksCompleted.incr();
 	}
 
-	public void endRunningTask(TaskInstance task) {
+	public void endRunningTask() {
 		tasksRunning.decr();
 	}
 
@@ -77,19 +77,19 @@ public class WFAppMetrics {
 		tasksWaiting.decr();
 	}
 
-	public void failedTask(TaskInstance task) {
+	public void failedTask() {
 		tasksFailed.incr();
 	}
 
-	public void killedTask(TaskInstance task) {
+	public void killedTask() {
 		tasksKilled.incr();
 	}
 
-	public void launchedTask(TaskInstance task) {
+	public void launchedTask() {
 		tasksLaunched.incr();
 	}
 
-	public void runningTask(TaskInstance task) {
+	public void runningTask() {
 		tasksRunning.incr();
 	}
 

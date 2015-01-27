@@ -30,49 +30,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.am.cuneiform;
+package de.huberlin.wbi.hiway.scheduler.heft;
 
-import java.util.UUID;
+import java.util.Comparator;
 
-import de.huberlin.wbi.cuneiform.core.repl.BaseRepl;
-import de.huberlin.wbi.cuneiform.core.semanticmodel.CompoundExpr;
-import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
-import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketSrcActor;
-import de.huberlin.wbi.hiway.am.HiWay;
+import de.huberlin.wbi.hiway.common.TaskInstance;
+import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
-//Repl - Read evaluation print loop
-public class HiWayRepl extends BaseRepl {
-
-	private CuneiformApplicationMaster am;
-
-	public HiWayRepl(TicketSrcActor ticketSrc, CuneiformApplicationMaster am) {
-		super(ticketSrc, null);
-		this.am = am;
-	}
-
+public class UpwardsRankComparator implements Comparator<TaskInstance> {
 	@Override
-	public void queryFailedPost(UUID queryId, Long ticketId, Exception e, String script, String stdOut, String stdErr) {
-		CuneiformApplicationMaster.getLog().info("Query failed.");
-		am.setDone();
-	}
-
-	@Override
-	public void queryFinishedPost(UUID queryId, CompoundExpr result) {
-		CuneiformApplicationMaster.getLog().info("Query finished.");
-		am.setDone();
+	public int compare(TaskInstance task1, TaskInstance task2) {
 		try {
-			for (String output : result.normalize()) {
-				if (am.getFiles().containsKey(output)) {
-					am.getFiles().get(output).setOutput(true);
-				}
-			}
-		} catch (NotDerivableException e) {
-			HiWay.onError(e);
+			return -Double.compare(task1.getUpwardRank(), task2.getUpwardRank());
+		} catch (WorkflowStructureUnknownException e) {
+			e.printStackTrace();
+			System.exit(1);
+			throw new RuntimeException(e);
 		}
 	}
-
-	@Override
-	public void queryStartedPost(UUID runId) {
-	}
-
 }

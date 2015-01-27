@@ -112,6 +112,7 @@ public class DaxApplicationMaster extends HiWay {
 						case Node.TEXT_NODE:
 							argument = argumentChildNd.getNodeValue().replaceAll("\\s+", " ").trim();
 							break;
+						default:
 						}
 
 						if (argument.length() > 0) {
@@ -146,11 +147,12 @@ public class DaxApplicationMaster extends HiWay {
 						data.setInput(false);
 						outputs.add(fileName);
 						break;
+					default:
 					}
 
 					task.getReport().add(
-							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
-									JsonReportEntry.KEY_INVOC_OUTPUT, new JSONObject().put("output", outputs)));
+							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
+									Long.valueOf(task.getId()), null, JsonReportEntry.KEY_INVOC_OUTPUT, new JSONObject().put("output", outputs)));
 				}
 
 				task.setCommand(taskName + arguments.toString());
@@ -175,19 +177,15 @@ public class DaxApplicationMaster extends HiWay {
 			}
 
 			for (TaskInstance task : tasks.values()) {
-				try {
-					if (task.getChildTasks().size() == 0) {
-						for (Data data : task.getOutputData()) {
-							data.setOutput(true);
-						}
+				if (task.getChildTasks().size() == 0) {
+					for (Data data : task.getOutputData()) {
+						data.setOutput(true);
 					}
-				} catch (WorkflowStructureUnknownException e) {
-					onError(e);
 				}
 
 				task.getReport().add(
-						new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
-								JsonReportEntry.KEY_INVOC_SCRIPT, task.getCommand()));
+						new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), Long.valueOf(task.getId()),
+								null, JsonReportEntry.KEY_INVOC_SCRIPT, task.getCommand()));
 			}
 
 		} catch (WorkflowStructureUnknownException | IOException | JSONException | ParserConfigurationException | SAXException e) {

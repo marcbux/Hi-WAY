@@ -32,7 +32,7 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.common;
 
-public class WorkflowStructureUnknownException extends Exception {
+public class WorkflowStructureUnknownException extends RuntimeException {
 
 	private static final long serialVersionUID = 157794148736647758L;
 

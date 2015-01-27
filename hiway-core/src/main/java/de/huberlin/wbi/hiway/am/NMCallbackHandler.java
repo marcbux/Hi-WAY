@@ -42,7 +42,7 @@ public class NMCallbackHandler implements NMClientAsync.CallbackHandler {
 	private static final Log log = LogFactory.getLog(NMCallbackHandler.class);
 
 	private final HiWay am;
-	private ConcurrentMap<ContainerId, Container> containers = new ConcurrentHashMap<ContainerId, Container>();
+	private ConcurrentMap<ContainerId, Container> containers = new ConcurrentHashMap<>();
 
 	public NMCallbackHandler(HiWay am) {
 		this.am = am;

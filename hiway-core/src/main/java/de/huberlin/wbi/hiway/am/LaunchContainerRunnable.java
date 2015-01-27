@@ -98,7 +98,7 @@ public class LaunchContainerRunnable implements Runnable {
 		ctx.setLocalResources(task.buildScriptsAndSetResources(am.getFs(), container));
 
 		// Set the necessary command to execute on the allocated container
-		Vector<CharSequence> vargs = new Vector<CharSequence>(5);
+		Vector<CharSequence> vargs = new Vector<>(5);
 
 		vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
 		// Set Xmx based on am memory size
@@ -134,7 +134,7 @@ public class LaunchContainerRunnable implements Runnable {
 			command.append(str).append(" ");
 		}
 
-		List<String> commands = new ArrayList<String>();
+		List<String> commands = new ArrayList<>();
 		commands.add(command.toString());
 		ctx.setCommands(commands);
 

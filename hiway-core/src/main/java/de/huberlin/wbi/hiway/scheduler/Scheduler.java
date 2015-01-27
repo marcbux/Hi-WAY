@@ -64,6 +64,7 @@ import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
+import de.huberlin.wbi.hiway.common.LogParser;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -77,22 +78,17 @@ public abstract class Scheduler {
 	private static final Log log = LogFactory.getLog(Scheduler.class);
 
 	protected HiwayDBI dbInterface;
-
 	protected final FileSystem fs;
-
 	protected HiWayConfiguration hiWayConf;
-
 	protected int maxRetries = 0;
 	protected Map<String, Long> maxTimestampPerHost;
 	protected int numberOfFinishedTasks = 0;
 	protected int numberOfPreviousRunTasks = 0;
-
 	protected int numberOfRemainingTasks = 0;
-
 	protected int numberOfRunningTasks = 0;
+	protected boolean relaxLocality = true;
 	protected Map<String, Map<Long, RuntimeEstimate>> runtimeEstimatesPerNode;
 	protected Set<Long> taskIds;
-
 	// a queue of nodes on which containers are to be requested
 	protected Queue<String[]> unissuedNodeRequests;
 	protected String workflowName;
@@ -115,9 +111,7 @@ public abstract class Scheduler {
 		log.info("HiwayDB: Added entry to database.");
 	}
 
-	protected void addTask(TaskInstance task) {
-		numberOfRemainingTasks++;
-	}
+	protected abstract void addTask(TaskInstance task);
 
 	public void addTasks(Collection<TaskInstance> tasks) {
 		for (TaskInstance task : tasks) {
@@ -125,19 +119,13 @@ public abstract class Scheduler {
 		}
 	}
 
-	public void addTaskToQueue(TaskInstance task) {
-		unissuedNodeRequests.add(new String[0]);
-	}
+	public abstract void addTaskToQueue(TaskInstance task);
 
 	public String[] getNextNodeRequest() {
 		return unissuedNodeRequests.remove();
 	}
 
-	public TaskInstance getNextTask(Container container) {
-		numberOfRemainingTasks--;
-		numberOfRunningTasks++;
-		return null;
-	}
+	public abstract TaskInstance getNextTask(Container container);
 
 	protected Set<String> getNodeIds() {
 		return new HashSet<>(runtimeEstimatesPerNode.keySet());
@@ -227,16 +215,17 @@ public abstract class Scheduler {
 			if (noSqlURIs == null) {
 				log.error(HiWayConfiguration.HIWAY_DB_NOSQL_URLS + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				HiWay.onError(new RuntimeException());
+			} else {
+				List<URI> noSqlURIList = new ArrayList<>();
+				for (String uri : noSqlURIs.split(",")) {
+					noSqlURIList.add(URI.create(uri));
+				}
+				dbInterface = new HiwayDBNoSQL(noSqlBucket, noSqlPassword, noSqlURIList, sqlUser, sqlPassword, sqlURL);
 			}
-			List<URI> noSqlURIList = new ArrayList<>();
-			for (String uri : noSqlURIs.split(",")) {
-				noSqlURIList.add(URI.create(uri));
-			}
-			dbInterface = new HiwayDBNoSQL(noSqlBucket, noSqlPassword, noSqlURIList, sqlUser, sqlPassword, sqlURL);
 			break;
 		default:
 			dbInterface = new LogParser();
-			parseLogs(fs);
+			parseLogs();
 		}
 	}
 
@@ -260,7 +249,7 @@ public abstract class Scheduler {
 		return getNumberOfReadyTasks() == 0;
 	}
 
-	protected void parseLogs(FileSystem fs) {
+	protected void parseLogs() {
 		Path hiwayDir = new Path(fs.getHomeDirectory(), hiWayConf.get(HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY,
 				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT));
 		try {
@@ -292,7 +281,7 @@ public abstract class Scheduler {
 	}
 
 	public boolean relaxLocality() {
-		return true;
+		return relaxLocality;
 	}
 
 	public Collection<ContainerId> taskCompleted(TaskInstance task, ContainerStatus containerStatus, long runtimeInMs) {
@@ -324,7 +313,7 @@ public abstract class Scheduler {
 		log.debug("Updating Runtime Estimate for stat " + stat.toString());
 		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostName()).get(stat.getTaskId());
 		re.finishedTasks += 1;
-		re.timeSpent += stat.getRealTime().longValue();
+		re.timeSpent += stat.getRealTime();
 		re.weight = re.averageRuntime = re.timeSpent / re.finishedTasks;
 	}
 

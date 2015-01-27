@@ -53,7 +53,7 @@ import de.huberlin.wbi.hiway.scheduler.gq.GreedyQueue;
 
 public class TestScheduler {
 
-	private void run(Scheduler scheduler, List<String> nodeNames, List<String> taskNames, int[][] runtimes) {
+	private static void run(Scheduler scheduler, List<String> nodeNames, List<String> taskNames, int[][] runtimes) {
 
 		Queue<NodeId> availableNodes = new LinkedList<>();
 		for (String nodeName : nodeNames) {
@@ -95,7 +95,7 @@ public class TestScheduler {
 		}
 	}
 
-	private void shakeRattelRoll(Scheduler scheduler) {
+	private static void shakeRattelRoll(Scheduler scheduler) {
 
 		List<String> nodeNames = new ArrayList<>();
 		nodeNames.add("Charlie");
@@ -128,7 +128,7 @@ public class TestScheduler {
 	// }
 
 	@Test
-	public void shakeRattelRollGreedyQueue() {
+	public static void shakeRattelRollGreedyQueue() {
 		shakeRattelRoll(new GreedyQueue("shakeRattleRoll", null, null));
 	}
 

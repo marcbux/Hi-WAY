@@ -66,6 +66,7 @@ public abstract class StaticScheduler extends Scheduler {
 		super(workflowName, conf, fs);
 		schedule = new HashMap<>();
 		queues = new HashMap<>();
+		relaxLocality = false;
 
 		for (String node : runtimeEstimatesPerNode.keySet()) {
 			Queue<TaskInstance> queue = new LinkedList<>();
@@ -85,7 +86,8 @@ public abstract class StaticScheduler extends Scheduler {
 
 	@Override
 	public TaskInstance getNextTask(Container container) {
-		super.getNextTask(container);
+		numberOfRemainingTasks--;
+		numberOfRunningTasks++;
 		String node = container.getNodeId().getHost();
 
 		log.info("Looking for task on container " + container.getId().getContainerId() + " on node " + node);
@@ -106,11 +108,6 @@ public abstract class StaticScheduler extends Scheduler {
 			readyTasks += queue.size();
 		}
 		return readyTasks;
-	}
-
-	@Override
-	public boolean relaxLocality() {
-		return false;
 	}
 
 }

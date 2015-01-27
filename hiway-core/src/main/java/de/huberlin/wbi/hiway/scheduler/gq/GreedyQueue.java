@@ -64,21 +64,22 @@ public class GreedyQueue extends Scheduler {
 
 	@Override
 	protected void addTask(TaskInstance task) {
-		super.addTask(task);
+		numberOfRemainingTasks++;
 		if (task.readyToExecute())
 			addTaskToQueue(task);
 	}
 
 	@Override
 	public void addTaskToQueue(TaskInstance task) {
-		super.addTaskToQueue(task);
+		unissuedNodeRequests.add(new String[0]);
 		queue.add(task);
 		log.info("Added task " + task + " to queue");
 	}
 
 	@Override
 	public TaskInstance getNextTask(Container container) {
-		super.getNextTask(container);
+		numberOfRemainingTasks--;
+		numberOfRunningTasks++;
 		TaskInstance task = queue.remove();
 
 		log.info("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());

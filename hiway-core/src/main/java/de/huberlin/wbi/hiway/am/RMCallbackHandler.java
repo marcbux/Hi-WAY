@@ -104,8 +104,8 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 		am.getLaunchThreads().add(launchThread);
 		launchThread.start();
 		am.getMetrics().endWaitingTask();
-		am.getMetrics().runningTask(task);
-		am.getMetrics().launchedTask(task);
+		am.getMetrics().runningTask();
+		am.getMetrics().launchedTask();
 
 	}
 
@@ -125,11 +125,11 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 					onError(e);
 				}
 				task.getReport().add(
-						new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
-								HiwayDBI.KEY_INVOC_TIME_SCHED, obj));
+						new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), Long.valueOf(task.getId()),
+								null, HiwayDBI.KEY_INVOC_TIME_SCHED, obj));
 				task.getReport().add(
-						new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
-								HiwayDBI.KEY_INVOC_HOST, allocatedContainer.getNodeId().getHost()));
+						new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), Long.valueOf(task.getId()),
+								null, HiwayDBI.KEY_INVOC_HOST, allocatedContainer.getNodeId().getHost()));
 			}
 			launchTask(task, allocatedContainer);
 		}
@@ -225,8 +225,8 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 						}
 
 						am.getNumCompletedContainers().incrementAndGet();
-						am.getMetrics().completedTask(finishedTask);
-						am.getMetrics().endRunningTask(finishedTask);
+						am.getMetrics().completedTask();
+						am.getMetrics().endRunningTask();
 
 						am.taskSuccess(finishedTask, containerId);
 					}
@@ -246,7 +246,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 					am.taskFailure(finishedTask, containerId);
 					am.getNumFailedContainers().incrementAndGet();
-					am.getMetrics().failedTask(finishedTask);
+					am.getMetrics().failedTask();
 
 					if (exitStatus == ExitCode.TERMINATED.getExitCode()) {
 						log.info("Container was terminated." + ", containerId=" + containerStatus.getContainerId());

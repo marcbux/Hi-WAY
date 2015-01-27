@@ -41,6 +41,7 @@ import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotBoundException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.Ticket;
+import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
@@ -74,7 +75,7 @@ public class HiWayCreActor extends BaseCreActor {
 				task.addInputData(data);
 			}
 		} catch (NotDerivableException e) {
-			CuneiformApplicationMaster.onError(e);
+			HiWay.onError(e);
 		}
 
 		try {
@@ -82,7 +83,7 @@ public class HiWayCreActor extends BaseCreActor {
 			am.writeEntryToLog(invoc.getExecutableLogEntry());
 			am.writeEntryToLog(invoc.getScriptLogEntry());
 		} catch (NotBoundException | NotDerivableException e) {
-			CuneiformApplicationMaster.onError(e);
+			HiWay.onError(e);
 		}
 
 		Collection<TaskInstance> tasks = new ArrayList<>();

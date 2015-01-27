@@ -130,9 +130,36 @@ import de.huberlin.wbi.hiway.scheduler.rr.RoundRobin;
  * </p>
  */
 public abstract class HiWay {
-
 	// a handle to the log, in which any events are recorded
 	private static final Log log = LogFactory.getLog(HiWay.class);
+
+	/**
+	 * If the debug flag is set, dump out contents of current working directory and the environment to stdout for debugging.
+	 */
+	private static void dumpOutDebugInfo() {
+		log.info("Dump debug output");
+		Map<String, String> envs = System.getenv();
+		for (Map.Entry<String, String> env : envs.entrySet()) {
+			log.info("System env: key=" + env.getKey() + ", val=" + env.getValue());
+		}
+
+		String cmd = "ls -al";
+		Runtime run = Runtime.getRuntime();
+		Process pr = null;
+		try {
+			pr = run.exec(cmd);
+			pr.waitFor();
+
+			try (BufferedReader buf = new BufferedReader(new InputStreamReader(pr.getInputStream()))) {
+				String line = "";
+				while ((line = buf.readLine()) != null) {
+					log.info("System CWD content: " + line);
+				}
+			}
+		} catch (IOException | InterruptedException e) {
+			onError(e);
+		}
+	}
 
 	/**
 	 * The main routine.
@@ -170,6 +197,16 @@ public abstract class HiWay {
 		System.exit(-1);
 	}
 
+	/**
+	 * Helper function to print usage.
+	 * 
+	 * @param opts
+	 *            Parsed command line options.
+	 */
+	private static void printUsage(Options opts) {
+		new HelpFormatter().printHelp("ApplicationMaster", opts);
+	}
+
 	private AMRMClientAsync.CallbackHandler allocListener;
 	// the yarn tokens to be passed to any launched containers
 	private ByteBuffer allTokens;
@@ -204,7 +241,7 @@ public abstract class HiWay {
 	private FileSystem fs;
 	private HiWayConfiguration hiWayConf;
 	// a list of threads, one for each container launch
-	private List<Thread> launchThreads = new ArrayList<Thread>();
+	private List<Thread> launchThreads = new ArrayList<>();
 	// a structure that stores various metrics during workflow execution
 	private final WFAppMetrics metrics = WFAppMetrics.create();
 	// a handle to communicate with the YARN NodeManagers
@@ -227,7 +264,7 @@ public abstract class HiWay {
 	private Scheduler scheduler;
 	private HiWayConfiguration.HIWAY_SCHEDULER_OPTS schedulerName;
 	// environment variables to be passed to any launched containers
-	private Map<String, String> shellEnv = new HashMap<String, String>();
+	private Map<String, String> shellEnv = new HashMap<>();
 	private BufferedWriter statLog;
 	private volatile boolean success;
 	private String summaryFile;
@@ -246,34 +283,6 @@ public abstract class HiWay {
 			onError(e);
 		}
 		runId = UUID.randomUUID();
-	}
-
-	/**
-	 * If the debug flag is set, dump out contents of current working directory and the environment to stdout for debugging.
-	 */
-	private void dumpOutDebugInfo() {
-		log.info("Dump debug output");
-		Map<String, String> envs = System.getenv();
-		for (Map.Entry<String, String> env : envs.entrySet()) {
-			log.info("System env: key=" + env.getKey() + ", val=" + env.getValue());
-		}
-
-		String cmd = "ls -al";
-		Runtime run = Runtime.getRuntime();
-		Process pr = null;
-		try {
-			pr = run.exec(cmd);
-			pr.waitFor();
-
-			BufferedReader buf = new BufferedReader(new InputStreamReader(pr.getInputStream()));
-			String line = "";
-			while ((line = buf.readLine()) != null) {
-				log.info("System CWD content: " + line);
-			}
-			buf.close();
-		} catch (IOException | InterruptedException e) {
-			onError(e);
-		}
 	}
 
 	public void evaluateReport(TaskInstance task, ContainerId containerId) {
@@ -626,16 +635,6 @@ public abstract class HiWay {
 	public abstract void parseWorkflow();
 
 	/**
-	 * Helper function to print usage.
-	 * 
-	 * @param opts
-	 *            Parsed command line options.
-	 */
-	private void printUsage(Options opts) {
-		new HelpFormatter().printHelp("ApplicationMaster", opts);
-	}
-
-	/**
 	 * Main run function for the application master
 	 * 
 	 * @throws YarnException
@@ -646,115 +645,118 @@ public abstract class HiWay {
 		log.info("Starting ApplicationMaster");
 
 		Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
-		DataOutputBuffer dob = new DataOutputBuffer();
-		credentials.writeTokenStorageToStream(dob);
-		// Now remove the AM->RM token so that containers cannot access it.
-		Iterator<Token<?>> iter = credentials.getAllTokens().iterator();
-		while (iter.hasNext()) {
-			Token<?> token = iter.next();
-			if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
-				iter.remove();
+		try (DataOutputBuffer dob = new DataOutputBuffer()) {
+			credentials.writeTokenStorageToStream(dob);
+			// Now remove the AM->RM token so that containers cannot access it.
+			Iterator<Token<?>> iter = credentials.getAllTokens().iterator();
+			while (iter.hasNext()) {
+				Token<?> token = iter.next();
+				if (token.getKind().equals(AMRMTokenIdentifier.KIND_NAME)) {
+					iter.remove();
+				}
 			}
-		}
-		allTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+			allTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
 
-		allocListener = new RMCallbackHandler(this);
-		amRMClient = AMRMClientAsync.createAMRMClientAsync(1000, allocListener);
-		amRMClient.init(conf);
-		amRMClient.start();
+			allocListener = new RMCallbackHandler(this);
+			amRMClient = AMRMClientAsync.createAMRMClientAsync(1000, allocListener);
+			amRMClient.init(conf);
+			amRMClient.start();
 
-		containerListener = new NMCallbackHandler(this);
-		nmClientAsync = new NMClientAsyncImpl(containerListener);
-		nmClientAsync.init(conf);
-		nmClientAsync.start();
+			containerListener = new NMCallbackHandler(this);
+			nmClientAsync = new NMClientAsyncImpl(containerListener);
+			nmClientAsync.init(conf);
+			nmClientAsync.start();
 
-		Data workflowFile = new Data(workflowPath);
-		workflowFile.stageIn(fs, "");
+			Data workflowData = new Data(workflowPath);
+			workflowData.stageIn(fs, "");
 
-		// Register self with ResourceManager. This will start heartbeating to the RM.
-		appMasterHostname = NetUtils.getHostname();
-		RegisterApplicationMasterResponse response = amRMClient.registerApplicationMaster(appMasterHostname, appMasterRpcPort, appMasterTrackingUrl);
+			// Register self with ResourceManager. This will start heartbeating to the RM.
+			appMasterHostname = NetUtils.getHostname();
+			RegisterApplicationMasterResponse response = amRMClient.registerApplicationMaster(appMasterHostname, appMasterRpcPort, appMasterTrackingUrl);
 
-		switch (schedulerName) {
-		case staticRoundRobin:
-		case heft:
-			scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new RoundRobin(getWorkflowName(), fs, hiWayConf)
-					: new HEFT(getWorkflowName(), fs, hiWayConf);
-			break;
-		case greedyQueue:
-			scheduler = new GreedyQueue(getWorkflowName(), hiWayConf, fs);
-			break;
-		default:
-			C3PO c3po = new C3PO(getWorkflowName(), fs, hiWayConf);
 			switch (schedulerName) {
-			case conservative:
-				c3po.setConservatismWeight(12d);
-				c3po.setnClones(0);
-				c3po.setPlacementAwarenessWeight(0.01d);
-				c3po.setOutlookWeight(0.01d);
+			case staticRoundRobin:
+			case heft:
+				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new RoundRobin(getWorkflowName(), fs, hiWayConf)
+						: new HEFT(getWorkflowName(), fs, hiWayConf);
 				break;
-			case cloning:
-				c3po.setConservatismWeight(0.01d);
-				c3po.setnClones(1);
-				c3po.setPlacementAwarenessWeight(0.01d);
-				c3po.setOutlookWeight(0.01d);
-				break;
-			case placementAware:
-				c3po.setConservatismWeight(0.01d);
-				c3po.setnClones(0);
-				c3po.setPlacementAwarenessWeight(12d);
-				c3po.setOutlookWeight(0.01d);
-				break;
-			case outlooking:
-				c3po.setConservatismWeight(0.01d);
-				c3po.setnClones(0);
-				c3po.setPlacementAwarenessWeight(0.01d);
-				c3po.setOutlookWeight(12d);
+			case greedyQueue:
+				scheduler = new GreedyQueue(getWorkflowName(), hiWayConf, fs);
 				break;
 			default:
-				c3po.setConservatismWeight(3d);
-				c3po.setnClones(2);
-				c3po.setPlacementAwarenessWeight(1d);
-				c3po.setOutlookWeight(2d);
-			}
-			scheduler = c3po;
-		}
-
-		scheduler.initialize();
-		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
-		parseWorkflow();
-		scheduler.updateRuntimeEstimates(getRunId().toString());
-		federatedReport = new Data(hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT));
-
-		// Dump out information about cluster capability as seen by the resource manager
-		int maxMem = response.getMaximumResourceCapability().getMemory();
-		int maxCores = response.getMaximumResourceCapability().getVirtualCores();
-		log.info("Max mem capabililty of resources in this cluster " + maxMem);
-
-		// A resource ask cannot exceed the max.
-		if (containerMemory > maxMem) {
-			log.info("Container memory specified above max threshold of cluster." + " Using max value." + ", specified=" + containerMemory + ", max=" + maxMem);
-			containerMemory = maxMem;
-		}
-		if (containerCores > maxCores) {
-			log.info("Container vcores specified above max threshold of cluster." + " Using max value." + ", specified=" + containerCores + ", max=" + maxCores);
-			containerCores = maxCores;
-		}
-
-		while (!done) {
-			try {
-				while (scheduler.hasNextNodeRequest()) {
-					ContainerRequest containerAsk = setupContainerAskForRM(scheduler.getNextNodeRequest());
-					amRMClient.addContainerRequest(containerAsk);
+				C3PO c3po = new C3PO(getWorkflowName(), fs, hiWayConf);
+				switch (schedulerName) {
+				case conservative:
+					c3po.setConservatismWeight(12d);
+					c3po.setnClones(0);
+					c3po.setPlacementAwarenessWeight(0.01d);
+					c3po.setOutlookWeight(0.01d);
+					break;
+				case cloning:
+					c3po.setConservatismWeight(0.01d);
+					c3po.setnClones(1);
+					c3po.setPlacementAwarenessWeight(0.01d);
+					c3po.setOutlookWeight(0.01d);
+					break;
+				case placementAware:
+					c3po.setConservatismWeight(0.01d);
+					c3po.setnClones(0);
+					c3po.setPlacementAwarenessWeight(12d);
+					c3po.setOutlookWeight(0.01d);
+					break;
+				case outlooking:
+					c3po.setConservatismWeight(0.01d);
+					c3po.setnClones(0);
+					c3po.setPlacementAwarenessWeight(0.01d);
+					c3po.setOutlookWeight(12d);
+					break;
+				default:
+					c3po.setConservatismWeight(3d);
+					c3po.setnClones(2);
+					c3po.setPlacementAwarenessWeight(1d);
+					c3po.setOutlookWeight(2d);
 				}
-				Thread.sleep(1000);
-				log.info("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
-						+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
-			} catch (InterruptedException ex) {
+				scheduler = c3po;
 			}
-		}
-		finish();
 
+			scheduler.initialize();
+			writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
+			parseWorkflow();
+			scheduler.updateRuntimeEstimates(getRunId().toString());
+			federatedReport = new Data(hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT));
+
+			// Dump out information about cluster capability as seen by the resource manager
+			int maxMem = response.getMaximumResourceCapability().getMemory();
+			int maxCores = response.getMaximumResourceCapability().getVirtualCores();
+			log.info("Max mem capabililty of resources in this cluster " + maxMem);
+
+			// A resource ask cannot exceed the max.
+			if (containerMemory > maxMem) {
+				log.info("Container memory specified above max threshold of cluster." + " Using max value." + ", specified=" + containerMemory + ", max="
+						+ maxMem);
+				containerMemory = maxMem;
+			}
+			if (containerCores > maxCores) {
+				log.info("Container vcores specified above max threshold of cluster." + " Using max value." + ", specified=" + containerCores + ", max="
+						+ maxCores);
+				containerCores = maxCores;
+			}
+
+			while (!done) {
+				try {
+					while (scheduler.hasNextNodeRequest()) {
+						ContainerRequest containerAsk = setupContainerAskForRM(scheduler.getNextNodeRequest());
+						amRMClient.addContainerRequest(containerAsk);
+					}
+					Thread.sleep(1000);
+					log.info("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
+							+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
+				} catch (InterruptedException ex) {
+					onError(ex);
+				}
+			}
+			finish();
+		}
 		return success;
 	}
 
@@ -811,7 +813,7 @@ public abstract class HiWay {
 			try (BufferedReader reader = new BufferedReader(new StringReader(task.getCommand()))) {
 				int i = 0;
 				while ((line = reader.readLine()) != null)
-					log.error(String.format("%02d  %s", ++i, line));
+					log.error(String.format("%02d  %s", Integer.valueOf(++i), line));
 			}
 
 			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);

@@ -30,7 +30,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.scheduler;
+package de.huberlin.wbi.hiway.common;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -91,7 +91,7 @@ public class LogParser implements HiwayDBI {
 			for (Long statKey : invocStats.keySet()) {
 				InvocStat stat = invocStats.get(statKey);
 
-				log.debug("Iterate over logStats: " + runKey.toString() + " | " + Long.toString(statKey) + " | " + stat.toString());
+				log.debug("Iterate over logStats: " + runKey.toString() + " | " + statKey + " | " + stat.toString());
 
 				if (stat.getHostName() != null && stat.getTaskId() == taskId && stat.getHostName().equals(hostName) && stat.getTimestamp() > timestamp) {
 					stats.add(stat);
@@ -112,7 +112,7 @@ public class LogParser implements HiwayDBI {
 
 	@Override
 	public Set<Long> getTaskIdsForWorkflow(String workflowName) {
-		return workflowNameToTaskIds.containsKey(workflowName) ? new HashSet<Long>(workflowNameToTaskIds.get(workflowName)) : new HashSet<Long>();
+		return workflowNameToTaskIds.containsKey(workflowName) ? new HashSet<>(workflowNameToTaskIds.get(workflowName)) : new HashSet<Long>();
 	}
 
 	@Override
@@ -153,6 +153,8 @@ public class LogParser implements HiwayDBI {
 				FileStat fileStat = new FileStat(fileName);
 				invocStat.addOutputFile(fileStat);
 			}
+			break;
+		default:
 		}
 
 		try {
@@ -182,6 +184,7 @@ public class LogParser implements HiwayDBI {
 			case HiwayDBI.KEY_FILE_TIME_STAGEOUT:
 				invocStat.getOutputFile(fileName).setRealTime((entry.getValueJsonObj().getLong("realTime")));
 				break;
+			default:
 			}
 		} catch (JSONException e) {
 			HiWay.onError(e);

@@ -49,6 +49,7 @@ import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
+import de.huberlin.wbi.hiway.scheduler.DepthComparator;
 import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
 
 /**
@@ -67,9 +68,9 @@ import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
 public class HEFT extends StaticScheduler {
 
 	private static final Log log = LogFactory.getLog(HEFT.class);
+
 	private Map<String, Map<Double, Double>> freeTimeSlotLengthsPerNode;
 	private Map<String, TreeSet<Double>> freeTimeSlotStartsPerNode;
-
 	private Map<TaskInstance, Double> readyTimePerTask;
 
 	public HEFT(String workflowName, FileSystem fs, HiWayConfiguration conf) {
@@ -89,7 +90,7 @@ public class HEFT extends StaticScheduler {
 
 	@Override
 	protected void addTask(TaskInstance task) {
-		super.addTask(task);
+		numberOfRemainingTasks++;
 		Collection<String> nodes = runtimeEstimatesPerNode.keySet();
 		double readyTime = readyTimePerTask.get(task);
 
@@ -163,7 +164,7 @@ public class HEFT extends StaticScheduler {
 	@Override
 	public void addTasks(Collection<TaskInstance> tasks) {
 		List<TaskInstance> taskList = new LinkedList<>(tasks);
-		Collections.sort(taskList, TaskInstance.Comparators.DEPTH);
+		Collections.sort(taskList, new DepthComparator());
 
 		Collection<String> nodes = runtimeEstimatesPerNode.keySet();
 
@@ -197,7 +198,7 @@ public class HEFT extends StaticScheduler {
 		}
 
 		// Phase 1: Task Prioritizing (sort by decreasing order of rank)
-		Collections.sort(taskList, TaskInstance.Comparators.UPWARDSRANK);
+		Collections.sort(taskList, new UpwardsRankComparator());
 
 		// Phase 2: Processor Selection
 		for (TaskInstance task : taskList) {

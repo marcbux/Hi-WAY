@@ -65,7 +65,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 					System.exit(1);
 					throw new RuntimeException(e);
 				}
-			};
+			}
 		};
 
 		public static Comparator<TaskInstance> UPWARDSRANK = new Comparator<TaskInstance>() {
@@ -78,7 +78,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 					System.exit(1);
 					throw new RuntimeException(e);
 				}
-			};
+			}
 		};
 
 	}
@@ -86,10 +86,8 @@ public class TaskInstance implements Comparable<TaskInstance> {
 	protected static int runningId = 1;
 
 	protected Set<TaskInstance> childTasks;
-
 	// the command to be executed
 	protected String command;
-
 	// whether this task is completed yet
 	protected boolean completed;
 	protected int depth = 0;
@@ -137,7 +135,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		this(runningId++, workflowId, taskName, taskId, languageLabel);
 	}
 
-	public void addChildTask(TaskInstance childTask) throws WorkflowStructureUnknownException {
+	public void addChildTask(TaskInstance childTask) {
 		childTasks.add(childTask);
 	}
 
@@ -149,13 +147,13 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		outputData.add(data);
 	}
 
-	public void addParentTask(TaskInstance parentTask) throws WorkflowStructureUnknownException {
+	public void addParentTask(TaskInstance parentTask) {
 		parentTasks.add(parentTask);
 		this.setDepth(parentTask.getDepth() + 1);
 	}
 
 	public Map<String, LocalResource> buildScriptsAndSetResources(FileSystem fs, Container container) {
-		Map<String, LocalResource> localResources = new HashMap<String, LocalResource>();
+		Map<String, LocalResource> localResources = new HashMap<>();
 		try {
 			String containerId = container.getId().toString();
 			File script = new File(containerId + ".sh");
@@ -177,6 +175,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		return localResources;
 	}
 
+	@Override
 	public int compareTo(TaskInstance other) {
 		return Long.compare(this.getId(), other.getId());
 	}
@@ -302,6 +301,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		this.upwardRank = upwardRank;
 	}
 
+	@Override
 	public String toString() {
 		return id + " [" + taskName + "]";
 	}

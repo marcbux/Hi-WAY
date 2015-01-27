@@ -193,25 +193,25 @@ public class GalaxyTaskInstance extends TaskInstance {
 	 *            the tool state string, as extracted from the workflow description file
 	 * 
 	 */
-	public void addToolState(String toolState) {
-		String toolState_json = toolState;
+	public void addToolState(String tool_state) {
+		String tool_state_json = tool_state;
 		// replace "{ }" "[ ]" with { } [ ]
-		toolState_json = toolState_json.replaceAll("\"\\{", "\\{");
-		toolState_json = toolState_json.replaceAll("\\}\"", "\\}");
-		toolState_json = toolState_json.replaceAll("\"\\[", "\\[");
-		toolState_json = toolState_json.replaceAll("\\]\"", "\\]");
+		tool_state_json = tool_state_json.replaceAll("\"\\{", "\\{");
+		tool_state_json = tool_state_json.replaceAll("\\}\"", "\\}");
+		tool_state_json = tool_state_json.replaceAll("\"\\[", "\\[");
+		tool_state_json = tool_state_json.replaceAll("\\]\"", "\\]");
 		// remove \
-		toolState_json = toolState_json.replaceAll("\\\\", "");
+		tool_state_json = tool_state_json.replaceAll("\\\\", "");
 		// replace "" with "
-		toolState_json = toolState_json.replaceAll("\"\"", "\"");
+		tool_state_json = tool_state_json.replaceAll("\"\"", "\"");
 		// replace : ", with : "",
-		toolState_json = toolState_json.replaceAll(": ?\",", ": \"\",");
+		tool_state_json = tool_state_json.replaceAll(": ?\",", ": \"\",");
 		// replace UnvalidatedValue with their actual value
-		toolState_json = toolState_json.replaceAll("\\{\"__class__\":\\s?\"UnvalidatedValue\",\\s?\"value\":\\s?([^\\}]*)\\}", "$1");
+		tool_state_json = tool_state_json.replaceAll("\\{\"__class__\":\\s?\"UnvalidatedValue\",\\s?\"value\":\\s?([^\\}]*)\\}", "$1");
 		// replace "null" with ""
-		toolState_json = toolState_json.replaceAll("\"null\"", "\"\"");
+		tool_state_json = tool_state_json.replaceAll("\"null\"", "\"\"");
 		try {
-			this.toolState = new JSONObject(toolState_json);
+			this.toolState = new JSONObject(tool_state_json);
 		} catch (JSONException e) {
 			HiWay.onError(e);
 		}

@@ -71,7 +71,6 @@ public class CuneiformApplicationMaster extends HiWay {
 	}
 
 	private BaseCreActor creActor;
-
 	private final TicketSrcActor ticketSrc;
 
 	public CuneiformApplicationMaster() {
