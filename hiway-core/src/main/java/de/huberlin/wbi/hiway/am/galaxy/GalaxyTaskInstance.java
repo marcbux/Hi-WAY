@@ -73,8 +73,8 @@ public class GalaxyTaskInstance extends TaskInstance {
 	// the tool state (i.e., the parameter settings in JSON format) of this task instance
 	private JSONObject toolState;
 
-	public GalaxyTaskInstance(long id, String taskName, GalaxyTool galaxyTool, String galaxyPath) {
-		super(id, UUID.randomUUID(), taskName, Math.abs(taskName.hashCode()), ForeignLambdaExpr.LANGID_BASH);
+	public GalaxyTaskInstance(long id, UUID workflowId, String taskName, GalaxyTool galaxyTool, String galaxyPath) {
+		super(id, workflowId, taskName, Math.abs(taskName.hashCode()), ForeignLambdaExpr.LANGID_BASH);
 		this.galaxyTool = galaxyTool;
 		toolState = new JSONObject();
 		paramScript = new StringBuilder("import os, ast\nimport cPickle as pickle\nimport galaxy.app\n");
@@ -83,16 +83,16 @@ public class GalaxyTaskInstance extends TaskInstance {
 
 		// the task instance's invocScript variable is set here for it to be passed to the Worker thread, which writes the script's content as JsonReportEntry
 		// to the stat.log
-		setInvocScript(id + ".sh");
+		setInvocScript("script.sh");
 
 		// As opposed to other Hi-WAY applciation masters, the Galaxy AM ha a fairly static command that can be build at task instance creation time
 		StringBuilder commandSb = new StringBuilder();
 		commandSb.append("PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n");
 		commandSb.append("PYTHON_EGG_CACHE=.; export PYTHON_EGG_CACHE\n");
-		commandSb.append("python ").append(id).append(".params.py\n");
-		commandSb.append("cat ").append(id).append(".pre.sh > ").append(id).append(".sh\n");
-		commandSb.append("echo `cheetah fill ").append(id).append(".template.tmpl --pickle ").append(id).append(".pickle.p -p` >> ").append(id).append(".sh\n");
-		commandSb.append("cat ").append(id).append(".post.sh >> ").append(id).append(".sh\n");
+		commandSb.append("python params.py\n");
+		commandSb.append("cat pre.sh > script.sh\n");
+		commandSb.append("echo `cheetah fill template.tmpl --pickle params.p -p` >> script.sh\n");
+		commandSb.append("cat post.sh >> script.sh\n");
 		commandSb.append("bash ").append(getInvocScript()).append("\n");
 		setCommand(commandSb.toString());
 	}
@@ -349,9 +349,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 		// (9) invoke the expandToolState method and write its result to a pickle file, which Cheetah can interpret to compile the template
 		paramScript.append("\n\nexpanded_tool_state = Dict()");
 		paramScript.append("\nexpandToolState(tool_state, expanded_tool_state)");
-		paramScript.append("\nwith open(\"");
-		paramScript.append(id);
-		paramScript.append(".pickle.p\", \"wb\") as picklefile:");
+		paramScript.append("\nwith open(\"params.p\", \"wb\") as picklefile:");
 		paramScript.append("\n    pickle.dump(ast.literal_eval(str(expanded_tool_state)), picklefile)\n");
 	}
 

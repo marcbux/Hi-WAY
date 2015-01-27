@@ -437,7 +437,7 @@ public class GalaxyApplicationMaster extends HiWay {
 						log.error("Tool " + toolId + "/" + toolVersion + " could not be located in local Galaxy installation.");
 						HiWay.onError(new RuntimeException());
 					}
-					GalaxyTaskInstance task = new GalaxyTaskInstance(id, tool.getId(), tool, galaxyPath);
+					GalaxyTaskInstance task = new GalaxyTaskInstance(id, getRunId(), tool.getId(), tool, galaxyPath);
 					tasks.put(id, task);
 
 					// (ii) determine the and incorporate post job actions apecified in the workflow (e.g., renaming the task's output data)
