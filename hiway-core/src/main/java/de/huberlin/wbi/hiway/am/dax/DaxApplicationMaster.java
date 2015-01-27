@@ -99,8 +99,14 @@ public class DaxApplicationMaster extends HiWay {
 						switch (argumentChildNd.getNodeType()) {
 						case Node.ELEMENT_NODE:
 							Element argumentChildEl = (Element) argumentChildNd;
-							if (argumentChildEl.hasAttribute("name")) {
-								argument = argumentChildEl.getAttribute("name");
+							if (argumentChildEl.getNodeName().equals("file")) {
+								if (argumentChildEl.hasAttribute("name")) {
+									argument = argumentChildEl.getAttribute("name");
+								}
+							} else if (argumentChildEl.getNodeName().equals("filename")) {
+								if (argumentChildEl.hasAttribute("file")) {
+									argument = argumentChildEl.getAttribute("file");
+								}
 							}
 							break;
 						case Node.TEXT_NODE:
@@ -115,7 +121,7 @@ public class DaxApplicationMaster extends HiWay {
 				}
 
 				NodeList usesNds = jobEl.getElementsByTagName("uses");
-				for (int j = 0; j < jobNds.getLength(); j++) {
+				for (int j = 0; j < usesNds.getLength(); j++) {
 					Element usesEl = (Element) usesNds.item(j);
 					String link = usesEl.getAttribute("link");
 					String fileName = usesEl.getAttribute("file");
