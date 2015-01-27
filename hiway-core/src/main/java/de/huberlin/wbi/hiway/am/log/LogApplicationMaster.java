@@ -42,6 +42,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 
+import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.Data;
@@ -75,6 +76,18 @@ public class LogApplicationMaster extends HiWay {
 
 					switch (entry.getKey()) {
 					case JsonReportEntry.KEY_FILE_SIZE_STAGEIN:
+					case JsonReportEntry.KEY_FILE_SIZE_STAGEOUT:
+					case JsonReportEntry.KEY_INVOC_SCRIPT:
+					case JsonReportEntry.KEY_INVOC_EXEC:
+					case JsonReportEntry.KEY_INVOC_USER:
+					case JsonReportEntry.KEY_INVOC_OUTPUT:
+						updateAndRegisterEntry(entry, task);
+						break;
+					default:
+					}
+
+					switch (entry.getKey()) {
+					case JsonReportEntry.KEY_FILE_SIZE_STAGEIN:
 						String inputName = entry.getFile();
 						if (!getFiles().containsKey(inputName)) {
 							Data data = new Data(inputName);
@@ -83,13 +96,11 @@ public class LogApplicationMaster extends HiWay {
 						}
 						Data data = getFiles().get(inputName);
 						task.addInputData(data);
-						data.setOutput(false);
 						break;
 					case JsonReportEntry.KEY_FILE_SIZE_STAGEOUT:
 						String outputName = entry.getFile();
 						if (!getFiles().containsKey(outputName)) {
 							data = new Data(outputName);
-							data.setOutput(true);
 							getFiles().put(outputName, data);
 						}
 						data = getFiles().get(outputName);
@@ -99,12 +110,12 @@ public class LogApplicationMaster extends HiWay {
 						break;
 					case JsonReportEntry.KEY_INVOC_SCRIPT:
 						task.setCommand(entry.getValueRawString());
-						//$FALL-THROUGH$
-					case JsonReportEntry.KEY_INVOC_EXEC:
-					case JsonReportEntry.KEY_INVOC_USER:
-						entry.setRunId(getRunId());
-						entry.setInvocId(task.getId());
-						task.getReport().add(entry);
+						break;
+					case HiwayDBI.KEY_WF_OUTPUT:
+						String[] outputs = entry.getValueRawString().split(", ");
+						for (String output : outputs) {
+							getFiles().get(output).setOutput(true);
+						}
 						break;
 					default:
 					}
@@ -131,6 +142,12 @@ public class LogApplicationMaster extends HiWay {
 		}
 
 		getScheduler().addTasks(tasks.values());
+	}
+
+	private void updateAndRegisterEntry(JsonReportEntry entry, TaskInstance task) {
+		entry.setRunId(getRunId());
+		entry.setInvocId(task.getId());
+		writeEntryToLog(entry);
 	}
 
 }

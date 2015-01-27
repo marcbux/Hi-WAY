@@ -66,10 +66,14 @@ public class DaxApplicationMaster extends HiWay {
 	public static void main(String[] args) {
 		HiWay.loop(new DaxApplicationMaster(), args);
 	}
+	
+	public DaxApplicationMaster() {
+		super();
+		setDetermineFileSizes();
+	}
 
 	@Override
 	public void parseWorkflow() {
-		setDetermineFileSizes();
 		Map<Object, TaskInstance> tasks = new HashMap<>();
 		log.info("Parsing Pegasus DAX " + getWorkflowFile());
 

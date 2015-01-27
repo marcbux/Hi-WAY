@@ -271,16 +271,18 @@ public class Client {
 				}
 				log.info("Application did finish unsuccessfully." + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
 						+ ". Breaking monitoring loop");
+
+				return false;
 			} else if (YarnApplicationState.KILLED == state || YarnApplicationState.FAILED == state) {
 				log.info("Application did not finish." + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
 						+ ". Breaking monitoring loop");
+				return false;
 			}
-
 			if (System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
 				log.info("Reached client specified timeout for application. Killing application");
 				forceKillApplication(appId);
+				return false;
 			}
-			return false;
 		}
 	}
 

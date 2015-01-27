@@ -138,6 +138,7 @@ public class GalaxyApplicationMaster extends HiWay {
 		galaxyDataTables = new HashMap<>();
 		galaxyDataTypes = new HashMap<>();
 		galaxyTools = new HashMap<>();
+		setDetermineFileSizes();
 	}
 
 	/**
@@ -346,7 +347,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			rootEl = doc.getDocumentElement();
 			String version = rootEl.hasAttribute("version") ? rootEl.getAttribute("version") : "1.0.0";
 			String id = rootEl.getAttribute("id");
-			GalaxyTool tool = new GalaxyTool(id, version, dir);
+			GalaxyTool tool = new GalaxyTool(id, version, dir, galaxyPath);
 
 			// (3) determine requirements (libraries and executables) of this tool; requirements have to be parsed such that the environment of the task can be
 			// set to include them

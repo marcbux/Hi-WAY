@@ -48,6 +48,7 @@ public interface HiwayDBI {
 	public static final String KEY_INVOC_TIME_STAGEOUT = "invoc-time-stageout";
 	public static final String KEY_WF_NAME = "wf-name";
 	public static final String KEY_WF_TIME = "wf-time";
+	public static final String KEY_WF_OUTPUT = "wf-output";
 
 	public Set<String> getHostNames();
 	public Set<Long> getTaskIdsForWorkflow(String workflowName);

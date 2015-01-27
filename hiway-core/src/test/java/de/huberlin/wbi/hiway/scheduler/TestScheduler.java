@@ -127,8 +127,9 @@ public class TestScheduler {
 	// shakeRattelRoll(c3po);
 	// }
 
+	@SuppressWarnings("static-method")
 	@Test
-	public static void shakeRattelRollGreedyQueue() {
+	public void shakeRattelRollGreedyQueue() {
 		shakeRattelRoll(new GreedyQueue("shakeRattleRoll", null, null));
 	}
 
