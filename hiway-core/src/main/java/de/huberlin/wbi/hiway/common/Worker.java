@@ -98,7 +98,7 @@ public class Worker {
 	}
 
 	private int exec() {
-		File script = new File("./" + containerId + ".sh");
+		File script = new File("./" + containerId);
 		script.setExecutable(true);
 		ProcessBuilder processBuilder = new ProcessBuilder(script.getPath());
 		processBuilder.directory(dir.toFile());
