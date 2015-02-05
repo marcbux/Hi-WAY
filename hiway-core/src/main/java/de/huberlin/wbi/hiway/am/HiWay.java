@@ -342,8 +342,11 @@ public abstract class HiWay {
 	private void finish() {
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_TIME, Long.toString(System.currentTimeMillis()
 				- amRMClient.getStartTime())));
-		String outputs = getOutputFiles().toString();
-		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_OUTPUT, outputs.substring(1, outputs.length() - 1)));
+		Collection<Data> outputFiles = getOutputFiles();
+		if (outputFiles.size() > 0) {
+			String outputs = getOutputFiles().toString();
+			writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_OUTPUT, outputs.substring(1, outputs.length() - 1)));
+		}
 		// Join all launched threads needed for when we time out and we need to release containers
 		for (Thread launchThread : launchThreads) {
 			try {
