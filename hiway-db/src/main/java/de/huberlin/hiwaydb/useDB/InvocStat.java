@@ -33,10 +33,8 @@
 package de.huberlin.hiwaydb.useDB;
 
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 public class InvocStat {
 
@@ -49,19 +47,18 @@ public class InvocStat {
 	private Long timestamp;
 	private final String runId;
 
-	
 	public InvocStat(String runId, long taskId) {
 		this.timestamp = -1l;
 		this.taskId = taskId;
 		this.runId = runId;
-		
+
 		inputFiles = new HashMap<>();
 		outputFiles = new HashMap<>();
 	}
 
 	public InvocStat(long timestamp, Long realTime, String runId, long taskId, String hostName) {
-		this(runId,taskId);
-		
+		this(runId, taskId);
+
 		this.timestamp = timestamp;
 		this.realTime = realTime;
 		this.hostName = hostName;
@@ -136,10 +133,6 @@ public class InvocStat {
 		setTimestamp(timestamp);
 	}
 
-//	private void setTaskId(long taskId) {
-//		this.taskId = taskId;
-//	}
-
 	private void setTimestamp(Long timestamp) {
 		this.timestamp = timestamp;
 	}
@@ -148,10 +141,8 @@ public class InvocStat {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 
-		sb.append("{Timestamp: " + this.timestamp + " | Host: " + this.hostName
-				+ " | TaskID: " + this.taskId + " | Time: " + this.realTime + " | RunID: " + this.runId + 
-				" FilesIn: " + this.getInputFiles().size() + " FilesOut:" +this.getOutputFiles().size()+
-				" }");
+		sb.append("{Timestamp: " + this.timestamp + " | Host: " + this.hostName + " | TaskID: " + this.taskId + " | Time: " + this.realTime + " | RunID: "
+				+ this.runId + " FilesIn: " + this.getInputFiles().size() + " FilesOut:" + this.getOutputFiles().size() + " }");
 
 		return sb.toString();
 	}
@@ -159,9 +150,5 @@ public class InvocStat {
 	public String getRunId() {
 		return runId;
 	}
-
-//	public void setRunId(UUID runId) {
-//		this.runId = runId;
-//	}
 
 }

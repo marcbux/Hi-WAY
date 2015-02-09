@@ -64,8 +64,7 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -84,8 +83,6 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 public class GalaxyApplicationMaster extends HiWay {
 
-	private static final Log log = LogFactory.getLog(GalaxyApplicationMaster.class);
-
 	public static void main(String[] args) {
 		HiWay.loop(new GalaxyApplicationMaster(), args);
 	}
@@ -103,7 +100,7 @@ public class GalaxyApplicationMaster extends HiWay {
 		if (!file.exists())
 			return;
 		try (BufferedReader locBr = new BufferedReader(new FileReader(file))) {
-			log.info("Processing Galaxy data table loc file " + file.getCanonicalPath());
+			System.out.println("Processing Galaxy data table loc file " + file.getCanonicalPath());
 			String line;
 			while ((line = locBr.readLine()) != null) {
 				if (line.startsWith(galaxyDataTable.getComment_char()))
@@ -132,7 +129,7 @@ public class GalaxyApplicationMaster extends HiWay {
 		super();
 		galaxyPath = getHiWayConf().get(HiWayConfiguration.HIWAY_GALAXY_PATH);
 		if (galaxyPath == null) {
-			log.error(HiWayConfiguration.HIWAY_GALAXY_PATH + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+			System.err.println(HiWayConfiguration.HIWAY_GALAXY_PATH + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 			HiWay.onError(new RuntimeException());
 		}
 		galaxyDataTables = new HashMap<>();
@@ -306,7 +303,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	 * @return the Galaxy tools described in the XML file
 	 */
 	private GalaxyTool parseToolFile(File file) {
-		log.info("Parsing Galaxy tool file " + file);
+		System.out.println("Parsing Galaxy tool file " + file);
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			String path = file.getCanonicalPath();
@@ -418,7 +415,7 @@ public class GalaxyApplicationMaster extends HiWay {
 
 	@Override
 	public void parseWorkflow() {
-		log.info("Parsing Galaxy workflow " + getWorkflowFile());
+		System.out.println("Parsing Galaxy workflow " + getWorkflowFile());
 		Map<Long, TaskInstance> tasks = new HashMap<>();
 		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath()))) {
 			StringBuilder sb = new StringBuilder();
@@ -465,7 +462,7 @@ public class GalaxyApplicationMaster extends HiWay {
 						toolId = splitId[splitId.length - 2];
 					GalaxyTool tool = galaxyTools.get(toolId).get(toolVersion);
 					if (tool == null) {
-						log.error("Tool " + toolId + "/" + toolVersion + " could not be located in local Galaxy installation.");
+						System.err.println("Tool " + toolId + "/" + toolVersion + " could not be located in local Galaxy installation.");
 						HiWay.onError(new RuntimeException());
 					} else {
 						GalaxyTaskInstance task = new GalaxyTaskInstance(id, getRunId(), tool.getId(), tool, galaxyPath);
@@ -606,7 +603,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	 */
 	private void processDataTables(File file) {
 		try {
-			log.info("Processing Galaxy data table config file " + file.getCanonicalPath());
+			System.out.println("Processing Galaxy data table config file " + file.getCanonicalPath());
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			Document doc = builder.parse(file);
 			NodeList tables = doc.getElementsByTagName("table");
@@ -638,7 +635,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	 */
 	private void processDataTypes(File file) {
 		try {
-			log.info("Processing Galaxy data type config file " + file.getCanonicalPath());
+			System.out.println("Processing Galaxy data type config file " + file.getCanonicalPath());
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			Document doc = builder.parse(file);
 			NodeList datatypeNds = doc.getElementsByTagName("datatype");
@@ -713,7 +710,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	 */
 	private void processToolLibraries(File file, String defaultPath, String dependencyDir) {
 		try {
-			log.info("Processing Galaxy tool library config file " + file.getCanonicalPath());
+			System.out.println("Processing Galaxy tool library config file " + file.getCanonicalPath());
 			File galaxyPathFile = new File(galaxyPath);
 			File dir = new File(galaxyPathFile, defaultPath);
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();

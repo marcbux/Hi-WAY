@@ -52,13 +52,13 @@ public class HiWayRepl extends BaseRepl {
 
 	@Override
 	public void queryFailedPost(UUID queryId, Long ticketId, Exception e, String script, String stdOut, String stdErr) {
-		CuneiformApplicationMaster.getLog().info("Query failed.");
+		System.out.println("Query failed.");
 		am.setDone();
 	}
 
 	@Override
 	public void queryFinishedPost(UUID queryId, CompoundExpr result) {
-		CuneiformApplicationMaster.getLog().info("Query finished.");
+		System.out.println("Query finished.");
 		am.setDone();
 		try {
 			for (String output : result.normalize()) {

@@ -30,8 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -48,8 +46,6 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * Thread to connect to the {@link ContainerManagementProtocol} and launch the container that will execute the shell command.
  */
 public class LaunchContainerRunnable implements Runnable {
-
-	private static final Log log = LogFactory.getLog(LaunchContainerRunnable.class);
 
 	private HiWay am;
 	private Container container;
@@ -74,7 +70,7 @@ public class LaunchContainerRunnable implements Runnable {
 	 */
 	@Override
 	public void run() {
-		log.info("Setting up container launch container for containerid=" + container.getId());
+		System.out.println("Setting up container launch container for containerid=" + container.getId());
 		ContainerLaunchContext ctx = Records.newRecord(ContainerLaunchContext.class);
 
 		// Set the environment

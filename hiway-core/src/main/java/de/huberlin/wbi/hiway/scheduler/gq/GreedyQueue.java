@@ -35,8 +35,6 @@ package de.huberlin.wbi.hiway.scheduler.gq;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 
@@ -52,8 +50,6 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
  * 
  */
 public class GreedyQueue extends Scheduler {
-
-	private static final Log log = LogFactory.getLog(GreedyQueue.class);
 
 	private Queue<TaskInstance> queue;
 
@@ -73,7 +69,7 @@ public class GreedyQueue extends Scheduler {
 	public void addTaskToQueue(TaskInstance task) {
 		unissuedNodeRequests.add(new String[0]);
 		queue.add(task);
-		log.info("Added task " + task + " to queue");
+		System.out.println("Added task " + task + " to queue");
 	}
 
 	@Override
@@ -82,7 +78,7 @@ public class GreedyQueue extends Scheduler {
 		numberOfRunningTasks++;
 		TaskInstance task = queue.remove();
 
-		log.info("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
+		System.out.println("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
 		task.incTries();
 		return task;
 	}

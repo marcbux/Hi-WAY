@@ -45,8 +45,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -187,8 +185,6 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
  */
 public class C3PO extends Scheduler {
 
-	private static final Log log = LogFactory.getLog(C3PO.class);
-
 	private static void normalizeWeights(Collection<? extends Estimate> statistics) {
 		double sum = 0d;
 		for (Estimate statistic : statistics)
@@ -242,14 +238,14 @@ public class C3PO extends Scheduler {
 	@Override
 	protected void addTask(TaskInstance task) {
 
-		log.info("Adding task of id " + task.getTaskId() + " and name " + task.getTaskName());
+		System.out.println("Adding task of id " + task.getTaskId() + " and name " + task.getTaskName());
 
 		numberOfRemainingTasks++;
 		long taskId = task.getTaskId();
 		if (!getTaskIds().contains(taskId)) {
 			newTask(taskId);
 			taskIdToName.put(taskId, task.getTaskName());
-			log.info("TaskId " + taskId + " (" + task.getTaskName() + ") to map.");
+			System.out.println("TaskId " + taskId + " (" + task.getTaskName() + ") to map.");
 		}
 
 		jobStatistics.get(taskId).remainingTasks++;
@@ -261,7 +257,7 @@ public class C3PO extends Scheduler {
 	public void addTaskToQueue(TaskInstance task) {
 		unissuedNodeRequests.add(new String[0]);
 		readyTasks.get(task.getTaskId()).add(task);
-		log.info("Added task " + task + " to queue " + task.getTaskName());
+		System.out.println("Added task " + task + " to queue " + task.getTaskName());
 	}
 
 	/* Outlook: Zero probabiliy for tasks which are not currently ready (or - in the case of speculative execution - running) Equally high probability for tasks
@@ -300,7 +296,7 @@ public class C3PO extends Scheduler {
 					dataLocalityStatistic.totalData = task.countAvailableTotalData(fs) + 1;
 					dataLocalityStatistic.weight = ((double) (dataLocalityStatistic.localData)) / ((double) dataLocalityStatistic.totalData);
 				} catch (IOException e) {
-					log.info("Error during hdfs block location determination.");
+					System.out.println("Error during hdfs block location determination.");
 					HiWay.onError(e);
 				}
 			}
@@ -352,11 +348,11 @@ public class C3PO extends Scheduler {
 		multiplyWeights(combinedWeights, dataLocalityStatistics, placementAwarenessWeight);
 		normalizeWeights(combinedWeights.values());
 
-		log.info("Updated Decision Vector for node " + nodeId + ":");
-		log.info("\tConservatism (x" + (int) (conservatismWeight + 0.5d) + ")\t" + printWeights(runtimeEstimatesPerNode.get(nodeId)));
-		log.info("\tOutlook (x" + (int) (outlookWeight + 0.5d) + ")\t\t" + printWeights(jobStatistics));
-		log.info("\tPlacement (x" + (int) (placementAwarenessWeight + 0.5d) + ")\t\t" + printWeights(dataLocalityStatistics));
-		log.info("\tCombined\t\t" + printWeights(combinedWeights));
+		System.out.println("Updated Decision Vector for node " + nodeId + ":");
+		System.out.println("\tConservatism (x" + (int) (conservatismWeight + 0.5d) + ")\t" + printWeights(runtimeEstimatesPerNode.get(nodeId)));
+		System.out.println("\tOutlook (x" + (int) (outlookWeight + 0.5d) + ")\t\t" + printWeights(jobStatistics));
+		System.out.println("\tPlacement (x" + (int) (placementAwarenessWeight + 0.5d) + ")\t\t" + printWeights(dataLocalityStatistics));
+		System.out.println("\tCombined\t\t" + printWeights(combinedWeights));
 
 		double sample = numGen.nextDouble();
 		double min = 0d;
@@ -377,10 +373,11 @@ public class C3PO extends Scheduler {
 				taskToContainers.get(task).add(container);
 
 				if (replicate) {
-					log.info("Assigned speculative copy of task " + task + " to container " + container.getId().getContainerId() + " on node "
+					System.out.println("Assigned speculative copy of task " + task + " to container " + container.getId().getContainerId() + " on node "
 							+ container.getNodeId().getHost());
 				} else {
-					log.info("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
+					System.out.println("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node "
+							+ container.getNodeId().getHost());
 				}
 
 				task.incTries();
@@ -414,9 +411,9 @@ public class C3PO extends Scheduler {
 		for (OutlookEstimate jobStatistic : jobStatistics.values()) {
 			rem += jobStatistic.remainingTasks;
 		}
-		log.info("Scheduled Containers Finished: " + fin);
-		log.info("Scheduled Containers Running: " + run);
-		log.info("Scheduled Containers Remaining: " + rem);
+		System.out.println("Scheduled Containers Finished: " + fin);
+		System.out.println("Scheduled Containers Running: " + run);
+		System.out.println("Scheduled Containers Remaining: " + rem);
 
 		return fin + run + rem;
 	}
@@ -428,14 +425,14 @@ public class C3PO extends Scheduler {
 	@Override
 	public void initialize() {
 		super.initialize();
-		log.info("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
+		System.out.println("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
 		Collection<Long> newTaskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
-		log.info("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
+		System.out.println("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
 		for (long taskId : newTaskIds) {
-			log.info("HiwayDB: Querying Task Name for Task Id " + taskId + " from database.");
+			System.out.println("HiwayDB: Querying Task Name for Task Id " + taskId + " from database.");
 			String taskName = dbInterface.getTaskName(taskId);
 			taskIdToName.put(taskId, taskName);
-			log.info("HiwayDB: Retrieved Task Name " + taskName + " from database.");
+			System.out.println("HiwayDB: Retrieved Task Name " + taskName + " from database.");
 		}
 	}
 
@@ -465,23 +462,23 @@ public class C3PO extends Scheduler {
 	}
 
 	private void printJobStatisticsWeight() {
-		log.info("Updated Job Statistics:");
+		System.out.println("Updated Job Statistics:");
 
-		log.info("\t\t#finish\tavg\t#remain\t#ready\tshare");
+		System.out.println("\t\t#finish\tavg\t#remain\t#ready\tshare");
 		for (long taskId : getTaskIds()) {
 			String jobName = taskIdToName.get(taskId);
 			String jobName7 = (jobName.length() > 7) ? jobName.substring(0, 7) : jobName;
 			OutlookEstimate jobStatistic = jobStatistics.get(taskId);
 			double avgRuntime = (jobStatistic.finishedTasks != 0) ? jobStatistic.timeSpent / jobStatistic.finishedTasks : 0d;
-			log.info("\t" + jobName7 + "\t" + df.format(jobStatistic.finishedTasks) + "\t" + df.format(avgRuntime) + "\t"
+			System.out.println("\t" + jobName7 + "\t" + df.format(jobStatistic.finishedTasks) + "\t" + df.format(avgRuntime) + "\t"
 					+ df.format(jobStatistic.remainingTasks) + "\t" + df.format(readyTasks.get(taskId).size()) + "\t" + df.format(jobStatistic.weight));
 		}
 	}
 
 	private void printPlacementAwarenessWeights(boolean replicate) {
-		log.info("Updated Placement Awareness Statistics:");
+		System.out.println("Updated Placement Awareness Statistics:");
 
-		log.info("\t\tlocal\ttotal\tshare");
+		System.out.println("\t\tlocal\ttotal\tshare");
 
 		for (long taskId : getTaskIds()) {
 			Queue<TaskInstance> queue = replicate ? runningTasks.get(taskId) : readyTasks.get(taskId);
@@ -489,14 +486,14 @@ public class C3PO extends Scheduler {
 				String jobName = taskIdToName.get(taskId);
 				String jobName7 = (jobName.length() > 7) ? jobName.substring(0, 7) : jobName;
 				PlacementAwarenessEstimate dataLocalityStatistic = dataLocalityStatistics.get(taskId);
-				log.info("\t" + jobName7 + "\t" + dataLocalityStatistic.localData + "\t" + dataLocalityStatistic.totalData + "\t"
+				System.out.println("\t" + jobName7 + "\t" + dataLocalityStatistic.localData + "\t" + dataLocalityStatistic.totalData + "\t"
 						+ df.format(dataLocalityStatistic.weight));
 			}
 		}
 	}
 
 	private void printTaskStatisticsWeights() {
-		log.info("Updated Task Statistics:");
+		System.out.println("Updated Task Statistics:");
 
 		String row = "";
 		for (long taskId : getTaskIds()) {
@@ -504,7 +501,7 @@ public class C3PO extends Scheduler {
 			String jobName7 = (jobName.length() > 7) ? jobName.substring(0, 7) : jobName;
 			row += "\t\t" + jobName7;
 		}
-		log.info(row);
+		System.out.println(row);
 
 		for (String nodeId : getNodeIds()) {
 			String nodeName7 = (nodeId.length() > 7) ? nodeId.substring(nodeId.length() - 7) : nodeId;
@@ -515,7 +512,7 @@ public class C3PO extends Scheduler {
 				row += "\t" + df.format(taskStatistic.averageRuntime) + "\t" + df.format(taskStatistic.weight);
 			}
 
-			log.info("\t" + nodeName7 + row);
+			System.out.println("\t" + nodeName7 + row);
 		}
 	}
 

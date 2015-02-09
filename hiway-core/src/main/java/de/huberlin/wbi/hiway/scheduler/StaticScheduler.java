@@ -37,8 +37,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 
@@ -53,8 +51,6 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * 
  */
 public abstract class StaticScheduler extends Scheduler {
-
-	private static final Log log = LogFactory.getLog(StaticScheduler.class);
 
 	// the tasks per compute node that are ready to execute
 	protected Map<String, Queue<TaskInstance>> queues;
@@ -81,7 +77,7 @@ public abstract class StaticScheduler extends Scheduler {
 		nodes[0] = node;
 		unissuedNodeRequests.add(nodes);
 		queues.get(node).add(task);
-		log.info("Added task " + task + " to queue " + node);
+		System.out.println("Added task " + task + " to queue " + node);
 	}
 
 	@Override
@@ -90,12 +86,12 @@ public abstract class StaticScheduler extends Scheduler {
 		numberOfRunningTasks++;
 		String node = container.getNodeId().getHost();
 
-		log.info("Looking for task on container " + container.getId().getContainerId() + " on node " + node);
-		log.info("Queue: " + queues.get(node).toString());
+		System.out.println("Looking for task on container " + container.getId().getContainerId() + " on node " + node);
+		System.out.println("Queue: " + queues.get(node).toString());
 
 		TaskInstance task = queues.get(node).remove();
 
-		log.info("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + node);
+		System.out.println("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + node);
 		task.incTries();
 
 		return task;

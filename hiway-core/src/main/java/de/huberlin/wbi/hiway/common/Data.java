@@ -38,8 +38,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -62,7 +60,6 @@ public class Data implements Comparable<Data> {
 	public static Map<Data, String> hdfsDirectoryMidfixes = new HashMap<>();
 	// The hdfs directory prefix (usually the Hi-WAY sandbox folder) for non-input files
 	protected static String hdfsDirectoryPrefix = "";
-	protected static final Log log = LogFactory.getLog(Data.class);
 
 	public static String getHdfsDirectoryPrefix() {
 		return hdfsDirectoryPrefix;
@@ -208,7 +205,7 @@ public class Data implements Comparable<Data> {
 	public void stageIn(FileSystem fs, String hdfsDirectoryMidfix) throws IOException {
 		Path src = new Path(fs.getHomeDirectory(), getHdfsPath(hdfsDirectoryMidfix));
 		Path dest = new Path(absoluteLocalDirectoryPrefix.length() > 0 ? absoluteLocalDirectoryPrefix + "/" + name : getLocalPath());
-		log.debug("Staging in: " + src + " -> " + dest);
+		System.out.println("Staging in: " + src + " -> " + dest);
 		if (!getLocalDirectory().equals(".")) {
 			Path dir = new Path(getLocalDirectory());
 			fs.mkdirs(dir);
@@ -220,7 +217,7 @@ public class Data implements Comparable<Data> {
 	public void stageOut(FileSystem fs, String hdfsDirectoryMidfix) throws IOException {
 		Path src = new Path(absoluteLocalDirectoryPrefix.length() > 0 ? absoluteLocalDirectoryPrefix + "/" + name : getLocalPath());
 		Path dest = new Path(fs.getHomeDirectory(), getHdfsPath(hdfsDirectoryMidfix));
-		log.debug("Staging out: " + src + " -> " + dest);
+		System.out.println("Staging out: " + src + " -> " + dest);
 		if (!getHdfsDirectory(hdfsDirectoryMidfix).isEmpty()) {
 			Path dir = new Path(fs.getHomeDirectory(), getHdfsDirectory(hdfsDirectoryMidfix));
 			fs.mkdirs(dir);

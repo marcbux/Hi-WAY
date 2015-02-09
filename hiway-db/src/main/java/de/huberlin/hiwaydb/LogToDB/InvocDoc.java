@@ -37,9 +37,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-
-
-
 public class InvocDoc {
 
 	private Long timestamp;
@@ -53,26 +50,24 @@ public class InvocDoc {
 	private Long scheduleTime;
 	private String standardError;
 	private String standardOut;
-	
+
 	private Long realTimeIn;
 	private Long realTimeOut;
 	private Long realTime;
-	
-	private Set<String> userevents = new HashSet<String>(0);
-	private Map<String, String>  input = new HashMap<String, String> (0);
-	private Map<String, String> output = new HashMap<String, String> (0);
-	private Map<String, HashMap<String,Long>> files = new HashMap<String, HashMap<String,Long>>();
-	
 
-	public 	Map<String, HashMap<String,Long>> getFiles() {
+	private Set<String> userevents = new HashSet<>(0);
+	private Map<String, String> input = new HashMap<>(0);
+	private Map<String, String> output = new HashMap<>(0);
+	private Map<String, HashMap<String, Long>> files = new HashMap<>();
+
+	public Map<String, HashMap<String, Long>> getFiles() {
 		return this.files;
 	}
 
-	public void setFiles(Map<String, HashMap<String,Long>> files) {
+	public void setFiles(Map<String, HashMap<String, Long>> files) {
 		this.files = files;
 	}
-	
-	
+
 	public Map<String, String> getOutput() {
 		return this.output;
 	}
@@ -81,14 +76,14 @@ public class InvocDoc {
 		this.output = output;
 	}
 
-	public  Map<String, String> getInput() {
+	public Map<String, String> getInput() {
 		return this.input;
 	}
 
-	public void setInput (Map<String, String> input) {
+	public void setInput(Map<String, String> input) {
 		this.input = input;
 	}
-	
+
 	public Set<String> getUserevents() {
 		return this.userevents;
 	}
@@ -96,7 +91,6 @@ public class InvocDoc {
 	public void setUserevents(Set<String> userevents) {
 		this.userevents = userevents;
 	}
-
 
 	public String getLang() {
 		return lang;

@@ -38,8 +38,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
@@ -51,15 +49,13 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 public class LogApplicationMaster extends HiWay {
 
-	private static final Log log = LogFactory.getLog(LogApplicationMaster.class);
-
 	public static void main(String[] args) {
 		HiWay.loop(new LogApplicationMaster(), args);
 	}
 
 	@Override
 	public void parseWorkflow() {
-		log.info("Parsing Hi-WAY log " + getWorkflowFile());
+		System.out.println("Parsing Hi-WAY log " + getWorkflowFile());
 		Map<Long, TaskInstance> tasks = new HashMap<>();
 		Map<Data, TaskInstance> taskProcucingThisFile = new HashMap<>();
 

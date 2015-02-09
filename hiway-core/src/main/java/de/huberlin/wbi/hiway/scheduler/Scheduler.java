@@ -47,8 +47,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -74,8 +72,6 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * 
  */
 public abstract class Scheduler {
-
-	private static final Log log = LogFactory.getLog(Scheduler.class);
 
 	protected HiwayDBI dbInterface;
 	protected final FileSystem fs;
@@ -106,9 +102,9 @@ public abstract class Scheduler {
 	}
 
 	public void addEntryToDB(JsonReportEntry entry) {
-		log.info("HiwayDB: Adding entry " + entry + " to database.");
+		System.out.println("HiwayDB: Adding entry " + entry + " to database.");
 		dbInterface.logToDB(entry);
-		log.info("HiwayDB: Added entry to database.");
+		System.out.println("HiwayDB: Added entry to database.");
 	}
 
 	protected abstract void addTask(TaskInstance task);
@@ -146,9 +142,9 @@ public abstract class Scheduler {
 		int run = getNumberOfRunningTasks();
 		int rem = numberOfRemainingTasks;
 
-		log.info("Scheduled Containers Finished: " + fin);
-		log.info("Scheduled Containers Running: " + run);
-		log.info("Scheduled Containers Remaining: " + rem);
+		System.out.println("Scheduled Containers Finished: " + fin);
+		System.out.println("Scheduled Containers Running: " + run);
+		System.out.println("Scheduled Containers Remaining: " + rem);
 
 		return fin + run + rem;
 	}
@@ -170,17 +166,17 @@ public abstract class Scheduler {
 		case SQL:
 			String sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
 			if (sqlUser == null) {
-				log.error(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				HiWay.onError(new RuntimeException());
 			}
 			String sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
 			if (sqlPassword == null) {
-				log.error(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				HiWay.onError(new RuntimeException());
 			}
 			String sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
 			if (sqlURL == null) {
-				log.error(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				HiWay.onError(new RuntimeException());
 			}
 			dbInterface = new HiwayDB(sqlUser, sqlPassword, sqlURL);
@@ -188,32 +184,32 @@ public abstract class Scheduler {
 		case NoSQL:
 			sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
 			if (sqlUser == null) {
-				log.error(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				HiWay.onError(new RuntimeException());
 			}
 			sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
 			if (sqlPassword == null) {
-				log.error(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				HiWay.onError(new RuntimeException());
 			}
 			sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
 			if (sqlURL == null) {
-				log.error(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				HiWay.onError(new RuntimeException());
 			}
 			String noSqlBucket = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
 			if (noSqlBucket == null) {
-				log.error(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.err.println(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				HiWay.onError(new RuntimeException());
 			}
 			String noSqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
 			if (noSqlPassword == null) {
-				log.error(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.err.println(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				HiWay.onError(new RuntimeException());
 			}
 			String noSqlURIs = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
 			if (noSqlURIs == null) {
-				log.error(HiWayConfiguration.HIWAY_DB_NOSQL_URLS + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.err.println(HiWayConfiguration.HIWAY_DB_NOSQL_URLS + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				HiWay.onError(new RuntimeException());
 			} else {
 				List<URI> noSqlURIList = new ArrayList<>();
@@ -261,7 +257,7 @@ public abstract class Scheduler {
 						String srcName = src.getName();
 						if (srcName.equals(hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT))) {
 							Path dest = new Path(appDir.getName());
-							log.info("Parsing log " + dest.toString());
+							System.out.println("Parsing log " + dest.toString());
 							fs.copyToLocalFile(false, src, dest);
 
 							try (BufferedReader reader = new BufferedReader(new FileReader(new File(dest.toString())))) {
@@ -289,7 +285,7 @@ public abstract class Scheduler {
 		numberOfRunningTasks--;
 		numberOfFinishedTasks++;
 
-		log.info("Task " + task + " in container " + containerStatus.getContainerId().getContainerId() + " finished after " + runtimeInMs + " ms");
+		System.out.println("Task " + task + " in container " + containerStatus.getContainerId().getContainerId() + " finished after " + runtimeInMs + " ms");
 
 		return new ArrayList<>();
 	}
@@ -297,12 +293,12 @@ public abstract class Scheduler {
 	public Collection<ContainerId> taskFailed(TaskInstance task, ContainerStatus containerStatus) {
 		numberOfRunningTasks--;
 
-		log.info("Task " + task + " on container " + containerStatus.getContainerId().getContainerId() + " failed");
+		System.out.println("Task " + task + " on container " + containerStatus.getContainerId().getContainerId() + " failed");
 		if (task.retry(maxRetries)) {
-			log.info("Retrying task " + task + ".");
+			System.out.println("Retrying task " + task + ".");
 			addTask(task);
 		} else {
-			log.info("Task " + task + " has exceeded maximum number of allowed retries. Aborting workflow.");
+			System.out.println("Task " + task + " has exceeded maximum number of allowed retries. Aborting workflow.");
 			HiWay.onError(new RuntimeException());
 		}
 
@@ -310,7 +306,6 @@ public abstract class Scheduler {
 	}
 
 	protected void updateRuntimeEstimate(InvocStat stat) {
-		log.debug("Updating Runtime Estimate for stat " + stat.toString());
 		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostName()).get(stat.getTaskId());
 		re.finishedTasks += 1;
 		re.timeSpent += stat.getRealTime();
@@ -318,18 +313,18 @@ public abstract class Scheduler {
 	}
 
 	public void updateRuntimeEstimates(String runId) {
-		log.info("Updating Runtime Estimates.");
+		System.out.println("Updating Runtime Estimates.");
 
-		log.info("HiwayDB: Querying Host Names from database.");
+		System.out.println("HiwayDB: Querying Host Names from database.");
 		Collection<String> newHostIds = dbInterface.getHostNames();
-		log.info("HiwayDB: Retrieved Host Names " + newHostIds.toString() + " from database.");
+		System.out.println("HiwayDB: Retrieved Host Names " + newHostIds.toString() + " from database.");
 		newHostIds.removeAll(getNodeIds());
 		for (String newHostId : newHostIds) {
 			newHost(newHostId);
 		}
-		log.info("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
+		System.out.println("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
 		Collection<Long> newTaskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
-		log.info("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
+		System.out.println("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
 
 		newTaskIds.removeAll(getTaskIds());
 		for (long newTaskId : newTaskIds) {
@@ -340,10 +335,10 @@ public abstract class Scheduler {
 			long oldMaxTimestamp = maxTimestampPerHost.get(hostName);
 			long newMaxTimestamp = oldMaxTimestamp;
 			for (long taskId : getTaskIds()) {
-				log.info("HiwayDB: Querying InvocStats for task id " + taskId + " on host " + hostName + " since timestamp " + oldMaxTimestamp
+				System.out.println("HiwayDB: Querying InvocStats for task id " + taskId + " on host " + hostName + " since timestamp " + oldMaxTimestamp
 						+ " from database.");
 				Collection<InvocStat> invocStats = dbInterface.getLogEntriesForTaskOnHostSince(taskId, hostName, oldMaxTimestamp);
-				log.info("HiwayDB: Retrieved InvocStats " + invocStats.toString() + " from database.");
+				System.out.println("HiwayDB: Retrieved InvocStats " + invocStats.toString() + " from database.");
 				for (InvocStat stat : invocStats) {
 					newMaxTimestamp = Math.max(newMaxTimestamp, stat.getTimestamp());
 					updateRuntimeEstimate(stat);

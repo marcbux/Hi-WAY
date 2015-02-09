@@ -60,8 +60,7 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
@@ -130,17 +129,15 @@ import de.huberlin.wbi.hiway.scheduler.rr.RoundRobin;
  * </p>
  */
 public abstract class HiWay {
-	// a handle to the log, in which any events are recorded
-	private static final Log log = LogFactory.getLog(HiWay.class);
 
 	/**
 	 * If the debug flag is set, dump out contents of current working directory and the environment to stdout for debugging.
 	 */
 	private static void dumpOutDebugInfo() {
-		log.info("Dump debug output");
+		System.out.println("Dump debug output");
 		Map<String, String> envs = System.getenv();
 		for (Map.Entry<String, String> env : envs.entrySet()) {
-			log.info("System env: key=" + env.getKey() + ", val=" + env.getValue());
+			System.out.println("System env: key=" + env.getKey() + ", val=" + env.getValue());
 		}
 
 		String cmd = "ls -al";
@@ -153,7 +150,7 @@ public abstract class HiWay {
 			try (BufferedReader buf = new BufferedReader(new InputStreamReader(pr.getInputStream()))) {
 				String line = "";
 				while ((line = buf.readLine()) != null) {
-					log.info("System CWD content: " + line);
+					System.out.println("System CWD content: " + line);
 				}
 			}
 		} catch (IOException | InterruptedException e) {
@@ -170,21 +167,21 @@ public abstract class HiWay {
 	public static void loop(HiWay appMaster, String[] args) {
 		boolean result = false;
 		try {
-			log.info("Initializing ApplicationMaster");
+			System.out.println("Initializing ApplicationMaster");
 			boolean doRun = appMaster.init(args);
 			if (!doRun) {
 				System.exit(0);
 			}
 			result = appMaster.run();
 		} catch (Throwable t) {
-			log.fatal("Error running ApplicationMaster", t);
+			System.err.println("Error running ApplicationMaster");
 			onError(t);
 		}
 		if (result) {
-			log.info("Application Master completed successfully. exiting");
+			System.out.println("Application Master completed successfully. exiting");
 			System.exit(0);
 		} else {
-			log.info("Application Master failed. exiting");
+			System.out.println("Application Master failed. exiting");
 			System.exit(2);
 		}
 	}
@@ -193,7 +190,7 @@ public abstract class HiWay {
 		Writer writer = new StringWriter();
 		PrintWriter printWriter = new PrintWriter(writer);
 		t.printStackTrace(printWriter);
-		log.error(writer.toString());
+		System.err.println(writer.toString());
 		System.exit(-1);
 	}
 
@@ -334,7 +331,7 @@ public abstract class HiWay {
 			}
 
 		} catch (Exception e) {
-			log.info("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
+			System.out.println("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
 			onError(e);
 		}
 	}
@@ -352,28 +349,28 @@ public abstract class HiWay {
 			try {
 				launchThread.join(10000);
 			} catch (InterruptedException e) {
-				log.info("Exception thrown in thread join: " + e.getMessage());
+				System.out.println("Exception thrown in thread join: " + e.getMessage());
 				onError(e);
 			}
 		}
 
 		// When the application completes, it should stop all running containers
-		log.info("Application completed. Stopping running containers");
+		System.out.println("Application completed. Stopping running containers");
 		nmClientAsync.stop();
 
 		// When the application completes, it should send a finish application signal to the RM
-		log.info("Application completed. Signalling finish to RM");
+		System.out.println("Application completed. Signalling finish to RM");
 
 		FinalApplicationStatus appStatus;
 		String appMessage = null;
 		success = true;
 
-		log.info("Failed Containers: " + numFailedContainers.get());
-		log.info("Completed Containers: " + numCompletedContainers.get());
+		System.out.println("Failed Containers: " + numFailedContainers.get());
+		System.out.println("Completed Containers: " + numCompletedContainers.get());
 
 		int numTotalContainers = scheduler.getNumberOfTotalTasks();
 
-		log.info("Total Scheduled Containers: " + numTotalContainers);
+		System.out.println("Total Scheduled Containers: " + numTotalContainers);
 
 		if (numFailedContainers.get() == 0 && numCompletedContainers.get() == numTotalContainers) {
 			appStatus = FinalApplicationStatus.SUCCEEDED;
@@ -414,14 +411,14 @@ public abstract class HiWay {
 				new Data(summaryFile).stageOut(fs, "");
 			}
 		} catch (IOException e) {
-			log.info("Error when attempting to stage out federated output log.");
+			System.out.println("Error when attempting to stage out federated output log.");
 			onError(e);
 		}
 
 		try {
 			amRMClient.unregisterApplicationMaster(appStatus, appMessage, null);
 		} catch (YarnException | IOException e) {
-			log.error("Failed to unregister application", e);
+			System.err.println("Failed to unregister application");
 			onError(e);
 		}
 
@@ -598,7 +595,7 @@ public abstract class HiWay {
 			throw new RuntimeException(Environment.NM_PORT.name() + " not set in the environment");
 		}
 
-		log.info("Application master for app" + ", appId=" + appAttemptID.getApplicationId().getId() + ", clustertimestamp="
+		System.out.println("Application master for app" + ", appId=" + appAttemptID.getApplicationId().getId() + ", clustertimestamp="
 				+ appAttemptID.getApplicationId().getClusterTimestamp() + ", attemptId=" + appAttemptID.getAttemptId());
 
 		String shellEnvs[] = hiWayConf.getStrings(HiWayConfiguration.HIWAY_WORKER_SHELL_ENV, HiWayConfiguration.HIWAY_WORKER_SHELL_ENV_DEFAULT);
@@ -646,7 +643,7 @@ public abstract class HiWay {
 	 */
 	@SuppressWarnings("unchecked")
 	public boolean run() throws YarnException, IOException {
-		log.info("Starting ApplicationMaster");
+		System.out.println("Starting ApplicationMaster");
 
 		Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
 		try (DataOutputBuffer dob = new DataOutputBuffer()) {
@@ -732,17 +729,17 @@ public abstract class HiWay {
 			// Dump out information about cluster capability as seen by the resource manager
 			int maxMem = response.getMaximumResourceCapability().getMemory();
 			int maxCores = response.getMaximumResourceCapability().getVirtualCores();
-			log.info("Max mem capabililty of resources in this cluster " + maxMem);
+			System.out.println("Max mem capabililty of resources in this cluster " + maxMem);
 
 			// A resource ask cannot exceed the max.
 			if (containerMemory > maxMem) {
-				log.info("Container memory specified above max threshold of cluster." + " Using max value." + ", specified=" + containerMemory + ", max="
-						+ maxMem);
+				System.out.println("Container memory specified above max threshold of cluster." + " Using max value." + ", specified=" + containerMemory
+						+ ", max=" + maxMem);
 				containerMemory = maxMem;
 			}
 			if (containerCores > maxCores) {
-				log.info("Container vcores specified above max threshold of cluster." + " Using max value." + ", specified=" + containerCores + ", max="
-						+ maxCores);
+				System.out.println("Container vcores specified above max threshold of cluster." + " Using max value." + ", specified=" + containerCores
+						+ ", max=" + maxCores);
 				containerCores = maxCores;
 			}
 
@@ -753,7 +750,7 @@ public abstract class HiWay {
 						amRMClient.addContainerRequest(containerAsk);
 					}
 					Thread.sleep(1000);
-					log.info("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
+					System.out.println("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
 							+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
 				} catch (InterruptedException ex) {
 					onError(ex);
@@ -804,7 +801,7 @@ public abstract class HiWay {
 			onError(e);
 		}
 
-		log.info("Requested container ask: " + request.toString() + " Nodes" + Arrays.toString(nodes));
+		System.out.println("Requested container ask: " + request.toString() + " Nodes" + Arrays.toString(nodes));
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 		return request;
 	}
@@ -813,35 +810,35 @@ public abstract class HiWay {
 		String line;
 
 		try {
-			log.error("[script]");
+			System.err.println("[script]");
 			try (BufferedReader reader = new BufferedReader(new StringReader(task.getCommand()))) {
 				int i = 0;
 				while ((line = reader.readLine()) != null)
-					log.error(String.format("%02d  %s", Integer.valueOf(++i), line));
+					System.err.println(String.format("%02d  %s", Integer.valueOf(++i), line));
 			}
 
 			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
 			stdoutFile.stageIn(fs, containerId.toString());
 
-			log.error("[out]");
+			System.err.println("[out]");
 			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stdoutFile.getLocalPath())))) {
 				while ((line = reader.readLine()) != null)
-					log.error(line);
+					System.err.println(line);
 			}
 
 			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
 			stderrFile.stageIn(fs, containerId.toString());
 
-			log.error("[err]");
+			System.err.println("[err]");
 			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stderrFile.getLocalPath())))) {
 				while ((line = reader.readLine()) != null)
-					log.error(line);
+					System.err.println(line);
 			}
 		} catch (IOException e) {
 			onError(e);
 		}
 
-		log.error("[end]");
+		System.err.println("[end]");
 	}
 
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {

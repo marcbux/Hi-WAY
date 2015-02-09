@@ -41,8 +41,6 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 
 import de.huberlin.wbi.hiway.am.HiWay;
@@ -66,8 +64,6 @@ import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
  * 
  */
 public class HEFT extends StaticScheduler {
-
-	private static final Log log = LogFactory.getLog(HEFT.class);
 
 	private Map<String, Map<Double, Double>> freeTimeSlotLengthsPerNode;
 	private Map<String, TreeSet<Double>> freeTimeSlotStartsPerNode;
@@ -126,7 +122,7 @@ public class HEFT extends StaticScheduler {
 
 		// assign task to node
 		schedule.put(task, bestNode);
-		log.info("Task " + task + " scheduled on node " + bestNode);
+		System.out.println("Task " + task + " scheduled on node " + bestNode);
 		if (task.readyToExecute()) {
 			addTaskToQueue(task);
 		}

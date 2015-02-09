@@ -41,8 +41,6 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.json.JSONException;
 
@@ -59,12 +57,6 @@ import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 public class CuneiformApplicationMaster extends HiWay {
-
-	protected static final Log log = LogFactory.getLog(CuneiformApplicationMaster.class);
-
-	public static Log getLog() {
-		return log;
-	}
 
 	public static void main(String[] args) {
 		HiWay.loop(new CuneiformApplicationMaster(), args);
@@ -92,7 +84,7 @@ public class CuneiformApplicationMaster extends HiWay {
 
 	@Override
 	public void parseWorkflow() {
-		log.info("Parsing Cuneiform workflow " + getWorkflowFile());
+		System.out.println("Parsing Cuneiform workflow " + getWorkflowFile());
 		BaseRepl repl = new HiWayRepl(ticketSrc, this);
 
 		StringBuffer buf = new StringBuffer();
@@ -146,7 +138,7 @@ public class CuneiformApplicationMaster extends HiWay {
 			Invocation invocation = ((CuneiformTaskInstance) task).getInvocation();
 			invocation.evalReport(task.getReport());
 			ticketSrc.sendMsg(new TicketFinishedMsg(creActor, invocation.getTicket(), task.getReport()));
-			log.info("Message sent.");
+			System.out.println("Message sent.");
 
 			// set output files
 			for (String outputName : invocation.getStageOutList()) {
@@ -162,7 +154,7 @@ public class CuneiformApplicationMaster extends HiWay {
 			}
 
 		} catch (JSONException | NotDerivableException e) {
-			log.info("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
+			System.out.println("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
 			onError(e);
 		}
 	}

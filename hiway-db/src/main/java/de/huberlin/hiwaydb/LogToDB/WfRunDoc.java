@@ -43,9 +43,9 @@ public class WfRunDoc {
 	private String runId;
 	private Long wfTime;
 	private Long reductionTime;
-	
-	private Map<String, String>  hiwayEvent = new HashMap<String, String> (0);
-	private Set<Long> taskIDs = new HashSet<Long>(0);
+
+	private Map<String, String> hiwayEvent = new HashMap<>(0);
+	private Set<Long> taskIDs = new HashSet<>(0);
 
 	public String getName() {
 		return name;
@@ -94,5 +94,5 @@ public class WfRunDoc {
 	public void setTaskIDs(Set<Long> taskIDs) {
 		this.taskIDs = taskIDs;
 	}
-	
+
 }

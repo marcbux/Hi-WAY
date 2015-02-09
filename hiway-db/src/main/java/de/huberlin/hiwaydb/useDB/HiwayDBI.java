@@ -51,13 +51,15 @@ public interface HiwayDBI {
 	public static final String KEY_WF_OUTPUT = "wf-output";
 
 	public Set<String> getHostNames();
+
 	public Set<Long> getTaskIdsForWorkflow(String workflowName);
 
 	public String getTaskName(long taskId);
-	
+
 	public Collection<InvocStat> getLogEntriesForTasks(Set<Long> taskIds);
+
 	public Collection<InvocStat> getLogEntriesForTaskOnHostSince(long taskId, String hostName, long timestamp);
 
-	public void logToDB(JsonReportEntry entry);	
+	public void logToDB(JsonReportEntry entry);
 
 }

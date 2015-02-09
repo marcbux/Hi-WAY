@@ -38,7 +38,6 @@ public class FileStat {
 	private Long realTime;
 	private Long size;
 
-	
 	public FileStat() {
 	}
 
@@ -77,4 +76,3 @@ public class FileStat {
 	}
 
 }
-

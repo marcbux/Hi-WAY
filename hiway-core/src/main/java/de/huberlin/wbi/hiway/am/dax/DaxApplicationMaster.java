@@ -43,8 +43,6 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.w3c.dom.Document;
@@ -61,12 +59,10 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 public class DaxApplicationMaster extends HiWay {
 
-	private static final Log log = LogFactory.getLog(DaxApplicationMaster.class);
-
 	public static void main(String[] args) {
 		HiWay.loop(new DaxApplicationMaster(), args);
 	}
-	
+
 	public DaxApplicationMaster() {
 		super();
 		setDetermineFileSizes();
@@ -75,7 +71,7 @@ public class DaxApplicationMaster extends HiWay {
 	@Override
 	public void parseWorkflow() {
 		Map<Object, TaskInstance> tasks = new HashMap<>();
-		log.info("Parsing Pegasus DAX " + getWorkflowFile());
+		System.out.println("Parsing Pegasus DAX " + getWorkflowFile());
 
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
@@ -160,7 +156,7 @@ public class DaxApplicationMaster extends HiWay {
 				}
 
 				task.setCommand(taskName + arguments.toString());
-				log.info("Adding task " + task + ": " + task.getInputData() + " -> " + task.getOutputData());
+				System.out.println("Adding task " + task + ": " + task.getInputData() + " -> " + task.getOutputData());
 			}
 
 			NodeList childNds = doc.getElementsByTagName("child");

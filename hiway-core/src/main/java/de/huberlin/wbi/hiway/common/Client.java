@@ -46,8 +46,7 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -87,9 +86,6 @@ import de.huberlin.wbi.hiway.am.HiWay;
  */
 public class Client {
 
-	// a handle to the log, in which any events are recorded
-	private static final Log log = LogFactory.getLog(Client.class);
-
 	/**
 	 * The main routine.
 	 * 
@@ -100,7 +96,7 @@ public class Client {
 		boolean result = false;
 		try {
 			Client client = new Client();
-			log.info("Initializing Client");
+			System.out.println("Initializing Client");
 			try {
 				boolean doRun = client.init(args);
 				if (!doRun) {
@@ -112,14 +108,14 @@ public class Client {
 			}
 			result = client.run();
 		} catch (Throwable t) {
-			log.fatal("Error running Client", t);
+			System.err.println("Error running Client");
 			HiWay.onError(t);
 		}
 		if (result) {
-			log.info("Application completed successfully");
+			System.out.println("Application completed successfully");
 			System.exit(0);
 		}
-		log.error("Application failed to complete successfully");
+		System.err.println("Application failed to complete successfully");
 		System.exit(2);
 	}
 
@@ -255,7 +251,7 @@ public class Client {
 			try {
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
-				log.debug("Thread sleep in monitoring loop interrupted");
+				System.out.println("Thread sleep in monitoring loop interrupted");
 			}
 
 			// Get application report for the appId we are interested in
@@ -265,21 +261,21 @@ public class Client {
 			FinalApplicationStatus dsStatus = report.getFinalApplicationStatus();
 			if (YarnApplicationState.FINISHED == state) {
 				if (FinalApplicationStatus.SUCCEEDED == dsStatus) {
-					log.info("Application has completed successfully. Breaking monitoring loop");
-					log.info(report.getDiagnostics());
+					System.out.println("Application has completed successfully. Breaking monitoring loop");
+					System.out.println(report.getDiagnostics());
 					return true;
 				}
-				log.info("Application did finish unsuccessfully." + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
+				System.out.println("Application did finish unsuccessfully." + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
 						+ ". Breaking monitoring loop");
 
 				return false;
 			} else if (YarnApplicationState.KILLED == state || YarnApplicationState.FAILED == state) {
-				log.info("Application did not finish." + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
+				System.out.println("Application did not finish." + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
 						+ ". Breaking monitoring loop");
 				return false;
 			}
 			if (System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
-				log.info("Reached client specified timeout for application. Killing application");
+				System.out.println("Reached client specified timeout for application. Killing application");
 				forceKillApplication(appId);
 				return false;
 			}
@@ -301,28 +297,28 @@ public class Client {
 	 * @throws YarnException
 	 */
 	public boolean run() throws IOException, YarnException {
-		log.info("Running Client");
+		System.out.println("Running Client");
 		yarnClient.start();
 
 		YarnClusterMetrics clusterMetrics = yarnClient.getYarnClusterMetrics();
-		log.info("Got Cluster metric info from ASM" + ", numNodeManagers=" + clusterMetrics.getNumNodeManagers());
+		System.out.println("Got Cluster metric info from ASM" + ", numNodeManagers=" + clusterMetrics.getNumNodeManagers());
 
 		List<NodeReport> clusterNodeReports = yarnClient.getNodeReports(NodeState.RUNNING);
-		log.info("Got Cluster node info from ASM");
+		System.out.println("Got Cluster node info from ASM");
 		for (NodeReport node : clusterNodeReports) {
-			log.info("Got node report from ASM for" + ", nodeId=" + node.getNodeId() + ", nodeAddress" + node.getHttpAddress() + ", nodeRackName"
+			System.out.println("Got node report from ASM for" + ", nodeId=" + node.getNodeId() + ", nodeAddress" + node.getHttpAddress() + ", nodeRackName"
 					+ node.getRackName() + ", nodeNumContainers" + node.getNumContainers());
 		}
 
 		QueueInfo queueInfo = yarnClient.getQueueInfo(this.amQueue);
-		log.info("Queue info" + ", queueName=" + queueInfo.getQueueName() + ", queueCurrentCapacity=" + queueInfo.getCurrentCapacity() + ", queueMaxCapacity="
-				+ queueInfo.getMaximumCapacity() + ", queueApplicationCount=" + queueInfo.getApplications().size() + ", queueChildQueueCount="
-				+ queueInfo.getChildQueues().size());
+		System.out.println("Queue info" + ", queueName=" + queueInfo.getQueueName() + ", queueCurrentCapacity=" + queueInfo.getCurrentCapacity()
+				+ ", queueMaxCapacity=" + queueInfo.getMaximumCapacity() + ", queueApplicationCount=" + queueInfo.getApplications().size()
+				+ ", queueChildQueueCount=" + queueInfo.getChildQueues().size());
 
 		List<QueueUserACLInfo> listAclInfo = yarnClient.getQueueAclsInfo();
 		for (QueueUserACLInfo aclInfo : listAclInfo) {
 			for (QueueACL userAcl : aclInfo.getUserAcls()) {
-				log.info("User ACL Info for Queue" + ", queueName=" + aclInfo.getQueueName() + ", userAcl=" + userAcl.name());
+				System.out.println("User ACL Info for Queue" + ", queueName=" + aclInfo.getQueueName() + ", userAcl=" + userAcl.name());
 			}
 		}
 
@@ -332,11 +328,11 @@ public class Client {
 
 		// Get min/max resource capabilities from RM and change memory ask if needed
 		int maxMem = appResponse.getMaximumResourceCapability().getMemory();
-		log.info("Max mem capabililty of resources in this cluster " + maxMem);
+		System.out.println("Max mem capabililty of resources in this cluster " + maxMem);
 
 		// A resource ask cannot exceed the max.
 		if (amMemory > maxMem) {
-			log.info("AM memory specified above max threshold of cluster. Using max value." + ", specified=" + amMemory + ", max=" + maxMem);
+			System.out.println("AM memory specified above max threshold of cluster. Using max value." + ", specified=" + amMemory + ", max=" + maxMem);
 			amMemory = maxMem;
 		}
 
@@ -355,7 +351,7 @@ public class Client {
 		Map<String, LocalResource> localResources = new HashMap<>();
 
 		// Copy the application master jar to the filesystem
-		log.info("Copy App Master jar from local filesystem and add to local environment");
+		System.out.println("Copy App Master jar from local filesystem and add to local environment");
 		try (FileSystem fs = FileSystem.get(conf)) {
 
 			workflow.stageOut(fs, "");
@@ -364,7 +360,7 @@ public class Client {
 			amContainer.setLocalResources(localResources);
 
 			/* set the env variables to be setup in the env where the application master will be run */
-			log.info("Set the environment for the application master");
+			System.out.println("Set the environment for the application master");
 			Map<String, String> env = new HashMap<>();
 
 			StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$()).append(File.pathSeparatorChar).append("./*");
@@ -387,7 +383,7 @@ public class Client {
 			Vector<CharSequence> vargs = new Vector<>(30);
 
 			// Set java executable command
-			log.info("Setting up app master command");
+			System.out.println("Setting up app master command");
 			vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
 			// Set Xmx based on am memory size
 			vargs.add("-Xmx" + amMemory + "m");
@@ -426,7 +422,7 @@ public class Client {
 				command.append(str).append(" ");
 			}
 
-			log.info("Completed setting up app master command " + command.toString());
+			System.out.println("Completed setting up app master command " + command.toString());
 			List<String> commands = new ArrayList<>();
 			commands.add(command.toString());
 			amContainer.setCommands(commands);
@@ -448,7 +444,7 @@ public class Client {
 				final Token<?> tokens[] = fs.addDelegationTokens(tokenRenewer, credentials);
 				if (tokens != null) {
 					for (Token<?> token : tokens) {
-						log.info("Got dt for " + fs.getUri() + "; " + token);
+						System.out.println("Got dt for " + fs.getUri() + "; " + token);
 					}
 				}
 				try (DataOutputBuffer dob = new DataOutputBuffer()) {
@@ -469,7 +465,7 @@ public class Client {
 			appContext.setQueue(amQueue);
 
 			// Submit the application to the applications manager
-			log.info("Submitting application to ASM");
+			System.out.println("Submitting application to ASM");
 			yarnClient.submitApplication(appContext);
 
 			// Monitor the application

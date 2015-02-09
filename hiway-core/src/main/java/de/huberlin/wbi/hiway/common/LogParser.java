@@ -40,8 +40,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.json.JSONException;
 
 import de.huberlin.hiwaydb.useDB.FileStat;
@@ -52,7 +50,6 @@ import de.huberlin.wbi.hiway.am.HiWay;
 
 public class LogParser implements HiwayDBI {
 
-	private static final Log log = LogFactory.getLog(LogParser.class);
 	private Set<String> hostNames;
 	private Map<UUID, Map<Long, InvocStat>> runToInvocStats;
 	private Map<UUID, String> runToWorkflowName;
@@ -83,16 +80,11 @@ public class LogParser implements HiwayDBI {
 
 	@Override
 	public synchronized Collection<InvocStat> getLogEntriesForTaskOnHostSince(long taskId, String hostName, long timestamp) {
-		log.debug("Retrieving InvocStats for task " + taskId + " on host " + hostName + " since time " + timestamp);
-
 		Collection<InvocStat> stats = new LinkedList<>();
 		for (UUID runKey : runToInvocStats.keySet()) {
 			Map<Long, InvocStat> invocStats = runToInvocStats.get(runKey);
 			for (Long statKey : invocStats.keySet()) {
 				InvocStat stat = invocStats.get(statKey);
-
-				log.debug("Iterate over logStats: " + runKey.toString() + " | " + statKey + " | " + stat.toString());
-
 				if (stat.getHostName() != null && stat.getTaskId() == taskId && stat.getHostName().equals(hostName) && stat.getTimestamp() > timestamp) {
 					stats.add(stat);
 				}

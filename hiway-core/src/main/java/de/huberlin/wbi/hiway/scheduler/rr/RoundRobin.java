@@ -38,8 +38,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
@@ -54,8 +52,6 @@ import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
  * 
  */
 public class RoundRobin extends StaticScheduler {
-
-	private static final Log log = LogFactory.getLog(RoundRobin.class);
 
 	private Iterator<String> nodeIterator;
 
@@ -72,7 +68,7 @@ public class RoundRobin extends StaticScheduler {
 		}
 		String node = nodeIterator.next();
 		schedule.put(task, node);
-		log.info("Task " + task + " scheduled on node " + node);
+		System.out.println("Task " + task + " scheduled on node " + node);
 		if (task.readyToExecute()) {
 			addTaskToQueue(task);
 		}

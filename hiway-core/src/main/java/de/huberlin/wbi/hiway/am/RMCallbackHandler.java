@@ -32,8 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -52,8 +50,6 @@ import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
-
-	private static final Log log = LogFactory.getLog(RMCallbackHandler.class);
 
 	private HiWay am;
 	// a data structure storing the invocation launched by each container
@@ -93,8 +89,8 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 	protected void launchTask(TaskInstance task, Container allocatedContainer) {
 		containerIdToInvocation.put(allocatedContainer.getId().getContainerId(), new HiWayInvocation(task));
-		log.info("Launching workflow task on a new container." + ", task=" + task + ", containerId=" + allocatedContainer.getId() + ", containerNode="
-				+ allocatedContainer.getNodeId().getHost() + ":" + allocatedContainer.getNodeId().getPort() + ", containerNodeURI="
+		System.out.println("Launching workflow task on a new container." + ", task=" + task + ", containerId=" + allocatedContainer.getId()
+				+ ", containerNode=" + allocatedContainer.getNodeId().getHost() + ":" + allocatedContainer.getNodeId().getPort() + ", containerNodeURI="
 				+ allocatedContainer.getNodeHttpAddress() + ", containerResourceMemory" + allocatedContainer.getResource().getMemory());
 
 		LaunchContainerRunnable runnableLaunchContainer = new LaunchContainerRunnable(allocatedContainer, am.getContainerListener(), task, am);
@@ -138,7 +134,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void onContainersAllocated(List<Container> allocatedContainers) {
-		log.info("Got response from RM for container ask, allocatedCnt=" + allocatedContainers.size());
+		System.out.println("Got response from RM for container ask, allocatedCnt=" + allocatedContainers.size());
 
 		for (Container container : allocatedContainers) {
 			JSONObject value = new JSONObject();
@@ -171,7 +167,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 	@Override
 	public void onContainersCompleted(List<ContainerStatus> completedContainers) {
-		log.info("Got response from RM for container ask, completedCnt=" + completedContainers.size());
+		System.out.println("Got response from RM for container ask, completedCnt=" + completedContainers.size());
 		for (ContainerStatus containerStatus : completedContainers) {
 
 			JSONObject value = new JSONObject();
@@ -185,8 +181,8 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 				onError(e);
 			}
 
-			log.info("Got container status for containerID=" + containerStatus.getContainerId() + ", state=" + containerStatus.getState() + ", exitStatus="
-					+ containerStatus.getExitStatus() + ", diagnostics=" + containerStatus.getDiagnostics());
+			System.out.println("Got container status for containerID=" + containerStatus.getContainerId() + ", state=" + containerStatus.getState()
+					+ ", exitStatus=" + containerStatus.getExitStatus() + ", diagnostics=" + containerStatus.getDiagnostics());
 			am.writeEntryToLog(new JsonReportEntry(am.getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 
 			// non complete containers should not be here
@@ -204,7 +200,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 				if (exitStatus == 0) {
 
-					log.info("Container completed successfully." + ", containerId=" + containerStatus.getContainerId());
+					System.out.println("Container completed successfully." + ", containerId=" + containerStatus.getContainerId());
 
 					// this task might have been completed previously (e.g., via speculative replication)
 					if (!finishedTask.isCompleted()) {
@@ -219,7 +215,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 						Collection<ContainerId> toBeReleasedContainers = am.getScheduler().taskCompleted(finishedTask, containerStatus,
 								System.currentTimeMillis() - invocation.timestamp);
 						for (ContainerId toBeReleasedContainer : toBeReleasedContainers) {
-							log.info("Killing speculative copy of task " + finishedTask + " on container " + toBeReleasedContainer);
+							System.out.println("Killing speculative copy of task " + finishedTask + " on container " + toBeReleasedContainer);
 							am.getAmRMClient().releaseAssignedContainer(toBeReleasedContainer);
 							am.getNumKilledContainers().incrementAndGet();
 						}
@@ -234,11 +230,11 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 				// The container was released by the framework (e.g., it was a speculative copy of a finished task)
 				else if (diagnostics.equals(SchedulerUtils.RELEASED_CONTAINER)) {
-					log.info("Container was released." + ", containerId=" + containerStatus.getContainerId());
+					System.out.println("Container was released." + ", containerId=" + containerStatus.getContainerId());
 				}
 
 				else if (exitStatus == ExitCode.FORCE_KILLED.getExitCode()) {
-					log.info("Container was force killed." + ", containerId=" + containerStatus.getContainerId());
+					System.out.println("Container was force killed." + ", containerId=" + containerStatus.getContainerId());
 				}
 
 				// The container failed horribly.
@@ -249,13 +245,13 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 					am.getMetrics().failedTask();
 
 					if (exitStatus == ExitCode.TERMINATED.getExitCode()) {
-						log.info("Container was terminated." + ", containerId=" + containerStatus.getContainerId());
+						System.out.println("Container was terminated." + ", containerId=" + containerStatus.getContainerId());
 					} else {
-						log.info("Container completed with failure." + ", containerId=" + containerStatus.getContainerId());
+						System.out.println("Container completed with failure." + ", containerId=" + containerStatus.getContainerId());
 
 						Collection<ContainerId> toBeReleasedContainers = am.getScheduler().taskFailed(finishedTask, containerStatus);
 						for (ContainerId toBeReleasedContainer : toBeReleasedContainers) {
-							log.info("Killing speculative copy of task " + finishedTask + " on container " + toBeReleasedContainer);
+							System.out.println("Killing speculative copy of task " + finishedTask + " on container " + toBeReleasedContainer);
 							am.getAmRMClient().releaseAssignedContainer(toBeReleasedContainer);
 							am.getNumKilledContainers().incrementAndGet();
 
@@ -285,7 +281,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 	@Override
 	public void onShutdownRequest() {
-		log.info("Shutdown Request.");
+		System.out.println("Shutdown Request.");
 		am.setDone();
 	}
 }
