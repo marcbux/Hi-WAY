@@ -229,7 +229,7 @@ public class Client {
 		workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.valueOf(cliParser.getOptionValue("language",
 				HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform.toString()));
 
-		clientTimeout = conf.getInt(HiWayConfiguration.HIWAY_CLIENT_TIMEOUT, HiWayConfiguration.HIWAY_CLIENT_TIMEOUT_DEFAULT) * 1000;
+		clientTimeout = conf.getInt(HiWayConfiguration.HIWAY_AM_TIMEOUT, HiWayConfiguration.HIWAY_AM_TIMEOUT_DEFAULT) * 1000;
 
 		return true;
 	}
