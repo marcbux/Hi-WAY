@@ -49,7 +49,6 @@ import org.apache.hadoop.yarn.api.records.LocalResource;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.ForeignLambdaExpr;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.am.HiWay;
 
 public class TaskInstance implements Comparable<TaskInstance> {
 
@@ -160,17 +159,20 @@ public class TaskInstance implements Comparable<TaskInstance> {
 			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(script))) {
 				scriptWriter.write(getCommand());
 			} catch (IOException e) {
-				HiWay.onError(e);
+				e.printStackTrace();
+				System.exit(-1);
 			}
-			Data scriptData = new Data(script.getPath());
+			Data scriptData = new Data(script.getPath(), containerId, fs);
 			try {
-				scriptData.stageOut(fs, containerId);
+				scriptData.stageOut();
 			} catch (IOException e) {
-				HiWay.onError(e);
+				e.printStackTrace();
+				System.exit(-1);
 			}
-			scriptData.addToLocalResourceMap(localResources, fs, containerId);
-		} catch (IOException e1) {
-			HiWay.onError(e1);
+			scriptData.addToLocalResourceMap(localResources);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		return localResources;
 	}
@@ -180,18 +182,18 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		return Long.compare(this.getId(), other.getId());
 	}
 
-	public long countAvailableLocalData(FileSystem fs, Container container) throws IOException {
+	public long countAvailableLocalData(Container container) throws IOException {
 		long sum = 0;
 		for (Data input : getInputData()) {
-			sum += input.countAvailableLocalData(fs, container);
+			sum += input.countAvailableLocalData(container);
 		}
 		return sum;
 	}
 
-	public long countAvailableTotalData(FileSystem fs) throws IOException {
+	public long countAvailableTotalData() throws IOException {
 		long sum = 0;
 		for (Data input : getInputData()) {
-			sum += input.countAvailableTotalData(fs);
+			sum += input.countAvailableTotalData();
 		}
 		return sum;
 	}

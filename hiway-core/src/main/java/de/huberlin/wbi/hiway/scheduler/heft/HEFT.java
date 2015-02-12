@@ -43,7 +43,6 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.fs.FileSystem;
 
-import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
@@ -135,7 +134,8 @@ public class HEFT extends StaticScheduler {
 				}
 			}
 		} catch (WorkflowStructureUnknownException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		double timeslotStart = freeTimeSlotStartsPerNode.get(bestNode).floor(bestNodeFreeTimeSlotActualStart);
@@ -176,7 +176,8 @@ public class HEFT extends StaticScheduler {
 					}
 				}
 			} catch (WorkflowStructureUnknownException e) {
-				HiWay.onError(e);
+				e.printStackTrace();
+				System.exit(-1);
 			}
 
 			double averageComputationCost = 0;
@@ -189,7 +190,8 @@ public class HEFT extends StaticScheduler {
 			try {
 				task.setUpwardRank(averageComputationCost + maxSuccessorRank);
 			} catch (WorkflowStructureUnknownException e) {
-				HiWay.onError(e);
+				e.printStackTrace();
+				System.exit(-1);
 			}
 		}
 

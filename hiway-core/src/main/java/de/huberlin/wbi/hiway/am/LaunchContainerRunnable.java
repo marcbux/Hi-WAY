@@ -75,13 +75,13 @@ public class LaunchContainerRunnable implements Runnable {
 
 		// Set the environment
 		StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$()).append(File.pathSeparatorChar).append("./*");
-		for (String c : am.getHiWayConf().getStrings(YarnConfiguration.YARN_APPLICATION_CLASSPATH, YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
+		for (String c : am.getConf().getStrings(YarnConfiguration.YARN_APPLICATION_CLASSPATH, YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
 			classPathEnv.append(':');
 			classPathEnv.append(File.pathSeparatorChar);
 			classPathEnv.append(c.trim());
 		}
 
-		if (am.getHiWayConf().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+		if (am.getConf().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
 			classPathEnv.append(':');
 			classPathEnv.append(System.getProperty("java.class.path"));
 		}
@@ -110,7 +110,7 @@ public class LaunchContainerRunnable implements Runnable {
 		vargs.add("--langLabel " + task.getLanguageLabel());
 		vargs.add("--id " + task.getId());
 		for (Data inputData : task.getInputData()) {
-			vargs.add("--input " + inputData.getLocalPath() + "," + inputData.isInput() + "," + Data.hdfsDirectoryMidfixes.get(inputData));
+			vargs.add("--input " + inputData.getLocalPath() + "," + inputData.isInput() + "," + inputData.getContainerId());
 		}
 		for (Data outputData : task.getOutputData()) {
 			vargs.add("--output " + outputData.getLocalPath());

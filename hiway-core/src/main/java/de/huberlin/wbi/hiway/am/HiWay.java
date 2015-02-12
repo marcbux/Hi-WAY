@@ -34,15 +34,11 @@ package de.huberlin.wbi.hiway.am;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.io.StringReader;
-import java.io.StringWriter;
-import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,14 +56,13 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -81,7 +76,6 @@ import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -154,7 +148,8 @@ public abstract class HiWay {
 				}
 			}
 		} catch (IOException | InterruptedException e) {
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -175,7 +170,8 @@ public abstract class HiWay {
 			result = appMaster.run();
 		} catch (Throwable t) {
 			System.err.println("Error running ApplicationMaster");
-			onError(t);
+			t.printStackTrace();
+			System.exit(-1);
 		}
 		if (result) {
 			System.out.println("Application Master completed successfully. exiting");
@@ -184,14 +180,6 @@ public abstract class HiWay {
 			System.out.println("Application Master failed. exiting");
 			System.exit(2);
 		}
-	}
-
-	public static void onError(Throwable t) {
-		Writer writer = new StringWriter();
-		PrintWriter printWriter = new PrintWriter(writer);
-		t.printStackTrace(printWriter);
-		System.err.println(writer.toString());
-		System.exit(-1);
 	}
 
 	/**
@@ -205,6 +193,7 @@ public abstract class HiWay {
 	}
 
 	private AMRMClientAsync.CallbackHandler allocListener;
+
 	// the yarn tokens to be passed to any launched containers
 	private ByteBuffer allTokens;
 	// a handle to the YARN ResourceManager
@@ -220,8 +209,7 @@ public abstract class HiWay {
 	private int appMasterRpcPort = -1;
 	// the tracking URL to which the ApplicationMaster publishes info for clients to monitor
 	private String appMasterTrackingUrl = "";
-	// the configuration of the Hadoop installation
-	private Configuration conf;
+	private HiWayConfiguration conf;
 	private int containerCores = 1;
 	// a listener for processing the responses from the NodeManagers
 	private NMCallbackHandler containerListener;
@@ -236,7 +224,7 @@ public abstract class HiWay {
 	private Map<String, Data> files = new HashMap<>();
 	// a handle to the hdfs
 	private FileSystem fs;
-	private HiWayConfiguration hiWayConf;
+	private Path hdfsApplicationDirectory;
 	// a list of threads, one for each container launch
 	private List<Thread> launchThreads = new ArrayList<>();
 	// a structure that stores various metrics during workflow execution
@@ -256,7 +244,6 @@ public abstract class HiWay {
 	// priority of the container request
 	private int requestPriority;
 	private UUID runId;
-	private String sandboxDir;
 	// the workflow scheduler, as defined at workflow launch time
 	private Scheduler scheduler;
 	private HiWayConfiguration.HIWAY_SCHEDULER_OPTS schedulerName;
@@ -264,20 +251,18 @@ public abstract class HiWay {
 	private Map<String, String> shellEnv = new HashMap<>();
 	private BufferedWriter statLog;
 	private volatile boolean success;
-	private String summaryFile;
+	private Path summaryPath;
 	private Data workflowFile;
-	// the workflow to be executed along with its format and path in the filesystem
-	private String workflowPath;
+
+	private Path workflowPath;
 
 	public HiWay() {
-		conf = new YarnConfiguration();
-		conf.addResource("core-site.xml");
-		hiWayConf = new HiWayConfiguration();
+		conf = new HiWayConfiguration();
 		try {
-			statLog = new BufferedWriter(new FileWriter(hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT)));
 			fs = FileSystem.get(conf);
 		} catch (IOException e) {
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		runId = UUID.randomUUID();
 	}
@@ -285,12 +270,12 @@ public abstract class HiWay {
 	public void evaluateReport(TaskInstance task, ContainerId containerId) {
 		try {
 
-			Data reportFile = new Data(Invocation.REPORT_FILENAME);
-			reportFile.stageIn(fs, containerId.toString());
-			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
-			stdoutFile.stageIn(fs, containerId.toString());
-			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
-			stderrFile.stageIn(fs, containerId.toString());
+			Data reportFile = new Data(Invocation.REPORT_FILENAME, containerId.toString(), fs);
+			reportFile.stageIn();
+			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME, containerId.toString(), fs);
+			stdoutFile.stageIn();
+			Data stderrFile = new Data(Invocation.STDERR_FILENAME, containerId.toString(), fs);
+			stderrFile.stageIn();
 
 			// (a) evaluate report
 			Set<JsonReportEntry> report = task.getReport();
@@ -332,7 +317,8 @@ public abstract class HiWay {
 
 		} catch (Exception e) {
 			System.out.println("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -349,8 +335,9 @@ public abstract class HiWay {
 			try {
 				launchThread.join(10000);
 			} catch (InterruptedException e) {
-				System.out.println("Exception thrown in thread join: " + e.getMessage());
-				onError(e);
+				System.err.println("Exception thrown in thread join: " + e.getMessage());
+				e.printStackTrace();
+				System.exit(-1);
 			}
 		}
 
@@ -383,17 +370,16 @@ public abstract class HiWay {
 
 		try {
 			statLog.close();
-			federatedReport.stageOut(fs, "");
-			if (summaryFile != null) {
-				String stdout = fs.getHomeDirectory().toString() + "/" + sandboxDir + "/" + appId + "/AppMaster.stdout";
-				String stderr = fs.getHomeDirectory().toString() + "/" + sandboxDir + "/" + appId + "/AppMaster.stderr";
-				String statlog = fs.getHomeDirectory().toString() + "/" + sandboxDir + "/" + appId + "/"
-						+ hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT);
+			federatedReport.stageOut();
+			if (summaryPath != null) {
+				String stdout = hdfsApplicationDirectory + "/AppMaster.stdout";
+				String stderr = hdfsApplicationDirectory + "/AppMaster.stderr";
+				String statlog = hdfsApplicationDirectory + "/" + appId + ".log";
 
-				try (BufferedWriter writer = new BufferedWriter(new FileWriter(summaryFile))) {
+				try (BufferedWriter writer = new BufferedWriter(new FileWriter(summaryPath.toString()))) {
 					Collection<String> output = new ArrayList<>();
 					for (Data outputFile : getOutputFiles()) {
-						output.add(fs.getHomeDirectory().toString() + "/" + outputFile.getHdfsPath(Data.hdfsDirectoryMidfixes.get(outputFile)));
+						output.add(outputFile.getHdfsPath().toString());
 					}
 					JSONObject obj = new JSONObject();
 					try {
@@ -402,24 +388,27 @@ public abstract class HiWay {
 						obj.put("stderr", stderr);
 						obj.put("statlog", statlog);
 					} catch (JSONException e) {
-						onError(e);
+						e.printStackTrace();
+						System.exit(-1);
 					}
 					writer.write(obj.toString());
 				}
-				new Data("AppMaster.stdout").stageOut(fs, "");
-				new Data("AppMaster.stderr").stageOut(fs, "");
-				new Data(summaryFile).stageOut(fs, "");
+				new Data("AppMaster.stdout", fs).stageOut();
+				new Data("AppMaster.stderr", fs).stageOut();
+				new Data(summaryPath, fs).stageOut();
 			}
 		} catch (IOException e) {
-			System.out.println("Error when attempting to stage out federated output log.");
-			onError(e);
+			System.err.println("Error when attempting to stage out federated output log.");
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		try {
 			amRMClient.unregisterApplicationMaster(appStatus, appMessage, null);
 		} catch (YarnException | IOException e) {
 			System.err.println("Failed to unregister application");
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		amRMClient.stop();
@@ -438,6 +427,10 @@ public abstract class HiWay {
 		return appId;
 	}
 
+	public HiWayConfiguration getConf() {
+		return conf;
+	}
+
 	public NMCallbackHandler getContainerListener() {
 		return containerListener;
 	}
@@ -452,10 +445,6 @@ public abstract class HiWay {
 
 	public FileSystem getFs() {
 		return fs;
-	}
-
-	public HiWayConfiguration getHiWayConf() {
-		return hiWayConf;
 	}
 
 	public List<Thread> getLaunchThreads() {
@@ -551,6 +540,12 @@ public abstract class HiWay {
 		}
 
 		appId = cliParser.getOptionValue("appid");
+		try {
+			statLog = new BufferedWriter(new FileWriter(appId + ".log"));
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
 
 		if (cliParser.hasOption("help")) {
 			printUsage(opts);
@@ -562,11 +557,16 @@ public abstract class HiWay {
 		}
 
 		if (cliParser.hasOption("summary")) {
-			summaryFile = cliParser.getOptionValue("summary");
+			summaryPath = new Path(cliParser.getOptionValue("summary"));
 		}
 
-		sandboxDir = hiWayConf.get(HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY, HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT);
-		Data.setHdfsDirectoryPrefix(sandboxDir + "/" + appId);
+		String hdfsBaseDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE, HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE_DEFAULT);
+		String hdfsSandboxDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE, HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE_DEFAULT);
+		Path hdfsBaseDirectory = new Path(new Path(fs.getUri()), hdfsBaseDirectoryName);
+		Data.setHdfsBaseDirectory(hdfsBaseDirectory);
+		Path hdfsSandboxDirectory = new Path(hdfsBaseDirectory, hdfsSandboxDirectoryName);
+		hdfsApplicationDirectory = new Path(hdfsSandboxDirectory, appId);
+		Data.setHdfsApplicationDirectory(hdfsApplicationDirectory);
 
 		Map<String, String> envs = System.getenv();
 
@@ -598,7 +598,7 @@ public abstract class HiWay {
 		System.out.println("Application master for app" + ", appId=" + appAttemptID.getApplicationId().getId() + ", clustertimestamp="
 				+ appAttemptID.getApplicationId().getClusterTimestamp() + ", attemptId=" + appAttemptID.getAttemptId());
 
-		String shellEnvs[] = hiWayConf.getStrings(HiWayConfiguration.HIWAY_WORKER_SHELL_ENV, HiWayConfiguration.HIWAY_WORKER_SHELL_ENV_DEFAULT);
+		String shellEnvs[] = conf.getStrings(HiWayConfiguration.HIWAY_WORKER_SHELL_ENV, HiWayConfiguration.HIWAY_WORKER_SHELL_ENV_DEFAULT);
 		for (String env : shellEnvs) {
 			env = env.trim();
 			int index = env.indexOf('=');
@@ -618,17 +618,17 @@ public abstract class HiWay {
 			throw new IllegalArgumentException("No workflow file specified to be executed by application master");
 		}
 
-		workflowPath = cliParser.getOptionValue("workflow");
-		workflowFile = new Data(workflowPath);
-		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(hiWayConf.get(HiWayConfiguration.HIWAY_SCHEDULER,
+		workflowPath = new Path(cliParser.getOptionValue("workflow"));
+		workflowFile = new Data(workflowPath, fs);
+		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(conf.get(HiWayConfiguration.HIWAY_SCHEDULER,
 				HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
 
-		containerMemory = hiWayConf.getInt(HiWayConfiguration.HIWAY_WORKER_MEMORY, HiWayConfiguration.HIWAY_WORKER_MEMORY_DEFAULT);
-		containerCores = hiWayConf.getInt(HiWayConfiguration.HIWAY_WORKER_VCORES, HiWayConfiguration.HIWAY_WORKER_VCORES_DEFAULT);
-		requestPriority = hiWayConf.getInt(HiWayConfiguration.HIWAY_WORKER_PRIORITY, HiWayConfiguration.HIWAY_WORKER_PRIORITY_DEFAULT);
+		containerMemory = conf.getInt(HiWayConfiguration.HIWAY_WORKER_MEMORY, HiWayConfiguration.HIWAY_WORKER_MEMORY_DEFAULT);
+		containerCores = conf.getInt(HiWayConfiguration.HIWAY_WORKER_VCORES, HiWayConfiguration.HIWAY_WORKER_VCORES_DEFAULT);
+		requestPriority = conf.getInt(HiWayConfiguration.HIWAY_WORKER_PRIORITY, HiWayConfiguration.HIWAY_WORKER_PRIORITY_DEFAULT);
 		return true;
 	}
-
+	
 	public boolean isDetermineFileSizes() {
 		return determineFileSizes;
 	}
@@ -668,8 +668,8 @@ public abstract class HiWay {
 			nmClientAsync.init(conf);
 			nmClientAsync.start();
 
-			Data workflowData = new Data(workflowPath);
-			workflowData.stageIn(fs, "");
+			Data workflowData = new Data(workflowPath, fs);
+			workflowData.stageIn();
 
 			// Register self with ResourceManager. This will start heartbeating to the RM.
 			appMasterHostname = NetUtils.getHostname();
@@ -678,14 +678,14 @@ public abstract class HiWay {
 			switch (schedulerName) {
 			case staticRoundRobin:
 			case heft:
-				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new RoundRobin(getWorkflowName(), fs, hiWayConf)
-						: new HEFT(getWorkflowName(), fs, hiWayConf);
+				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new RoundRobin(getWorkflowName(), fs, conf)
+						: new HEFT(getWorkflowName(), fs, conf);
 				break;
 			case greedyQueue:
-				scheduler = new GreedyQueue(getWorkflowName(), hiWayConf, fs);
+				scheduler = new GreedyQueue(getWorkflowName(), conf, fs);
 				break;
 			default:
-				C3PO c3po = new C3PO(getWorkflowName(), fs, hiWayConf);
+				C3PO c3po = new C3PO(getWorkflowName(), fs, conf);
 				switch (schedulerName) {
 				case conservative:
 					c3po.setConservatismWeight(12d);
@@ -724,7 +724,7 @@ public abstract class HiWay {
 			writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
 			parseWorkflow();
 			scheduler.updateRuntimeEstimates(getRunId().toString());
-			federatedReport = new Data(hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT));
+			federatedReport = new Data(appId + ".log", fs);
 
 			// Dump out information about cluster capability as seen by the resource manager
 			int maxMem = response.getMaximumResourceCapability().getMemory();
@@ -752,11 +752,15 @@ public abstract class HiWay {
 					Thread.sleep(1000);
 					System.out.println("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
 							+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
-				} catch (InterruptedException ex) {
-					onError(ex);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+					System.exit(-1);
 				}
 			}
 			finish();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		return success;
 	}
@@ -798,7 +802,8 @@ public abstract class HiWay {
 			value.put("nodes", nodes);
 			value.put("priority", pri);
 		} catch (JSONException e) {
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		System.out.println("Requested container ask: " + request.toString() + " Nodes" + Arrays.toString(nodes));
@@ -817,25 +822,26 @@ public abstract class HiWay {
 					System.err.println(String.format("%02d  %s", Integer.valueOf(++i), line));
 			}
 
-			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME);
-			stdoutFile.stageIn(fs, containerId.toString());
+			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME, containerId.toString(), fs);
+			stdoutFile.stageIn();
 
 			System.err.println("[out]");
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stdoutFile.getLocalPath())))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(stdoutFile.getLocalPath().toString()))) {
 				while ((line = reader.readLine()) != null)
 					System.err.println(line);
 			}
 
-			Data stderrFile = new Data(Invocation.STDERR_FILENAME);
-			stderrFile.stageIn(fs, containerId.toString());
+			Data stderrFile = new Data(Invocation.STDERR_FILENAME, containerId.toString(), fs);
+			stderrFile.stageIn();
 
 			System.err.println("[err]");
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(stderrFile.getLocalPath())))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(stderrFile.getLocalPath().toString()))) {
 				while ((line = reader.readLine()) != null)
 					System.err.println(line);
 			}
 		} catch (IOException e) {
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		System.err.println("[end]");
@@ -848,10 +854,11 @@ public abstract class HiWay {
 					scheduler.addTaskToQueue(childTask);
 			}
 		} catch (WorkflowStructureUnknownException e) {
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		for (Data data : task.getOutputData()) {
-			Data.hdfsDirectoryMidfixes.put(data, containerId.toString());
+			data.setContainerId(containerId.toString());
 		}
 		if (scheduler.getNumberOfReadyTasks() == 0 && scheduler.getNumberOfRunningTasks() == 0) {
 			done = true;
@@ -864,7 +871,8 @@ public abstract class HiWay {
 			statLog.newLine();
 			statLog.flush();
 		} catch (IOException e) {
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		scheduler.addEntryToDB(entry);
 	}

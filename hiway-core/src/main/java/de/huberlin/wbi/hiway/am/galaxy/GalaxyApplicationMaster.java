@@ -64,7 +64,6 @@ import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.cli.ParseException;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -109,7 +108,8 @@ public class GalaxyApplicationMaster extends HiWay {
 				galaxyDataTable.addContent(content);
 			}
 		} catch (IOException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -127,10 +127,10 @@ public class GalaxyApplicationMaster extends HiWay {
 
 	public GalaxyApplicationMaster() {
 		super();
-		galaxyPath = getHiWayConf().get(HiWayConfiguration.HIWAY_GALAXY_PATH);
+		galaxyPath = getConf().get(HiWayConfiguration.HIWAY_GALAXY_PATH);
 		if (galaxyPath == null) {
 			System.err.println(HiWayConfiguration.HIWAY_GALAXY_PATH + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
-			HiWay.onError(new RuntimeException());
+			throw new RuntimeException();
 		}
 		galaxyDataTables = new HashMap<>();
 		galaxyDataTypes = new HashMap<>();
@@ -276,7 +276,8 @@ public class GalaxyApplicationMaster extends HiWay {
 					datatypes_config_file = line.split("=")[1].trim();
 			}
 		} catch (IOException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		String[] tool_config_files = tool_config_file.split(",");
 
@@ -289,7 +290,8 @@ public class GalaxyApplicationMaster extends HiWay {
 				processToolLibraries(new File(galaxyPath + "/" + config_file.trim()), tool_path, tool_dependency_dir);
 			}
 		} catch (FactoryConfigurationError e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		return true;
@@ -408,7 +410,8 @@ public class GalaxyApplicationMaster extends HiWay {
 
 			return tool;
 		} catch (SAXException | IOException | TransformerException | XPathExpressionException | ParserConfigurationException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 			return null;
 		}
 	}
@@ -417,7 +420,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	public void parseWorkflow() {
 		System.out.println("Parsing Galaxy workflow " + getWorkflowFile());
 		Map<Long, TaskInstance> tasks = new HashMap<>();
-		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath()))) {
+		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath().toString()))) {
 			StringBuilder sb = new StringBuilder();
 			String line;
 			while ((line = reader.readLine()) != null) {
@@ -438,7 +441,7 @@ public class GalaxyApplicationMaster extends HiWay {
 					for (int j = 0; j < inputs.length(); j++) {
 						JSONObject input = inputs.getJSONObject(j);
 						String name = input.getString("name");
-						GalaxyData data = new GalaxyData(name);
+						GalaxyData data = new GalaxyData(name, getFs());
 
 						if (name.contains(".")) {
 							String extension = name.substring(name.indexOf(".") + 1);
@@ -463,95 +466,95 @@ public class GalaxyApplicationMaster extends HiWay {
 					GalaxyTool tool = galaxyTools.get(toolId).get(toolVersion);
 					if (tool == null) {
 						System.err.println("Tool " + toolId + "/" + toolVersion + " could not be located in local Galaxy installation.");
-						HiWay.onError(new RuntimeException());
-					} else {
-						GalaxyTaskInstance task = new GalaxyTaskInstance(id, getRunId(), tool.getId(), tool, galaxyPath);
-						tasks.put(id, task);
-
-						// (ii) determine the and incorporate post job actions apecified in the workflow (e.g., renaming the task's output data)
-						Map<String, String> renameOutputs = new HashMap<>();
-						Set<String> hideOutputs = new HashSet<>();
-						if (step.has("post_job_actions")) {
-							JSONObject post_job_actions = step.getJSONObject("post_job_actions");
-							for (Iterator<?> it = post_job_actions.keys(); it.hasNext();) {
-								JSONObject post_job_action = post_job_actions.getJSONObject((String) it.next());
-								String action_type = post_job_action.getString("action_type");
-								if (action_type.equals("RenameDatasetAction")) {
-									String output_name = post_job_action.getString("output_name");
-									JSONObject action_arguments = post_job_action.getJSONObject("action_arguments");
-									String newname = action_arguments.getString("newname");
-									if (newname.contains(" "))
-										newname = newname.replaceAll("\\s", "_");
-									renameOutputs.put(output_name, newname);
-								} else if (action_type.equals("HideDatasetAction")) {
-									String output_name = post_job_action.getString("output_name");
-									hideOutputs.add(output_name);
-								}
-							}
-						}
-
-						// (iii) set the tool state (i.e., the parameter settings) of the task
-						task.addToolState(step.getString("tool_state"));
-
-						// (iv) resolve the file names of input data
-						Map<String, String> inputNameToIdName = new HashMap<>();
-						JSONObject input_connections = step.getJSONObject("input_connections");
-						for (String input_name : JSONObject.getNames(input_connections)) {
-							JSONObject input_connection = input_connections.getJSONObject(input_name);
-							inputNameToIdName.put(input_name, input_connection.getString("id") + "_" + input_connection.getString("output_name"));
-						}
-
-						// (v) handle output data
-						JSONArray outputs = step.getJSONArray("outputs");
-						List<String> outputFiles = new LinkedList<>();
-						for (int j = 0; j < outputs.length(); j++) {
-							JSONObject output = outputs.getJSONObject(j);
-							String outputName = output.getString("name");
-
-							// determine the output file's data type
-							GalaxyDataType dataType = null;
-							GalaxyParamValue param = tool.getFirstMatchingParamByName(outputName);
-							String outputTypeString = param.getDataType();
-							if (galaxyDataTypes.containsKey(outputTypeString)) {
-								dataType = galaxyDataTypes.get(outputTypeString);
-							} else if (inputNameToIdName.containsKey(outputTypeString)) {
-								dataType = ((GalaxyData) getFiles().get(inputNameToIdName.get(outputTypeString))).getDataType();
-							} else if (outputTypeString.equals("input")) {
-								dataType = ((GalaxyData) getFiles().get(inputNameToIdName.values().iterator().next())).getDataType();
-							}
-
-							// determine the output file's name
-							String fileName = id + "_" + outputName;
-							if (dataType != null) {
-								String extension = dataType.getExtension();
-								if (extension != null && extension.length() > 0) {
-									fileName = fileName + "." + extension;
-								}
-							}
-							if (renameOutputs.containsKey(outputName))
-								fileName = renameOutputs.get(outputName);
-
-							// if the output file is to moved from a (temporary) working directory, append a command in the task's post script
-							if (param.hasFrom_work_dir())
-								task.addToPostScript("mv " + param.getFrom_work_dir() + " " + fileName);
-
-							// create the data object and add it to the task object and data structures
-							GalaxyData data = new GalaxyData(fileName);
-							data.setDataType(dataType);
-							String idName = id + "_" + outputName;
-							if (!hideOutputs.contains(outputName)) {
-								data.setOutput(true);
-							}
-							getFiles().put(idName, data);
-							task.addOutputData(data);
-							task.addFile(outputName, false, data);
-							outputFiles.add(fileName);
-						}
-
-						task.getReport().add(
-								new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
-										JsonReportEntry.KEY_INVOC_OUTPUT, new JSONObject().put("output", outputFiles)));
+						throw new RuntimeException();
 					}
+					GalaxyTaskInstance task = new GalaxyTaskInstance(id, getRunId(), tool.getId(), tool, galaxyPath);
+					tasks.put(id, task);
+
+					// (ii) determine the and incorporate post job actions apecified in the workflow (e.g., renaming the task's output data)
+					Map<String, String> renameOutputs = new HashMap<>();
+					Set<String> hideOutputs = new HashSet<>();
+					if (step.has("post_job_actions")) {
+						JSONObject post_job_actions = step.getJSONObject("post_job_actions");
+						for (Iterator<?> it = post_job_actions.keys(); it.hasNext();) {
+							JSONObject post_job_action = post_job_actions.getJSONObject((String) it.next());
+							String action_type = post_job_action.getString("action_type");
+							if (action_type.equals("RenameDatasetAction")) {
+								String output_name = post_job_action.getString("output_name");
+								JSONObject action_arguments = post_job_action.getJSONObject("action_arguments");
+								String newname = action_arguments.getString("newname");
+								if (newname.contains(" "))
+									newname = newname.replaceAll("\\s", "_");
+								renameOutputs.put(output_name, newname);
+							} else if (action_type.equals("HideDatasetAction")) {
+								String output_name = post_job_action.getString("output_name");
+								hideOutputs.add(output_name);
+							}
+						}
+					}
+
+					// (iii) set the tool state (i.e., the parameter settings) of the task
+					task.addToolState(step.getString("tool_state"));
+
+					// (iv) resolve the file names of input data
+					Map<String, String> inputNameToIdName = new HashMap<>();
+					JSONObject input_connections = step.getJSONObject("input_connections");
+					for (String input_name : JSONObject.getNames(input_connections)) {
+						JSONObject input_connection = input_connections.getJSONObject(input_name);
+						inputNameToIdName.put(input_name, input_connection.getString("id") + "_" + input_connection.getString("output_name"));
+					}
+
+					// (v) handle output data
+					JSONArray outputs = step.getJSONArray("outputs");
+					List<String> outputFiles = new LinkedList<>();
+					for (int j = 0; j < outputs.length(); j++) {
+						JSONObject output = outputs.getJSONObject(j);
+						String outputName = output.getString("name");
+
+						// determine the output file's data type
+						GalaxyDataType dataType = null;
+						GalaxyParamValue param = tool.getFirstMatchingParamByName(outputName);
+						String outputTypeString = param.getDataType();
+						if (galaxyDataTypes.containsKey(outputTypeString)) {
+							dataType = galaxyDataTypes.get(outputTypeString);
+						} else if (inputNameToIdName.containsKey(outputTypeString)) {
+							dataType = ((GalaxyData) getFiles().get(inputNameToIdName.get(outputTypeString))).getDataType();
+						} else if (outputTypeString.equals("input")) {
+							dataType = ((GalaxyData) getFiles().get(inputNameToIdName.values().iterator().next())).getDataType();
+						}
+
+						// determine the output file's name
+						String fileName = id + "_" + outputName;
+						if (dataType != null) {
+							String extension = dataType.getExtension();
+							if (extension != null && extension.length() > 0) {
+								fileName = fileName + "." + extension;
+							}
+						}
+						if (renameOutputs.containsKey(outputName))
+							fileName = renameOutputs.get(outputName);
+
+						// if the output file is to moved from a (temporary) working directory, append a command in the task's post script
+						if (param.hasFrom_work_dir())
+							task.addToPostScript("mv " + param.getFrom_work_dir() + " " + fileName);
+
+						// create the data object and add it to the task object and data structures
+						GalaxyData data = new GalaxyData(fileName, getFs());
+						data.setDataType(dataType);
+						String idName = id + "_" + outputName;
+						if (!hideOutputs.contains(outputName)) {
+							data.setOutput(true);
+						}
+						getFiles().put(idName, data);
+						task.addOutputData(data);
+						task.addFile(outputName, false, data);
+						outputFiles.add(fileName);
+					}
+
+					task.getReport().add(
+							new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
+									JsonReportEntry.KEY_INVOC_OUTPUT, new JSONObject().put("output", outputFiles)));
+
 				}
 			}
 
@@ -589,7 +592,8 @@ public class GalaxyApplicationMaster extends HiWay {
 
 		} catch (IOException | JSONException | WorkflowStructureUnknownException e) {
 			e.printStackTrace();
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		getScheduler().addTasks(tasks.values());
@@ -623,7 +627,8 @@ public class GalaxyApplicationMaster extends HiWay {
 			}
 
 		} catch (SAXException | IOException | ParserConfigurationException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -648,7 +653,8 @@ public class GalaxyApplicationMaster extends HiWay {
 				galaxyDataTypes.put(extension, new GalaxyDataType(splitType[0], splitType[1], extension));
 			}
 		} catch (SAXException | IOException | ParserConfigurationException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -693,7 +699,8 @@ public class GalaxyApplicationMaster extends HiWay {
 				macrosByName.put(name, macro);
 			}
 		} catch (SAXException | IOException | TransformerException | ParserConfigurationException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		return macrosByName;
 	}
@@ -752,7 +759,8 @@ public class GalaxyApplicationMaster extends HiWay {
 
 			}
 		} catch (SAXException | IOException | ParserConfigurationException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 }

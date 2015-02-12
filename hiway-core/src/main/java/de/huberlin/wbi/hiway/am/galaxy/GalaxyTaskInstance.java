@@ -50,7 +50,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.ForeignLambdaExpr;
-import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
@@ -82,7 +81,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 		inputs = new HashSet<>();
 
 		// the task instance's invocScript variable is set here for it to be passed to the Worker thread, which writes the script's content as JsonReportEntry
-		// to the stat.log
+		// to the log
 		setInvocScript("script.sh");
 
 		// As opposed to other Hi-WAY applciation masters, the Galaxy AM ha a fairly static command that can be build at task instance creation time
@@ -181,7 +180,8 @@ public class GalaxyTaskInstance extends TaskInstance {
 				}
 			}
 		} catch (JSONException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -213,7 +213,8 @@ public class GalaxyTaskInstance extends TaskInstance {
 		try {
 			this.toolState = new JSONObject(tool_state_json);
 		} catch (JSONException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -235,35 +236,37 @@ public class GalaxyTaskInstance extends TaskInstance {
 
 		// The task isntance's bash script is built by appending the pre script, the template compiled by Cheetah using the parameters set in the params Python
 		// script, and the post script
-		Data preSriptData = new Data("pre.sh");
-		Data paramScriptData = new Data("params.py");
-		Data templateData = new Data("template.tmpl");
-		Data postSriptData = new Data("post.sh");
+		Data preSriptData = new Data("pre.sh", containerId, fs);
+		Data paramScriptData = new Data("params.py", containerId, fs);
+		Data templateData = new Data("template.tmpl", containerId, fs);
+		Data postSriptData = new Data("post.sh", containerId, fs);
 
-		try (BufferedWriter preScriptWriter = new BufferedWriter(new FileWriter(preSriptData.getLocalPath()));
-				BufferedWriter paramScriptWriter = new BufferedWriter(new FileWriter(paramScriptData.getLocalPath()));
-				BufferedWriter templateWriter = new BufferedWriter(new FileWriter(templateData.getLocalPath()));
-				BufferedWriter postScriptWriter = new BufferedWriter(new FileWriter(postSriptData.getLocalPath()))) {
+		try (BufferedWriter preScriptWriter = new BufferedWriter(new FileWriter(preSriptData.getLocalPath().toString()));
+				BufferedWriter paramScriptWriter = new BufferedWriter(new FileWriter(paramScriptData.getLocalPath().toString()));
+				BufferedWriter templateWriter = new BufferedWriter(new FileWriter(templateData.getLocalPath().toString()));
+				BufferedWriter postScriptWriter = new BufferedWriter(new FileWriter(postSriptData.getLocalPath().toString()))) {
 			preScriptWriter.write(galaxyTool.getEnv());
 			paramScriptWriter.write(paramScript.toString());
 			templateWriter.write(galaxyTool.getTemplate());
 			postScriptWriter.write(getPostScript());
 		} catch (IOException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		try {
-			preSriptData.stageOut(fs, containerId);
-			paramScriptData.stageOut(fs, containerId);
-			templateData.stageOut(fs, containerId);
-			postSriptData.stageOut(fs, containerId);
+			preSriptData.stageOut();
+			paramScriptData.stageOut();
+			templateData.stageOut();
+			postSriptData.stageOut();
 
-			preSriptData.addToLocalResourceMap(localResources, fs, containerId);
-			paramScriptData.addToLocalResourceMap(localResources, fs, containerId);
-			templateData.addToLocalResourceMap(localResources, fs, containerId);
-			postSriptData.addToLocalResourceMap(localResources, fs, containerId);
+			preSriptData.addToLocalResourceMap(localResources);
+			paramScriptData.addToLocalResourceMap(localResources);
+			templateData.addToLocalResourceMap(localResources);
+			postSriptData.addToLocalResourceMap(localResources);
 		} catch (IOException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		return localResources;

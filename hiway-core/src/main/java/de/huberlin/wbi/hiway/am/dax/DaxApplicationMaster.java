@@ -75,7 +75,7 @@ public class DaxApplicationMaster extends HiWay {
 
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-			Document doc = builder.parse(new File(getWorkflowFile().getLocalPath()));
+			Document doc = builder.parse(new File(getWorkflowFile().getLocalPath().toString()));
 			NodeList jobNds = doc.getElementsByTagName("job");
 
 			for (int i = 0; i < jobNds.getLength(); i++) {
@@ -132,7 +132,7 @@ public class DaxApplicationMaster extends HiWay {
 					switch (link) {
 					case "input":
 						if (!getFiles().containsKey(fileName)) {
-							Data data = new Data(fileName);
+							Data data = new Data(fileName, getFs());
 							data.setInput(true);
 							getFiles().put(fileName, data);
 						}
@@ -141,7 +141,7 @@ public class DaxApplicationMaster extends HiWay {
 						break;
 					case "output":
 						if (!getFiles().containsKey(fileName))
-							getFiles().put(fileName, new Data(fileName));
+							getFiles().put(fileName, new Data(fileName, getFs()));
 						data = getFiles().get(fileName);
 						task.addOutputData(data, size);
 						data.setInput(false);
@@ -189,7 +189,8 @@ public class DaxApplicationMaster extends HiWay {
 			}
 
 		} catch (WorkflowStructureUnknownException | IOException | JSONException | ParserConfigurationException | SAXException e) {
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		getScheduler().addTasks(tasks.values());

@@ -32,6 +32,9 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.am.galaxy;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
 import de.huberlin.wbi.hiway.common.Data;
 
 /**
@@ -43,8 +46,12 @@ import de.huberlin.wbi.hiway.common.Data;
 public class GalaxyData extends Data {
 	private GalaxyDataType dataType;
 
-	public GalaxyData(String path) {
-		super(path);
+	public GalaxyData(Path localPath, FileSystem fs) {
+		super(localPath, fs);
+	}
+
+	public GalaxyData(String localPathString, FileSystem fs) {
+		super(localPathString, fs);
 	}
 
 	public GalaxyDataType getDataType() {

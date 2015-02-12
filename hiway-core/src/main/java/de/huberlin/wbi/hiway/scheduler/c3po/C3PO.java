@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
 import de.huberlin.hiwaydb.useDB.InvocStat;
-import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.Estimate;
@@ -291,13 +290,14 @@ public class C3PO extends Scheduler {
 				TaskInstance task = queue.peek();
 				try {
 					/* in case of total data being zero (prevent division by zero if a container has no input data for ready tasks whatsoever) */
-					dataLocalityStatistic.localData = task.countAvailableLocalData(fs, container) + 1;
+					dataLocalityStatistic.localData = task.countAvailableLocalData(container) + 1;
 					/* in case of total data being zero (prevent division by zero) */
-					dataLocalityStatistic.totalData = task.countAvailableTotalData(fs) + 1;
+					dataLocalityStatistic.totalData = task.countAvailableTotalData() + 1;
 					dataLocalityStatistic.weight = ((double) (dataLocalityStatistic.localData)) / ((double) dataLocalityStatistic.totalData);
 				} catch (IOException e) {
-					System.out.println("Error during hdfs block location determination.");
-					HiWay.onError(e);
+					System.err.println("Error during hdfs block location determination.");
+					e.printStackTrace();
+					System.exit(-1);
 				}
 			}
 		}

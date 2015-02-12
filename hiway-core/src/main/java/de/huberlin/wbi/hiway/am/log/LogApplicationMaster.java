@@ -59,7 +59,7 @@ public class LogApplicationMaster extends HiWay {
 		Map<Long, TaskInstance> tasks = new HashMap<>();
 		Map<Data, TaskInstance> taskProcucingThisFile = new HashMap<>();
 
-		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath()))) {
+		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath().toString()))) {
 			String line;
 			while ((line = reader.readLine()) != null) {
 				try {
@@ -86,7 +86,7 @@ public class LogApplicationMaster extends HiWay {
 					case JsonReportEntry.KEY_FILE_SIZE_STAGEIN:
 						String inputName = entry.getFile();
 						if (!getFiles().containsKey(inputName)) {
-							Data data = new Data(inputName);
+							Data data = new Data(inputName, getFs());
 							data.setInput(true);
 							getFiles().put(inputName, data);
 						}
@@ -96,7 +96,7 @@ public class LogApplicationMaster extends HiWay {
 					case JsonReportEntry.KEY_FILE_SIZE_STAGEOUT:
 						String outputName = entry.getFile();
 						if (!getFiles().containsKey(outputName)) {
-							data = new Data(outputName);
+							data = new Data(outputName, getFs());
 							getFiles().put(outputName, data);
 						}
 						data = getFiles().get(outputName);
@@ -116,11 +116,13 @@ public class LogApplicationMaster extends HiWay {
 					default:
 					}
 				} catch (JSONException e) {
-					onError(e);
+					e.printStackTrace();
+					System.exit(-1);
 				}
 			}
 		} catch (IOException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		for (TaskInstance task : tasks.values()) {
@@ -132,7 +134,8 @@ public class LogApplicationMaster extends HiWay {
 					task.addParentTask(parentTask);
 					parentTask.addChildTask(task);
 				} catch (WorkflowStructureUnknownException e) {
-					onError(e);
+					e.printStackTrace();
+					System.exit(-1);
 				}
 			}
 		}

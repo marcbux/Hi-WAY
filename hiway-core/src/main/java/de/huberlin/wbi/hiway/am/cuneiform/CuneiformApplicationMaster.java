@@ -34,7 +34,6 @@ package de.huberlin.wbi.hiway.am.cuneiform;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.UUID;
@@ -89,17 +88,14 @@ public class CuneiformApplicationMaster extends HiWay {
 
 		StringBuffer buf = new StringBuffer();
 
-		try {
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(getWorkflowFile().getLocalPath())))) {
-				String line;
-				while ((line = reader.readLine()) != null) {
-					buf.append(line).append('\n');
-				}
+		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath().toString()))) {
+			String line;
+			while ((line = reader.readLine()) != null) {
+				buf.append(line).append('\n');
 			}
-		} catch (FileNotFoundException e) {
-			onError(e);
 		} catch (IOException e) {
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		repl.interpret(buf.toString());
 	}
@@ -124,11 +120,12 @@ public class CuneiformApplicationMaster extends HiWay {
 			}
 			String stdErr = buf.toString();
 			Invocation invocation = ((CuneiformTaskInstance) task).getInvocation();
-			if (!task.retry(getHiWayConf().getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
+			if (!task.retry(getConf().getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
 				ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, task.getCommand(), stdOut, stdErr));
 			}
 		} catch (IOException e) {
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -143,19 +140,19 @@ public class CuneiformApplicationMaster extends HiWay {
 			// set output files
 			for (String outputName : invocation.getStageOutList()) {
 				if (!getFiles().containsKey(outputName)) {
-					Data output = new Data(outputName);
+					Data output = new Data(outputName, getFs());
 					getFiles().put(outputName, output);
 				}
 				Data output = getFiles().get(outputName);
-				Data.hdfsDirectoryMidfixes.put(output, containerId.toString());
+				output.setContainerId(containerId.toString());
 
 				task.addOutputData(output);
-				output.setInput(false);
 			}
 
 		} catch (JSONException | NotDerivableException e) {
 			System.out.println("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
-			onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 

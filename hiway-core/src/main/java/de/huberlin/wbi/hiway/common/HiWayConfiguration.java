@@ -33,8 +33,9 @@
 package de.huberlin.wbi.hiway.common;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
-public class HiWayConfiguration extends Configuration {
+public class HiWayConfiguration extends YarnConfiguration {
 
 	public static enum HIWAY_DB_TYPE_OPTS {
 		local, NoSQL, SQL
@@ -50,14 +51,16 @@ public class HiWayConfiguration extends Configuration {
 
 	public static final String HIWAY_AM_APPLICATION_TYPE = "hiway.am.application.type";
 	public static final String HIWAY_AM_APPLICATION_TYPE_DEFAULT = "Hi-WAY";
+	public static final String HIWAY_AM_DIRECTORY_BASE = "hiway.am.directory.base";
+	public static final String HIWAY_AM_DIRECTORY_BASE_DEFAULT = "/";
+	public static final String HIWAY_AM_DIRECTORY_CACHE = "hiway.am.directory.cache";
+	public static final String HIWAY_AM_DIRECTORY_CACHE_DEFAULT = "hiway";
 	public static final String HIWAY_AM_MEMORY = "hiway.am.memory";
 	public static final int HIWAY_AM_MEMORY_DEFAULT = 1024;
 	public static final String HIWAY_AM_PRIORITY = "hiway.am.priority";
 	public static final int HIWAY_AM_PRIORITY_DEFAULT = 0;
 	public static final String HIWAY_AM_QUEUE = "hiway.am.queue";
 	public static final String HIWAY_AM_QUEUE_DEFAULT = "default";
-	public static final String HIWAY_AM_SANDBOX_DIRECTORY = "hiway.am.sandbox.directory";
-	public static final String HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT = "hiway";
 	public static final String HIWAY_AM_TASK_RETRIES = "hiway.am.task.retries";
 	public static final int HIWAY_AM_TASK_RETRIES_DEFAULT = 1;
 	public static final String HIWAY_AM_VCORES = "hiway.am.vcores";
@@ -71,8 +74,6 @@ public class HiWayConfiguration extends Configuration {
 	public static final String HIWAY_DB_SQL_PASSWORD = "hiway.db.sql.password";
 	public static final String HIWAY_DB_SQL_URL = "hiway.db.sql.url";
 	public static final String HIWAY_DB_SQL_USER = "hiway.db.sql.user";
-	public static final String HIWAY_DB_STAT_LOG = "hiway.stat.log";
-	public static final String HIWAY_DB_STAT_LOG_DEFAULT = "stat.log";
 	public static final String HIWAY_DB_TYPE = "hiway.db.type";
 	public static final HIWAY_DB_TYPE_OPTS HIWAY_DB_TYPE_DEFAULT = HIWAY_DB_TYPE_OPTS.local;
 

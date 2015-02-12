@@ -46,9 +46,8 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -61,7 +60,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.NodeReport;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -76,10 +74,6 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
-//import org.json.JSONException;
-//import org.json.JSONObject;
-
-import de.huberlin.wbi.hiway.am.HiWay;
 
 /**
  * Hi-WAY Client for workflow submission to Hadoop YARN.
@@ -104,12 +98,14 @@ public class Client {
 				}
 			} catch (IllegalArgumentException e) {
 				client.printUsage();
-				HiWay.onError(e);
+				e.printStackTrace();
+				System.exit(-1);
 			}
 			result = client.run();
 		} catch (Throwable t) {
 			System.err.println("Error running Client");
-			HiWay.onError(t);
+			t.printStackTrace();
+			System.exit(-1);
 		}
 		if (result) {
 			System.out.println("Application completed successfully");
@@ -129,29 +125,24 @@ public class Client {
 	private final long clientStartTime = System.currentTimeMillis();
 	// timeout threshold for client. Kill app after time interval expires.
 	private long clientTimeout;
-	// the configuration of the Hadoop installation
-	private Configuration conf;
+	private HiWayConfiguration conf;
 	// debug flag
 	boolean debugFlag = false;
-	private Configuration hiWayConf;
+	private FileSystem fs;
 	// command line options
 	private Options opts;
-	private String sandboxDir;
 	private Data summary;
+	private Path summaryPath;
 	// the workflow format and its path in the file system
 	private Data workflow;
+	private Path workflowPath;
+
 	private HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS workflowType;
 	// a handle to the YARN ApplicationsManager (ASM)
 	private YarnClient yarnClient;
 
-	public Client() throws Exception {
-		this(new YarnConfiguration());
-		conf.addResource("core-site.xml");
-	}
-
-	public Client(Configuration conf) {
-		this.conf = conf;
-		hiWayConf = new HiWayConfiguration();
+	public Client() {
+		conf = new HiWayConfiguration();
 		yarnClient = YarnClient.createYarnClient();
 		yarnClient.init(conf);
 		opts = new Options();
@@ -191,6 +182,13 @@ public class Client {
 	 */
 	public boolean init(String[] args) throws ParseException {
 
+		try {
+			fs = FileSystem.get(conf);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+
 		CommandLine cliParser = new GnuParser().parse(opts, args);
 
 		if (args.length == 0) {
@@ -206,32 +204,32 @@ public class Client {
 			debugFlag = true;
 		}
 
-		amPriority = hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_PRIORITY, HiWayConfiguration.HIWAY_AM_PRIORITY_DEFAULT);
-		amQueue = hiWayConf.get(HiWayConfiguration.HIWAY_AM_QUEUE, HiWayConfiguration.HIWAY_AM_QUEUE_DEFAULT);
-		amMemory = hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_MEMORY, HiWayConfiguration.HIWAY_AM_MEMORY_DEFAULT);
+		amPriority = conf.getInt(HiWayConfiguration.HIWAY_AM_PRIORITY, HiWayConfiguration.HIWAY_AM_PRIORITY_DEFAULT);
+		amQueue = conf.get(HiWayConfiguration.HIWAY_AM_QUEUE, HiWayConfiguration.HIWAY_AM_QUEUE_DEFAULT);
+		amMemory = conf.getInt(HiWayConfiguration.HIWAY_AM_MEMORY, HiWayConfiguration.HIWAY_AM_MEMORY_DEFAULT);
 		if (amMemory < 0) {
 			throw new IllegalArgumentException("Invalid memory specified for application master, exiting." + " Specified memory=" + amMemory);
 		}
 
 		if (cliParser.hasOption("summary")) {
-			String summaryFile = cliParser.getOptionValue("summary");
 			try {
-				summary = new Data((new File(summaryFile)).getCanonicalPath());
+				summaryPath = new Path(new File(cliParser.getOptionValue("summary")).getCanonicalPath());
 			} catch (IOException e) {
-				HiWay.onError(e);
+				e.printStackTrace();
+				System.exit(-1);
 			}
 		}
 
-		String workflowPath = cliParser.getOptionValue("workflow");
 		try {
-			workflow = new Data((new File(workflowPath)).getCanonicalPath());
+			workflowPath = new Path(new File(cliParser.getOptionValue("workflow")).getCanonicalPath());
 		} catch (IOException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.valueOf(cliParser.getOptionValue("language",
 				HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform.toString()));
 
-		clientTimeout = hiWayConf.getInt(HiWayConfiguration.HIWAY_CLIENT_TIMEOUT, HiWayConfiguration.HIWAY_CLIENT_TIMEOUT_DEFAULT) * 1000;
+		clientTimeout = conf.getInt(HiWayConfiguration.HIWAY_CLIENT_TIMEOUT, HiWayConfiguration.HIWAY_CLIENT_TIMEOUT_DEFAULT) * 1000;
 
 		return true;
 	}
@@ -338,145 +336,145 @@ public class Client {
 
 		// set the application name
 		ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
-		appContext.setApplicationType(hiWayConf.get(HiWayConfiguration.HIWAY_AM_APPLICATION_TYPE, HiWayConfiguration.HIWAY_AM_APPLICATION_TYPE_DEFAULT));
-		appContext.setApplicationName("run " + workflow.getName() + " (type: " + workflowType.toString() + ")");
+		appContext.setApplicationType(conf.get(HiWayConfiguration.HIWAY_AM_APPLICATION_TYPE, HiWayConfiguration.HIWAY_AM_APPLICATION_TYPE_DEFAULT));
+		appContext.setApplicationName("run " + workflowPath.getName() + " (type: " + workflowType.toString() + ")");
 		ApplicationId appId = appContext.getApplicationId();
-		sandboxDir = hiWayConf.get(HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY, HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT);
-		Data.setHdfsDirectoryPrefix(sandboxDir + "/" + appId);
+		String hdfsBaseDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE, HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE_DEFAULT);
+		String hdfsSandboxDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE, HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE_DEFAULT);
+		Path hdfsBaseDirectory = new Path(new Path(fs.getUri()), hdfsBaseDirectoryName);
+		Data.setHdfsBaseDirectory(hdfsBaseDirectory);
+		Path hdfsSandboxDirectory = new Path(hdfsBaseDirectory, hdfsSandboxDirectoryName);
+		Path hdfsApplicationDirectory = new Path(hdfsSandboxDirectory, appId.toString());
+		Data.setHdfsApplicationDirectory(hdfsApplicationDirectory);
+		workflow = new Data(workflowPath, fs);
+		if (summaryPath != null)
+			summary = new Data(summaryPath, fs);
 
 		// Set up the container launch context for the application master
 		ContainerLaunchContext amContainer = Records.newRecord(ContainerLaunchContext.class);
 
-		// set local resources for the application master
-		Map<String, LocalResource> localResources = new HashMap<>();
-
 		// Copy the application master jar to the filesystem
 		System.out.println("Copy App Master jar from local filesystem and add to local environment");
-		try (FileSystem fs = FileSystem.get(conf)) {
+		workflow.stageOut();
 
-			workflow.stageOut(fs, "");
+		/* set the env variables to be setup in the env where the application master will be run */
+		System.out.println("Set the environment for the application master");
+		Map<String, String> env = new HashMap<>();
 
-			// set local resource info into app master container launch context
-			amContainer.setLocalResources(localResources);
-
-			/* set the env variables to be setup in the env where the application master will be run */
-			System.out.println("Set the environment for the application master");
-			Map<String, String> env = new HashMap<>();
-
-			StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$()).append(File.pathSeparatorChar).append("./*");
-			for (String c : conf.getStrings(YarnConfiguration.YARN_APPLICATION_CLASSPATH, YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
-				classPathEnv.append(':');
-				classPathEnv.append(File.pathSeparatorChar);
-				classPathEnv.append(c.trim());
-			}
-
-			if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
-				classPathEnv.append(':');
-				classPathEnv.append(System.getProperty("java.class.path"));
-			}
-
-			env.put("CLASSPATH", classPathEnv.toString());
-
-			amContainer.setEnvironment(env);
-
-			// Set the necessary command to execute the application master
-			Vector<CharSequence> vargs = new Vector<>(30);
-
-			// Set java executable command
-			System.out.println("Setting up app master command");
-			vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
-			// Set Xmx based on am memory size
-			vargs.add("-Xmx" + amMemory + "m");
-			// Set class name
-
-			switch (workflowType) {
-			case dax:
-				vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS);
-				break;
-			case log:
-				vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_LOG_CLASS);
-				break;
-			case galaxy:
-				vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_GALAXY_CLASS);
-				break;
-			default:
-				vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS);
-			}
-
-			vargs.add("--workflow " + workflow.getLocalPath());
-			if (summary != null) {
-				vargs.add("--summary " + summary.getLocalPath());
-			}
-			vargs.add("--appid " + appId.toString());
-
-			if (debugFlag) {
-				vargs.add("--debug");
-			}
-
-			vargs.add("1>&1 | tee AppMaster.stdout > " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout");
-			vargs.add("2>&2 | tee AppMaster.stderr > " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stderr");
-
-			// Get final command
-			StringBuilder command = new StringBuilder();
-			for (CharSequence str : vargs) {
-				command.append(str).append(" ");
-			}
-
-			System.out.println("Completed setting up app master command " + command.toString());
-			List<String> commands = new ArrayList<>();
-			commands.add(command.toString());
-			amContainer.setCommands(commands);
-
-			// Set up resource type requirements
-			Resource capability = Records.newRecord(Resource.class);
-			capability.setMemory(amMemory);
-			appContext.setResource(capability);
-
-			// Setup security tokens
-			if (UserGroupInformation.isSecurityEnabled()) {
-				Credentials credentials = new Credentials();
-				String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
-				if (tokenRenewer == null || tokenRenewer.length() == 0) {
-					throw new IOException("Can't get Master Kerberos principal for the RM to use as renewer");
-				}
-
-				// For now, only getting tokens for the default file-system.
-				final Token<?> tokens[] = fs.addDelegationTokens(tokenRenewer, credentials);
-				if (tokens != null) {
-					for (Token<?> token : tokens) {
-						System.out.println("Got dt for " + fs.getUri() + "; " + token);
-					}
-				}
-				try (DataOutputBuffer dob = new DataOutputBuffer()) {
-					credentials.writeTokenStorageToStream(dob);
-					ByteBuffer fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
-					amContainer.setTokens(fsTokens);
-				}
-			}
-
-			appContext.setAMContainerSpec(amContainer);
-
-			// Set the priority for the application master
-			Priority pri = Records.newRecord(Priority.class);
-			pri.setPriority(amPriority);
-			appContext.setPriority(pri);
-
-			// Set the queue to which this application is to be submitted in the RM
-			appContext.setQueue(amQueue);
-
-			// Submit the application to the applications manager
-			System.out.println("Submitting application to ASM");
-			yarnClient.submitApplication(appContext);
-
-			// Monitor the application
-			boolean success = monitorApplication(appId);
-
-			if (summary != null) {
-				summary.stageIn(fs, "");
-			}
-
-			return success;
+		StringBuilder classPathEnv = new StringBuilder(Environment.CLASSPATH.$()).append(File.pathSeparatorChar).append("./*");
+		for (String c : conf.getStrings(YarnConfiguration.YARN_APPLICATION_CLASSPATH, YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
+			classPathEnv.append(':');
+			classPathEnv.append(File.pathSeparatorChar);
+			classPathEnv.append(c.trim());
 		}
+
+		if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+			classPathEnv.append(':');
+			classPathEnv.append(System.getProperty("java.class.path"));
+		}
+
+		env.put("CLASSPATH", classPathEnv.toString());
+
+		amContainer.setEnvironment(env);
+
+		// Set the necessary command to execute the application master
+		Vector<CharSequence> vargs = new Vector<>(30);
+
+		// Set java executable command
+		System.out.println("Setting up app master command");
+		vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
+		// Set Xmx based on am memory size
+		vargs.add("-Xmx" + amMemory + "m");
+		// Set class name
+
+		switch (workflowType) {
+		case dax:
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS);
+			break;
+		case log:
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_LOG_CLASS);
+			break;
+		case galaxy:
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_GALAXY_CLASS);
+			break;
+		default:
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS);
+		}
+
+		vargs.add("--workflow " + workflow.getName());
+		if (summary != null) {
+			vargs.add("--summary " + summary.getName());
+		}
+		vargs.add("--appid " + appId.toString());
+
+		if (debugFlag) {
+			vargs.add("--debug");
+		}
+
+		vargs.add("> >(tee AppMaster.stdout " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout)");
+		vargs.add("2> >(tee AppMaster.stderr " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stderr >&2)");
+
+		// Get final command
+		StringBuilder command = new StringBuilder();
+		for (CharSequence str : vargs) {
+			command.append(str).append(" ");
+		}
+
+		System.out.println("Completed setting up app master command " + command.toString());
+		List<String> commands = new ArrayList<>();
+		commands.add(command.toString());
+		amContainer.setCommands(commands);
+
+		// Set up resource type requirements
+		Resource capability = Records.newRecord(Resource.class);
+		capability.setMemory(amMemory);
+		appContext.setResource(capability);
+
+		// Setup security tokens
+		if (UserGroupInformation.isSecurityEnabled()) {
+			Credentials credentials = new Credentials();
+			String tokenRenewer = conf.get(YarnConfiguration.RM_PRINCIPAL);
+			if (tokenRenewer == null || tokenRenewer.length() == 0) {
+				throw new IOException("Can't get Master Kerberos principal for the RM to use as renewer");
+			}
+
+			// For now, only getting tokens for the default file-system.
+			final Token<?> tokens[] = fs.addDelegationTokens(tokenRenewer, credentials);
+			if (tokens != null) {
+				for (Token<?> token : tokens) {
+					System.out.println("Got dt for " + fs.getUri() + "; " + token);
+				}
+			}
+			try (DataOutputBuffer dob = new DataOutputBuffer()) {
+				credentials.writeTokenStorageToStream(dob);
+				ByteBuffer fsTokens = ByteBuffer.wrap(dob.getData(), 0, dob.getLength());
+				amContainer.setTokens(fsTokens);
+			}
+		}
+
+		appContext.setAMContainerSpec(amContainer);
+
+		// Set the priority for the application master
+		Priority pri = Records.newRecord(Priority.class);
+		pri.setPriority(amPriority);
+		appContext.setPriority(pri);
+
+		// Set the queue to which this application is to be submitted in the RM
+		appContext.setQueue(amQueue);
+
+		// Submit the application to the applications manager
+		System.out.println("Submitting application to ASM");
+		yarnClient.submitApplication(appContext);
+
+		// Monitor the application
+		boolean success = monitorApplication(appId);
+
+		if (summary != null) {
+			summary.stageIn();
+		}
+
+		return success;
+
 	}
 
 }

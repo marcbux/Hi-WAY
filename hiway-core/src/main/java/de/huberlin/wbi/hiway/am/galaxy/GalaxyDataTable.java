@@ -39,8 +39,6 @@ import java.util.Set;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import de.huberlin.wbi.hiway.am.HiWay;
-
 /**
  * A Galaxy data table stores information on data registered in Galaxy, e.g. genomic indices.
  * 
@@ -90,7 +88,8 @@ public class GalaxyDataTable {
 		try {
 			outer.put("fields", inner);
 		} catch (JSONException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 		return outer;
 	}

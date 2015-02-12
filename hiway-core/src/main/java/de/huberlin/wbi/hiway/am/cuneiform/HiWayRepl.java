@@ -38,7 +38,6 @@ import de.huberlin.wbi.cuneiform.core.repl.BaseRepl;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.CompoundExpr;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketSrcActor;
-import de.huberlin.wbi.hiway.am.HiWay;
 
 //Repl - Read evaluation print loop
 public class HiWayRepl extends BaseRepl {
@@ -67,7 +66,8 @@ public class HiWayRepl extends BaseRepl {
 				}
 			}
 		} catch (NotDerivableException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 

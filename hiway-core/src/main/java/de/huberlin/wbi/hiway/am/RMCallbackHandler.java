@@ -272,7 +272,8 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 	@Override
 	public void onError(Throwable e) {
-		HiWay.onError(e);
+		e.printStackTrace();
+		System.exit(-1);
 	}
 
 	@Override

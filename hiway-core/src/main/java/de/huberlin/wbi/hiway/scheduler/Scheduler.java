@@ -60,7 +60,6 @@ import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.hiwaydb.useDB.HiwayDBNoSQL;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.LogParser;
 import de.huberlin.wbi.hiway.common.TaskInstance;
@@ -73,9 +72,9 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  */
 public abstract class Scheduler {
 
+	protected HiWayConfiguration conf;
 	protected HiwayDBI dbInterface;
 	protected final FileSystem fs;
-	protected HiWayConfiguration hiWayConf;
 	protected int maxRetries = 0;
 	protected Map<String, Long> maxTimestampPerHost;
 	protected int numberOfFinishedTasks = 0;
@@ -92,7 +91,7 @@ public abstract class Scheduler {
 	public Scheduler(String workflowName, HiWayConfiguration conf, FileSystem fs) {
 		this.workflowName = workflowName;
 
-		this.hiWayConf = conf;
+		this.conf = conf;
 		this.fs = fs;
 		unissuedNodeRequests = new LinkedList<>();
 
@@ -158,66 +157,66 @@ public abstract class Scheduler {
 	}
 
 	public void initialize() {
-		maxRetries = hiWayConf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT);
+		maxRetries = conf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT);
 
-		HiWayConfiguration.HIWAY_DB_TYPE_OPTS dbType = HiWayConfiguration.HIWAY_DB_TYPE_OPTS.valueOf(hiWayConf.get(HiWayConfiguration.HIWAY_DB_TYPE,
+		HiWayConfiguration.HIWAY_DB_TYPE_OPTS dbType = HiWayConfiguration.HIWAY_DB_TYPE_OPTS.valueOf(conf.get(HiWayConfiguration.HIWAY_DB_TYPE,
 				HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT.toString()));
 		switch (dbType) {
 		case SQL:
-			String sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			String sqlUser = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
 			if (sqlUser == null) {
 				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
-				HiWay.onError(new RuntimeException());
+				throw new RuntimeException();
 			}
-			String sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			String sqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
 			if (sqlPassword == null) {
 				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
-				HiWay.onError(new RuntimeException());
+				throw new RuntimeException();
 			}
-			String sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+			String sqlURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
 			if (sqlURL == null) {
 				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
-				HiWay.onError(new RuntimeException());
+				throw new RuntimeException();
 			}
 			dbInterface = new HiwayDB(sqlUser, sqlPassword, sqlURL);
 			break;
 		case NoSQL:
-			sqlUser = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
+			sqlUser = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
 			if (sqlUser == null) {
 				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
-				HiWay.onError(new RuntimeException());
+				throw new RuntimeException();
 			}
-			sqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
+			sqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
 			if (sqlPassword == null) {
 				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
-				HiWay.onError(new RuntimeException());
+				throw new RuntimeException();
 			}
-			sqlURL = hiWayConf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
+			sqlURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
 			if (sqlURL == null) {
 				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
-				HiWay.onError(new RuntimeException());
+				throw new RuntimeException();
 			}
-			String noSqlBucket = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
+			String noSqlBucket = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
 			if (noSqlBucket == null) {
 				System.err.println(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
-				HiWay.onError(new RuntimeException());
+				throw new RuntimeException();
 			}
-			String noSqlPassword = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
+			String noSqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
 			if (noSqlPassword == null) {
 				System.err.println(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
-				HiWay.onError(new RuntimeException());
+				throw new RuntimeException();
 			}
-			String noSqlURIs = hiWayConf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
+			String noSqlURIs = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
 			if (noSqlURIs == null) {
 				System.err.println(HiWayConfiguration.HIWAY_DB_NOSQL_URLS + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
-				HiWay.onError(new RuntimeException());
-			} else {
-				List<URI> noSqlURIList = new ArrayList<>();
-				for (String uri : noSqlURIs.split(",")) {
-					noSqlURIList.add(URI.create(uri));
-				}
-				dbInterface = new HiwayDBNoSQL(noSqlBucket, noSqlPassword, noSqlURIList, sqlUser, sqlPassword, sqlURL);
+				throw new RuntimeException();
 			}
+			List<URI> noSqlURIList = new ArrayList<>();
+			for (String uri : noSqlURIs.split(",")) {
+				noSqlURIList.add(URI.create(uri));
+			}
+			dbInterface = new HiwayDBNoSQL(noSqlBucket, noSqlPassword, noSqlURIList, sqlUser, sqlPassword, sqlURL);
+
 			break;
 		default:
 			dbInterface = new LogParser();
@@ -246,16 +245,18 @@ public abstract class Scheduler {
 	}
 
 	protected void parseLogs() {
-		Path hiwayDir = new Path(fs.getHomeDirectory(), hiWayConf.get(HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY,
-				HiWayConfiguration.HIWAY_AM_SANDBOX_DIRECTORY_DEFAULT));
+		String hdfsBaseDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE, HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE_DEFAULT);
+		String hdfsSandboxDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE, HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE_DEFAULT);
+		Path hdfsBaseDirectory = new Path(new Path(fs.getUri()), hdfsBaseDirectoryName);
+		Path hdfsSandboxDirectory = new Path(hdfsBaseDirectory, hdfsSandboxDirectoryName);
 		try {
-			for (FileStatus appDirStatus : fs.listStatus(hiwayDir)) {
+			for (FileStatus appDirStatus : fs.listStatus(hdfsSandboxDirectory)) {
 				if (appDirStatus.isDirectory()) {
 					Path appDir = appDirStatus.getPath();
 					for (FileStatus srcStatus : fs.listStatus(appDir)) {
 						Path src = srcStatus.getPath();
 						String srcName = src.getName();
-						if (srcName.equals(hiWayConf.get(HiWayConfiguration.HIWAY_DB_STAT_LOG, HiWayConfiguration.HIWAY_DB_STAT_LOG_DEFAULT))) {
+						if (srcName.endsWith(".log")) {
 							Path dest = new Path(appDir.getName());
 							System.out.println("Parsing log " + dest.toString());
 							fs.copyToLocalFile(false, src, dest);
@@ -272,7 +273,8 @@ public abstract class Scheduler {
 				}
 			}
 		} catch (IOException | JSONException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -299,7 +301,7 @@ public abstract class Scheduler {
 			addTask(task);
 		} else {
 			System.out.println("Task " + task + " has exceeded maximum number of allowed retries. Aborting workflow.");
-			HiWay.onError(new RuntimeException());
+			throw new RuntimeException();
 		}
 
 		return new ArrayList<>();

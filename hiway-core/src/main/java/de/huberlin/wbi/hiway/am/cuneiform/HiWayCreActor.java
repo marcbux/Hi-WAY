@@ -35,13 +35,14 @@ package de.huberlin.wbi.hiway.am.cuneiform;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import de.huberlin.wbi.cuneiform.core.actormodel.Message;
 import de.huberlin.wbi.cuneiform.core.cre.BaseCreActor;
 import de.huberlin.wbi.cuneiform.core.cre.TicketReadyMsg;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotBoundException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.Ticket;
-import de.huberlin.wbi.hiway.am.HiWay;
+import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketFinishedMsg;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
@@ -49,10 +50,24 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 public class HiWayCreActor extends BaseCreActor {
 
 	private CuneiformApplicationMaster am;
+	private boolean init;
 
 	public HiWayCreActor(CuneiformApplicationMaster am) {
 		super();
 		this.am = am;
+		this.init = true;
+	}
+
+	public boolean isInit() {
+		return init;
+	}
+
+	@Override
+	protected synchronized void processMsg(Message msg) {
+		super.processMsg(msg);
+		if (msg instanceof TicketFinishedMsg) {
+			this.init = false;
+		}
 	}
 
 	@Override
@@ -67,15 +82,16 @@ public class HiWayCreActor extends BaseCreActor {
 			for (String inputName : invoc.getStageInList()) {
 
 				if (!am.getFiles().containsKey(inputName)) {
-					Data data = new Data(inputName);
-					data.setInput(true);
+					Data data = new Data(inputName, am.getFs());
+					data.setInput(isInit());
 					am.getFiles().put(inputName, data);
 				}
 				Data data = am.getFiles().get(inputName);
 				task.addInputData(data);
 			}
 		} catch (NotDerivableException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		try {
@@ -83,7 +99,8 @@ public class HiWayCreActor extends BaseCreActor {
 			am.writeEntryToLog(invoc.getExecutableLogEntry());
 			am.writeEntryToLog(invoc.getScriptLogEntry());
 		} catch (NotBoundException | NotDerivableException e) {
-			HiWay.onError(e);
+			e.printStackTrace();
+			System.exit(-1);
 		}
 
 		Collection<TaskInstance> tasks = new ArrayList<>();
