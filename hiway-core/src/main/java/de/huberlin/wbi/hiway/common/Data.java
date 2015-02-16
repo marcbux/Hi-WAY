@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
@@ -216,7 +218,7 @@ public class Data implements Comparable<Data> {
 		Path hdfsPath = getHdfsPath();
 		System.out.println("Staging out: " + localPath + " -> " + hdfsPath);
 		if (hdfsDirectory.depth() > 0) {
-			fs.mkdirs(hdfsDirectory);
+			fs.mkdirs(hdfsDirectory, new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.READ_WRITE));
 		}
 		fs.copyFromLocalFile(false, true, localPath, hdfsPath);
 	}
