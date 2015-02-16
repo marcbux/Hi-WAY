@@ -99,14 +99,16 @@ public class Data implements Comparable<Data> {
 	}
 
 	public void addToLocalResourceMap(Map<String, LocalResource> localResources) throws IOException {
-		Path dest = getHdfsPath();
+		Path hdfsDirectory = getHdfsDirectory();
+		fs.mkdirs(hdfsDirectory, new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+		Path hdfsPath = getHdfsPath();
 
 		LocalResource rsrc = Records.newRecord(LocalResource.class);
 		rsrc.setType(LocalResourceType.FILE);
 		rsrc.setVisibility(LocalResourceVisibility.APPLICATION);
-		rsrc.setResource(ConverterUtils.getYarnUrlFromPath(dest));
+		rsrc.setResource(ConverterUtils.getYarnUrlFromPath(hdfsPath));
 
-		FileStatus status = fs.getFileStatus(dest);
+		FileStatus status = fs.getFileStatus(hdfsPath);
 		rsrc.setTimestamp(status.getModificationTime());
 		rsrc.setSize(status.getLen());
 
@@ -218,7 +220,7 @@ public class Data implements Comparable<Data> {
 		Path hdfsPath = getHdfsPath();
 		System.out.println("Staging out: " + localPath + " -> " + hdfsPath);
 		if (hdfsDirectory.depth() > 0) {
-			fs.mkdirs(hdfsDirectory, new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.READ_WRITE));
+			fs.mkdirs(hdfsDirectory, new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
 		}
 		fs.copyFromLocalFile(false, true, localPath, hdfsPath);
 	}
