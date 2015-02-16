@@ -206,12 +206,12 @@ public class C3PO extends Scheduler {
 	protected Map<Long, String> taskIdToName;
 	protected Map<TaskInstance, List<Container>> taskToContainers;
 
-	public C3PO(String workflowName, FileSystem fs, HiWayConfiguration conf) {
-		this(workflowName, fs, System.currentTimeMillis(), conf);
+	public C3PO(String workflowName, FileSystem hdfs, HiWayConfiguration conf) {
+		this(workflowName, hdfs, System.currentTimeMillis(), conf);
 	}
 
-	public C3PO(String workflowName, FileSystem fs, long seed, HiWayConfiguration conf) {
-		super(workflowName, conf, fs);
+	public C3PO(String workflowName, FileSystem hdfs, long seed, HiWayConfiguration conf) {
+		super(workflowName, conf, hdfs);
 		readyTasks = new HashMap<>();
 		runningTasks = new HashMap<>();
 		taskIdToName = new HashMap<>();

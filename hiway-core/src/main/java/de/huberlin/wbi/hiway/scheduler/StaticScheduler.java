@@ -58,8 +58,8 @@ public abstract class StaticScheduler extends Scheduler {
 	// the static schedule
 	protected Map<TaskInstance, String> schedule;
 
-	public StaticScheduler(String workflowName, FileSystem fs, HiWayConfiguration conf) {
-		super(workflowName, conf, fs);
+	public StaticScheduler(String workflowName, FileSystem hdfs, HiWayConfiguration conf) {
+		super(workflowName, conf, hdfs);
 		schedule = new HashMap<>();
 		queues = new HashMap<>();
 		relaxLocality = false;

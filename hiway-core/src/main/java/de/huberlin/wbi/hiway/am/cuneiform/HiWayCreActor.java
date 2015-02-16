@@ -82,7 +82,7 @@ public class HiWayCreActor extends BaseCreActor {
 			for (String inputName : invoc.getStageInList()) {
 
 				if (!am.getFiles().containsKey(inputName)) {
-					Data data = new Data(inputName, am.getFs());
+					Data data = new Data(inputName);
 					data.setInput(isInit());
 					am.getFiles().put(inputName, data);
 				}

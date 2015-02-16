@@ -79,7 +79,7 @@ public class Worker {
 	private String containerId;
 	private boolean determineFileSizes = false;
 	// private Path dir;
-	private FileSystem fs;
+	private FileSystem hdfs;
 	private long id;
 	private Set<Data> inputFiles;
 	private String invocScript = "";
@@ -119,7 +119,7 @@ public class Worker {
 	public void init(String[] args) throws ParseException {
 		conf = new HiWayConfiguration();
 		try {
-			fs = FileSystem.get(conf);
+			hdfs = FileSystem.get(conf);
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(-1);
@@ -143,11 +143,12 @@ public class Worker {
 		appId = cliParser.getOptionValue("appId");
 		String hdfsBaseDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE, HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE_DEFAULT);
 		String hdfsSandboxDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE, HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE_DEFAULT);
-		Path hdfsBaseDirectory = new Path(new Path(fs.getUri()), hdfsBaseDirectoryName);
+		Path hdfsBaseDirectory = new Path(new Path(hdfs.getUri()), hdfsBaseDirectoryName);
 		Data.setHdfsBaseDirectory(hdfsBaseDirectory);
 		Path hdfsSandboxDirectory = new Path(hdfsBaseDirectory, hdfsSandboxDirectoryName);
 		Path hdfsApplicationDirectory = new Path(hdfsSandboxDirectory, appId);
 		Data.setHdfsApplicationDirectory(hdfsApplicationDirectory);
+		Data.setHdfs(hdfs);
 
 		workflowId = UUID.fromString(cliParser.getOptionValue("workflowId"));
 		taskId = Long.parseLong(cliParser.getOptionValue("taskId"));
@@ -158,7 +159,7 @@ public class Worker {
 			for (String inputList : cliParser.getOptionValues("input")) {
 				String[] inputElements = inputList.split(",");
 				String otherContainerId = inputElements[2].equals("null") ? null : inputElements[2];
-				Data input = new Data(inputElements[0], otherContainerId, fs);
+				Data input = new Data(inputElements[0], otherContainerId);
 				input.setInput(Boolean.parseBoolean(inputElements[1]));
 				inputFiles.add(input);
 			}
@@ -168,7 +169,7 @@ public class Worker {
 		}
 		if (cliParser.hasOption("output")) {
 			for (String output : cliParser.getOptionValues("output")) {
-				outputFiles.add(new Data(output, containerId, fs));
+				outputFiles.add(new Data(output, containerId));
 			}
 		}
 		if (cliParser.hasOption("invocScript")) {
@@ -207,8 +208,8 @@ public class Worker {
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, JsonReportEntry.KEY_INVOC_TIME, obj));
 
 		tic = System.currentTimeMillis();
-		new Data(Invocation.STDOUT_FILENAME, containerId, fs).stageOut();
-		new Data(Invocation.STDERR_FILENAME, containerId, fs).stageOut();
+		new Data(Invocation.STDOUT_FILENAME, containerId).stageOut();
+		new Data(Invocation.STDERR_FILENAME, containerId).stageOut();
 		if (exitValue != 0) {
 			System.exit(exitValue);
 		}
@@ -218,7 +219,7 @@ public class Worker {
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT, obj));
 
-		new Data(Invocation.REPORT_FILENAME, containerId, fs).stageOut();
+		new Data(Invocation.REPORT_FILENAME, containerId).stageOut();
 	}
 
 	public void stageIn() throws IOException, JSONException {
@@ -244,7 +245,7 @@ public class Worker {
 			while ((line = logReader.readLine()) != null) {
 				JsonReportEntry entry = new JsonReportEntry(line);
 				if (entry.getKey().equals(JsonReportEntry.KEY_FILE_SIZE_STAGEOUT)) {
-					outputFiles.add(new Data(entry.getFile(), containerId, fs));
+					outputFiles.add(new Data(entry.getFile(), containerId));
 				}
 			}
 		} catch (JSONException e) {

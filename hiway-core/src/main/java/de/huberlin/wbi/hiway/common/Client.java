@@ -128,7 +128,7 @@ public class Client {
 	private HiWayConfiguration conf;
 	// debug flag
 	boolean debugFlag = false;
-	private FileSystem fs;
+	private FileSystem hdfs;
 	// command line options
 	private Options opts;
 	private Data summary;
@@ -183,7 +183,7 @@ public class Client {
 	public boolean init(String[] args) throws ParseException {
 
 		try {
-			fs = FileSystem.get(conf);
+			hdfs = FileSystem.get(conf);
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(-1);
@@ -341,20 +341,20 @@ public class Client {
 		ApplicationId appId = appContext.getApplicationId();
 		String hdfsBaseDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE, HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE_DEFAULT);
 		String hdfsSandboxDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE, HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE_DEFAULT);
-		Path hdfsBaseDirectory = new Path(new Path(fs.getUri()), hdfsBaseDirectoryName);
+		Path hdfsBaseDirectory = new Path(new Path(hdfs.getUri()), hdfsBaseDirectoryName);
 		Data.setHdfsBaseDirectory(hdfsBaseDirectory);
 		Path hdfsSandboxDirectory = new Path(hdfsBaseDirectory, hdfsSandboxDirectoryName);
 		Path hdfsApplicationDirectory = new Path(hdfsSandboxDirectory, appId.toString());
 		Data.setHdfsApplicationDirectory(hdfsApplicationDirectory);
-		workflow = new Data(workflowPath, fs);
+		Data.setHdfs(hdfs);
+		workflow = new Data(workflowPath);
 		if (summaryPath != null)
-			summary = new Data(summaryPath, fs);
+			summary = new Data(summaryPath);
 
 		// Set up the container launch context for the application master
 		ContainerLaunchContext amContainer = Records.newRecord(ContainerLaunchContext.class);
 
 		// Copy the application master jar to the filesystem
-		System.out.println("Copy App Master jar from local filesystem and add to local environment");
 		workflow.stageOut();
 
 		/* set the env variables to be setup in the env where the application master will be run */
@@ -439,10 +439,10 @@ public class Client {
 			}
 
 			// For now, only getting tokens for the default file-system.
-			final Token<?> tokens[] = fs.addDelegationTokens(tokenRenewer, credentials);
+			final Token<?> tokens[] = hdfs.addDelegationTokens(tokenRenewer, credentials);
 			if (tokens != null) {
 				for (Token<?> token : tokens) {
-					System.out.println("Got dt for " + fs.getUri() + "; " + token);
+					System.out.println("Got dt for " + hdfs.getUri() + "; " + token);
 				}
 			}
 			try (DataOutputBuffer dob = new DataOutputBuffer()) {

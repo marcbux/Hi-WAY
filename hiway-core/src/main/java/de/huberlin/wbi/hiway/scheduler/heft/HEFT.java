@@ -68,8 +68,8 @@ public class HEFT extends StaticScheduler {
 	private Map<String, TreeSet<Double>> freeTimeSlotStartsPerNode;
 	private Map<TaskInstance, Double> readyTimePerTask;
 
-	public HEFT(String workflowName, FileSystem fs, HiWayConfiguration conf) {
-		super(workflowName, fs, conf);
+	public HEFT(String workflowName, FileSystem hdfs, HiWayConfiguration conf) {
+		super(workflowName, hdfs, conf);
 		readyTimePerTask = new HashMap<>();
 		freeTimeSlotStartsPerNode = new HashMap<>();
 		freeTimeSlotLengthsPerNode = new HashMap<>();

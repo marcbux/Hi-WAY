@@ -86,7 +86,7 @@ public class LogApplicationMaster extends HiWay {
 					case JsonReportEntry.KEY_FILE_SIZE_STAGEIN:
 						String inputName = entry.getFile();
 						if (!getFiles().containsKey(inputName)) {
-							Data data = new Data(inputName, getFs());
+							Data data = new Data(inputName);
 							data.setInput(true);
 							getFiles().put(inputName, data);
 						}
@@ -96,7 +96,7 @@ public class LogApplicationMaster extends HiWay {
 					case JsonReportEntry.KEY_FILE_SIZE_STAGEOUT:
 						String outputName = entry.getFile();
 						if (!getFiles().containsKey(outputName)) {
-							data = new Data(outputName, getFs());
+							data = new Data(outputName);
 							getFiles().put(outputName, data);
 						}
 						data = getFiles().get(outputName);

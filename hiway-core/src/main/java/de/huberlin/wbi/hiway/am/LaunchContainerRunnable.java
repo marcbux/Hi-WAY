@@ -91,7 +91,7 @@ public class LaunchContainerRunnable implements Runnable {
 		// Set the environment
 		ctx.setEnvironment(am.getShellEnv());
 
-		ctx.setLocalResources(task.buildScriptsAndSetResources(am.getFs(), container));
+		ctx.setLocalResources(task.buildScriptsAndSetResources(container));
 
 		// Set the necessary command to execute on the allocated container
 		Vector<CharSequence> vargs = new Vector<>(5);

@@ -42,7 +42,6 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.json.JSONArray;
@@ -230,16 +229,16 @@ public class GalaxyTaskInstance extends TaskInstance {
 	}
 
 	@Override
-	public Map<String, LocalResource> buildScriptsAndSetResources(FileSystem fs, Container container) {
-		Map<String, LocalResource> localResources = super.buildScriptsAndSetResources(fs, container);
+	public Map<String, LocalResource> buildScriptsAndSetResources(Container container) {
+		Map<String, LocalResource> localResources = super.buildScriptsAndSetResources(container);
 		String containerId = container.getId().toString();
 
 		// The task isntance's bash script is built by appending the pre script, the template compiled by Cheetah using the parameters set in the params Python
 		// script, and the post script
-		Data preSriptData = new Data("pre.sh", containerId, fs);
-		Data paramScriptData = new Data("params.py", containerId, fs);
-		Data templateData = new Data("template.tmpl", containerId, fs);
-		Data postSriptData = new Data("post.sh", containerId, fs);
+		Data preSriptData = new Data("pre.sh", containerId);
+		Data paramScriptData = new Data("params.py", containerId);
+		Data templateData = new Data("template.tmpl", containerId);
+		Data postSriptData = new Data("post.sh", containerId);
 
 		try (BufferedWriter preScriptWriter = new BufferedWriter(new FileWriter(preSriptData.getLocalPath().toString()));
 				BufferedWriter paramScriptWriter = new BufferedWriter(new FileWriter(paramScriptData.getLocalPath().toString()));

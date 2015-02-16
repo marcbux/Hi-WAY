@@ -441,7 +441,7 @@ public class GalaxyApplicationMaster extends HiWay {
 					for (int j = 0; j < inputs.length(); j++) {
 						JSONObject input = inputs.getJSONObject(j);
 						String name = input.getString("name");
-						GalaxyData data = new GalaxyData(name, getFs());
+						GalaxyData data = new GalaxyData(name);
 
 						if (name.contains(".")) {
 							String extension = name.substring(name.indexOf(".") + 1);
@@ -539,7 +539,7 @@ public class GalaxyApplicationMaster extends HiWay {
 							task.addToPostScript("mv " + param.getFrom_work_dir() + " " + fileName);
 
 						// create the data object and add it to the task object and data structures
-						GalaxyData data = new GalaxyData(fileName, getFs());
+						GalaxyData data = new GalaxyData(fileName);
 						data.setDataType(dataType);
 						String idName = id + "_" + outputName;
 						if (!hideOutputs.contains(outputName)) {

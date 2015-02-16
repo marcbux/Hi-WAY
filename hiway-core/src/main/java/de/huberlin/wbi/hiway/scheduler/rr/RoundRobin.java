@@ -55,8 +55,8 @@ public class RoundRobin extends StaticScheduler {
 
 	private Iterator<String> nodeIterator;
 
-	public RoundRobin(String workflowName, FileSystem fs, HiWayConfiguration conf) {
-		super(workflowName, fs, conf);
+	public RoundRobin(String workflowName, FileSystem hdfs, HiWayConfiguration conf) {
+		super(workflowName, hdfs, conf);
 		nodeIterator = queues.keySet().iterator();
 	}
 

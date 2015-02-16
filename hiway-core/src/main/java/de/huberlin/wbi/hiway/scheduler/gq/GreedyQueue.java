@@ -53,8 +53,8 @@ public class GreedyQueue extends Scheduler {
 
 	private Queue<TaskInstance> queue;
 
-	public GreedyQueue(String workflowName, HiWayConfiguration conf, FileSystem fs) {
-		super(workflowName, conf, fs);
+	public GreedyQueue(String workflowName, HiWayConfiguration conf, FileSystem hdfs) {
+		super(workflowName, conf, hdfs);
 		queue = new LinkedList<>();
 	}
 

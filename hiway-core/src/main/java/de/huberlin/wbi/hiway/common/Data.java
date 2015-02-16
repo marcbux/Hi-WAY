@@ -38,6 +38,7 @@ import java.util.Map;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -54,8 +55,16 @@ import org.apache.hadoop.yarn.util.Records;
  * @author Marc Bux
  */
 public class Data implements Comparable<Data> {
+	private static FileSystem hdfs;
 	private static Path hdfsApplicationDirectory;
+
 	private static Path hdfsBaseDirectory;
+
+	private static FileSystem localFs = new LocalFileSystem();
+
+	public static void setHdfs(FileSystem hdfs) {
+		Data.hdfs = hdfs;
+	}
 
 	public static void setHdfsApplicationDirectory(Path hdfsApplicationDirectory) {
 		Data.hdfsApplicationDirectory = hdfsApplicationDirectory;
@@ -66,8 +75,8 @@ public class Data implements Comparable<Data> {
 	}
 
 	private String containerId;
+
 	private String fileName;
-	private FileSystem fs;
 
 	// is the file input of the workflow
 	private boolean input;
@@ -76,12 +85,12 @@ public class Data implements Comparable<Data> {
 
 	// is the file output of the workflow
 	private boolean output;
-	public Data(Path localPath, FileSystem fs) {
-		this(localPath, null, fs);
+
+	public Data(Path localPath) {
+		this(localPath, null);
 	}
 
-	public Data(Path localPath, String containerId, FileSystem fs) {
-		this.fs = fs;
+	public Data(Path localPath, String containerId) {
 		this.input = false;
 		this.output = false;
 
@@ -90,31 +99,29 @@ public class Data implements Comparable<Data> {
 		this.containerId = containerId;
 	}
 
-	public Data(String localPathString, FileSystem fs) {
-		this(new Path(localPathString), null, fs);
+	public Data(String localPathString) {
+		this(new Path(localPathString), null);
 	}
-	
-	public Data(String localPathString, String containerId, FileSystem fs) {
-		this(new Path(localPathString), containerId, fs);
+
+	public Data(String localPathString, String containerId) {
+		this(new Path(localPathString), containerId);
 	}
 
 	public void addToLocalResourceMap(Map<String, LocalResource> localResources) throws IOException {
-		Path hdfsDirectory = getHdfsDirectory();
-		fs.mkdirs(hdfsDirectory, new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
-		Path hdfsPath = getHdfsPath();
+		Path dest = getHdfsPath();
 
 		LocalResource rsrc = Records.newRecord(LocalResource.class);
 		rsrc.setType(LocalResourceType.FILE);
 		rsrc.setVisibility(LocalResourceVisibility.APPLICATION);
-		rsrc.setResource(ConverterUtils.getYarnUrlFromPath(hdfsPath));
+		rsrc.setResource(ConverterUtils.getYarnUrlFromPath(dest));
 
-		FileStatus status = fs.getFileStatus(hdfsPath);
+		FileStatus status = hdfs.getFileStatus(dest);
 		rsrc.setTimestamp(status.getModificationTime());
 		rsrc.setSize(status.getLen());
 
 		localResources.put(getLocalPath().toString(), rsrc);
 	}
-	
+
 	@Override
 	public int compareTo(Data other) {
 		return this.getLocalPath().compareTo(other.getLocalPath());
@@ -125,8 +132,8 @@ public class Data implements Comparable<Data> {
 
 		Path hdfsLocation = getHdfsPath();
 		while (blockLocations == null) {
-			FileStatus fileStatus = fs.getFileStatus(hdfsLocation);
-			blockLocations = fs.getFileBlockLocations(hdfsLocation, 0, fileStatus.getLen());
+			FileStatus fileStatus = hdfs.getFileStatus(hdfsLocation);
+			blockLocations = hdfs.getFileBlockLocations(hdfsLocation, 0, fileStatus.getLen());
 		}
 
 		long sum = 0;
@@ -143,7 +150,7 @@ public class Data implements Comparable<Data> {
 
 	public long countAvailableTotalData() throws IOException {
 		Path hdfsLocation = getHdfsPath();
-		FileStatus fileStatus = fs.getFileStatus(hdfsLocation);
+		FileStatus fileStatus = hdfs.getFileStatus(hdfsLocation);
 		return fileStatus.getLen();
 	}
 
@@ -192,6 +199,15 @@ public class Data implements Comparable<Data> {
 		return output;
 	}
 
+	private void mkHdfsDir(Path dir) throws IOException {
+		if (dir == null || hdfs.isDirectory(dir))
+			return;
+		mkHdfsDir(dir.getParent());
+		System.out.println("Creating directoy: " + dir);
+		hdfs.mkdirs(dir);
+		hdfs.setPermission(dir, new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+	}
+
 	public void setContainerId(String containerId) {
 		this.containerId = containerId;
 	}
@@ -209,20 +225,20 @@ public class Data implements Comparable<Data> {
 		Path localPath = getLocalPath();
 		System.out.println("Staging in: " + hdfsPath + " -> " + localPath);
 		if (localDirectory.depth() > 0) {
-			fs.mkdirs(localDirectory);
+			localFs.mkdirs(localDirectory);
 		}
-		fs.copyToLocalFile(false, hdfsPath, localPath);
+		hdfs.copyToLocalFile(false, hdfsPath, localPath);
 	}
 
 	public void stageOut() throws IOException {
 		Path localPath = getLocalPath();
 		Path hdfsDirectory = getHdfsDirectory();
 		Path hdfsPath = getHdfsPath();
-		System.out.println("Staging out: " + localPath + " -> " + hdfsPath);
 		if (hdfsDirectory.depth() > 0) {
-			fs.mkdirs(hdfsDirectory, new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+			mkHdfsDir(hdfsDirectory);
 		}
-		fs.copyFromLocalFile(false, true, localPath, hdfsPath);
+		System.out.println("Staging out: " + localPath + " -> " + hdfsPath);
+		hdfs.copyFromLocalFile(false, true, localPath, hdfsPath);
 	}
 
 	@Override

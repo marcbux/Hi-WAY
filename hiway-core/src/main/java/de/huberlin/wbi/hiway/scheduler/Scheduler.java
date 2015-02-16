@@ -74,7 +74,7 @@ public abstract class Scheduler {
 
 	protected HiWayConfiguration conf;
 	protected HiwayDBI dbInterface;
-	protected final FileSystem fs;
+	protected final FileSystem hdfs;
 	protected int maxRetries = 0;
 	protected Map<String, Long> maxTimestampPerHost;
 	protected int numberOfFinishedTasks = 0;
@@ -88,11 +88,11 @@ public abstract class Scheduler {
 	protected Queue<String[]> unissuedNodeRequests;
 	protected String workflowName;
 
-	public Scheduler(String workflowName, HiWayConfiguration conf, FileSystem fs) {
+	public Scheduler(String workflowName, HiWayConfiguration conf, FileSystem hdfs) {
 		this.workflowName = workflowName;
 
 		this.conf = conf;
-		this.fs = fs;
+		this.hdfs = hdfs;
 		unissuedNodeRequests = new LinkedList<>();
 
 		taskIds = new HashSet<>();
@@ -247,19 +247,19 @@ public abstract class Scheduler {
 	protected void parseLogs() {
 		String hdfsBaseDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE, HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE_DEFAULT);
 		String hdfsSandboxDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE, HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE_DEFAULT);
-		Path hdfsBaseDirectory = new Path(new Path(fs.getUri()), hdfsBaseDirectoryName);
+		Path hdfsBaseDirectory = new Path(new Path(hdfs.getUri()), hdfsBaseDirectoryName);
 		Path hdfsSandboxDirectory = new Path(hdfsBaseDirectory, hdfsSandboxDirectoryName);
 		try {
-			for (FileStatus appDirStatus : fs.listStatus(hdfsSandboxDirectory)) {
+			for (FileStatus appDirStatus : hdfs.listStatus(hdfsSandboxDirectory)) {
 				if (appDirStatus.isDirectory()) {
 					Path appDir = appDirStatus.getPath();
-					for (FileStatus srcStatus : fs.listStatus(appDir)) {
+					for (FileStatus srcStatus : hdfs.listStatus(appDir)) {
 						Path src = srcStatus.getPath();
 						String srcName = src.getName();
 						if (srcName.endsWith(".log")) {
 							Path dest = new Path(appDir.getName());
 							System.out.println("Parsing log " + dest.toString());
-							fs.copyToLocalFile(false, src, dest);
+							hdfs.copyToLocalFile(false, src, dest);
 
 							try (BufferedReader reader = new BufferedReader(new FileReader(new File(dest.toString())))) {
 								String line;

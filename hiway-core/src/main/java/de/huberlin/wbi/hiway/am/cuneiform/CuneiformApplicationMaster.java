@@ -140,7 +140,7 @@ public class CuneiformApplicationMaster extends HiWay {
 			// set output files
 			for (String outputName : invocation.getStageOutList()) {
 				if (!getFiles().containsKey(outputName)) {
-					Data output = new Data(outputName, getFs());
+					Data output = new Data(outputName);
 					getFiles().put(outputName, output);
 				}
 				Data output = getFiles().get(outputName);

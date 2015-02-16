@@ -223,7 +223,7 @@ public abstract class HiWay {
 	// private BufferedWriter federatedReportWriter;
 	private Map<String, Data> files = new HashMap<>();
 	// a handle to the hdfs
-	private FileSystem fs;
+	private FileSystem hdfs;
 	private Path hdfsApplicationDirectory;
 	// a list of threads, one for each container launch
 	private List<Thread> launchThreads = new ArrayList<>();
@@ -259,7 +259,7 @@ public abstract class HiWay {
 	public HiWay() {
 		conf = new HiWayConfiguration();
 		try {
-			fs = FileSystem.get(conf);
+			hdfs = FileSystem.get(conf);
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(-1);
@@ -267,14 +267,14 @@ public abstract class HiWay {
 		runId = UUID.randomUUID();
 	}
 
+	@SuppressWarnings("static-method")
 	public void evaluateReport(TaskInstance task, ContainerId containerId) {
 		try {
-
-			Data reportFile = new Data(Invocation.REPORT_FILENAME, containerId.toString(), fs);
+			Data reportFile = new Data(Invocation.REPORT_FILENAME, containerId.toString());
 			reportFile.stageIn();
-			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME, containerId.toString(), fs);
+			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME, containerId.toString());
 			stdoutFile.stageIn();
-			Data stderrFile = new Data(Invocation.STDERR_FILENAME, containerId.toString(), fs);
+			Data stderrFile = new Data(Invocation.STDERR_FILENAME, containerId.toString());
 			stderrFile.stageIn();
 
 			// (a) evaluate report
@@ -393,9 +393,9 @@ public abstract class HiWay {
 					}
 					writer.write(obj.toString());
 				}
-				new Data("AppMaster.stdout", fs).stageOut();
-				new Data("AppMaster.stderr", fs).stageOut();
-				new Data(summaryPath, fs).stageOut();
+				new Data("AppMaster.stdout").stageOut();
+				new Data("AppMaster.stderr").stageOut();
+				new Data(summaryPath).stageOut();
 			}
 		} catch (IOException e) {
 			System.err.println("Error when attempting to stage out federated output log.");
@@ -443,8 +443,8 @@ public abstract class HiWay {
 		return files;
 	}
 
-	public FileSystem getFs() {
-		return fs;
+	public FileSystem getHdfs() {
+		return hdfs;
 	}
 
 	public List<Thread> getLaunchThreads() {
@@ -562,11 +562,12 @@ public abstract class HiWay {
 
 		String hdfsBaseDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE, HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE_DEFAULT);
 		String hdfsSandboxDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE, HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE_DEFAULT);
-		Path hdfsBaseDirectory = new Path(new Path(fs.getUri()), hdfsBaseDirectoryName);
+		Path hdfsBaseDirectory = new Path(new Path(hdfs.getUri()), hdfsBaseDirectoryName);
 		Data.setHdfsBaseDirectory(hdfsBaseDirectory);
 		Path hdfsSandboxDirectory = new Path(hdfsBaseDirectory, hdfsSandboxDirectoryName);
 		hdfsApplicationDirectory = new Path(hdfsSandboxDirectory, appId);
 		Data.setHdfsApplicationDirectory(hdfsApplicationDirectory);
+		Data.setHdfs(hdfs);
 
 		Map<String, String> envs = System.getenv();
 
@@ -619,7 +620,7 @@ public abstract class HiWay {
 		}
 
 		workflowPath = new Path(cliParser.getOptionValue("workflow"));
-		workflowFile = new Data(workflowPath, fs);
+		workflowFile = new Data(workflowPath);
 		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(conf.get(HiWayConfiguration.HIWAY_SCHEDULER,
 				HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
 
@@ -628,7 +629,7 @@ public abstract class HiWay {
 		requestPriority = conf.getInt(HiWayConfiguration.HIWAY_WORKER_PRIORITY, HiWayConfiguration.HIWAY_WORKER_PRIORITY_DEFAULT);
 		return true;
 	}
-	
+
 	public boolean isDetermineFileSizes() {
 		return determineFileSizes;
 	}
@@ -668,7 +669,7 @@ public abstract class HiWay {
 			nmClientAsync.init(conf);
 			nmClientAsync.start();
 
-			Data workflowData = new Data(workflowPath, fs);
+			Data workflowData = new Data(workflowPath);
 			workflowData.stageIn();
 
 			// Register self with ResourceManager. This will start heartbeating to the RM.
@@ -678,14 +679,14 @@ public abstract class HiWay {
 			switch (schedulerName) {
 			case staticRoundRobin:
 			case heft:
-				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new RoundRobin(getWorkflowName(), fs, conf)
-						: new HEFT(getWorkflowName(), fs, conf);
+				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new RoundRobin(getWorkflowName(), hdfs, conf)
+						: new HEFT(getWorkflowName(), hdfs, conf);
 				break;
 			case greedyQueue:
-				scheduler = new GreedyQueue(getWorkflowName(), conf, fs);
+				scheduler = new GreedyQueue(getWorkflowName(), conf, hdfs);
 				break;
 			default:
-				C3PO c3po = new C3PO(getWorkflowName(), fs, conf);
+				C3PO c3po = new C3PO(getWorkflowName(), hdfs, conf);
 				switch (schedulerName) {
 				case conservative:
 					c3po.setConservatismWeight(12d);
@@ -724,7 +725,7 @@ public abstract class HiWay {
 			writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
 			parseWorkflow();
 			scheduler.updateRuntimeEstimates(getRunId().toString());
-			federatedReport = new Data(appId + ".log", fs);
+			federatedReport = new Data(appId + ".log");
 
 			// Dump out information about cluster capability as seen by the resource manager
 			int maxMem = response.getMaximumResourceCapability().getMemory();
@@ -811,6 +812,7 @@ public abstract class HiWay {
 		return request;
 	}
 
+	@SuppressWarnings("static-method")
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
 		String line;
 
@@ -822,7 +824,7 @@ public abstract class HiWay {
 					System.err.println(String.format("%02d  %s", Integer.valueOf(++i), line));
 			}
 
-			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME, containerId.toString(), fs);
+			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME, containerId.toString());
 			stdoutFile.stageIn();
 
 			System.err.println("[out]");
@@ -831,7 +833,7 @@ public abstract class HiWay {
 					System.err.println(line);
 			}
 
-			Data stderrFile = new Data(Invocation.STDERR_FILENAME, containerId.toString(), fs);
+			Data stderrFile = new Data(Invocation.STDERR_FILENAME, containerId.toString());
 			stderrFile.stageIn();
 
 			System.err.println("[err]");

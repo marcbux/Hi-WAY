@@ -132,7 +132,7 @@ public class DaxApplicationMaster extends HiWay {
 					switch (link) {
 					case "input":
 						if (!getFiles().containsKey(fileName)) {
-							Data data = new Data(fileName, getFs());
+							Data data = new Data(fileName);
 							data.setInput(true);
 							getFiles().put(fileName, data);
 						}
@@ -141,7 +141,7 @@ public class DaxApplicationMaster extends HiWay {
 						break;
 					case "output":
 						if (!getFiles().containsKey(fileName))
-							getFiles().put(fileName, new Data(fileName, getFs()));
+							getFiles().put(fileName, new Data(fileName));
 						data = getFiles().get(fileName);
 						task.addOutputData(data, size);
 						data.setInput(false);

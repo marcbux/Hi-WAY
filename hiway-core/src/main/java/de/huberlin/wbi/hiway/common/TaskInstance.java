@@ -43,7 +43,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 
@@ -151,7 +150,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		this.setDepth(parentTask.getDepth() + 1);
 	}
 
-	public Map<String, LocalResource> buildScriptsAndSetResources(FileSystem fs, Container container) {
+	public Map<String, LocalResource> buildScriptsAndSetResources(Container container) {
 		Map<String, LocalResource> localResources = new HashMap<>();
 		try {
 			String containerId = container.getId().toString();
@@ -162,7 +161,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 				e.printStackTrace();
 				System.exit(-1);
 			}
-			Data scriptData = new Data(script.getPath(), containerId, fs);
+			Data scriptData = new Data(script.getPath(), containerId);
 			try {
 				scriptData.stageOut();
 			} catch (IOException e) {

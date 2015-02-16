@@ -63,10 +63,10 @@ public class HiWayConfiguration extends YarnConfiguration {
 	public static final String HIWAY_AM_QUEUE_DEFAULT = "default";
 	public static final String HIWAY_AM_TASK_RETRIES = "hiway.am.task.retries";
 	public static final int HIWAY_AM_TASK_RETRIES_DEFAULT = 1;
-	public static final String HIWAY_AM_VCORES = "hiway.am.vcores";
-	public static final int HIWAY_AM_VCORES_DEFAULT = 1;
 	public static final String HIWAY_AM_TIMEOUT = "hiway.am.timeout";
 	public static final int HIWAY_AM_TIMEOUT_DEFAULT = 604800;
+	public static final String HIWAY_AM_VCORES = "hiway.am.vcores";
+	public static final int HIWAY_AM_VCORES_DEFAULT = 1;
 
 	public static final String HIWAY_DB_NOSQL_BUCKET = "hiway.db.nosql.bucket";
 	public static final String HIWAY_DB_NOSQL_PASSWORD = "hiway.db.nosql.password";
