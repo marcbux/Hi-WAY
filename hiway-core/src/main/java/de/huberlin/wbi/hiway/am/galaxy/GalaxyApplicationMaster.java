@@ -427,19 +427,19 @@ public class GalaxyApplicationMaster extends HiWay {
 				sb.append(line).append("\n");
 			}
 			JSONObject workflow = new JSONObject(sb.toString());
-			JSONObject steps = workflow.getJSONObject("steps");
+			JSONObject steps = workflow.optJSONObject("steps");
 
 			// (1) First pass: Parse Nodes
 			for (int i = 0; i < steps.length(); i++) {
-				JSONObject step = steps.getJSONObject(Integer.toString(i));
+				JSONObject step = steps.optJSONObject(Integer.toString(i));
 				long id = step.getLong("id");
 				String type = step.getString("type");
 
 				// (a) input nodes are nodes that do not invoke a task, but simply specify where an input file is located
 				if (type.equals("data_input")) {
-					JSONArray inputs = step.getJSONArray("inputs");
+					JSONArray inputs = step.optJSONArray("inputs");
 					for (int j = 0; j < inputs.length(); j++) {
-						JSONObject input = inputs.getJSONObject(j);
+						JSONObject input = inputs.optJSONObject(j);
 						String name = input.getString("name");
 						GalaxyData data = new GalaxyData(name);
 
@@ -463,9 +463,14 @@ public class GalaxyApplicationMaster extends HiWay {
 					String[] splitId = toolId.split("/");
 					if (splitId.length > 2)
 						toolId = splitId[splitId.length - 2];
-					GalaxyTool tool = galaxyTools.get(toolId).get(toolVersion);
+					Map<String, GalaxyTool> tools = galaxyTools.get(toolId);
+					if (tools == null) {
+						System.err.println("Tool " + toolId + " could not be located in local Galaxy installation.");
+						throw new RuntimeException();
+					}
+					GalaxyTool tool = tools.get(toolVersion);
 					if (tool == null) {
-						System.err.println("Tool " + toolId + "/" + toolVersion + " could not be located in local Galaxy installation.");
+						System.err.println("Tool version " + toolVersion + " of tool " + toolId + " could not be located in local Galaxy installation.");
 						throw new RuntimeException();
 					}
 					GalaxyTaskInstance task = new GalaxyTaskInstance(id, getRunId(), tool.getId(), tool, galaxyPath);
@@ -475,17 +480,19 @@ public class GalaxyApplicationMaster extends HiWay {
 					Map<String, String> renameOutputs = new HashMap<>();
 					Set<String> hideOutputs = new HashSet<>();
 					if (step.has("post_job_actions")) {
-						JSONObject post_job_actions = step.getJSONObject("post_job_actions");
+						JSONObject post_job_actions = step.optJSONObject("post_job_actions");
 						for (Iterator<?> it = post_job_actions.keys(); it.hasNext();) {
-							JSONObject post_job_action = post_job_actions.getJSONObject((String) it.next());
+							JSONObject post_job_action = post_job_actions.optJSONObject((String) it.next());
 							String action_type = post_job_action.getString("action_type");
 							if (action_type.equals("RenameDatasetAction")) {
 								String output_name = post_job_action.getString("output_name");
-								JSONObject action_arguments = post_job_action.getJSONObject("action_arguments");
-								String newname = action_arguments.getString("newname");
-								if (newname.contains(" "))
-									newname = newname.replaceAll("\\s", "_");
-								renameOutputs.put(output_name, newname);
+								JSONObject action_arguments = post_job_action.optJSONObject("action_arguments");
+								if (action_arguments != null) {
+									String newname = action_arguments.getString("newname");
+									if (newname.contains(" "))
+										newname = newname.replaceAll("\\s", "_");
+									renameOutputs.put(output_name, newname);
+								}
 							} else if (action_type.equals("HideDatasetAction")) {
 								String output_name = post_job_action.getString("output_name");
 								hideOutputs.add(output_name);
@@ -498,17 +505,17 @@ public class GalaxyApplicationMaster extends HiWay {
 
 					// (iv) resolve the file names of input data
 					Map<String, String> inputNameToIdName = new HashMap<>();
-					JSONObject input_connections = step.getJSONObject("input_connections");
+					JSONObject input_connections = step.optJSONObject("input_connections");
 					for (String input_name : JSONObject.getNames(input_connections)) {
-						JSONObject input_connection = input_connections.getJSONObject(input_name);
+						JSONObject input_connection = input_connections.optJSONObject(input_name);
 						inputNameToIdName.put(input_name, input_connection.getString("id") + "_" + input_connection.getString("output_name"));
 					}
 
 					// (v) handle output data
-					JSONArray outputs = step.getJSONArray("outputs");
+					JSONArray outputs = step.optJSONArray("outputs");
 					List<String> outputFiles = new LinkedList<>();
 					for (int j = 0; j < outputs.length(); j++) {
-						JSONObject output = outputs.getJSONObject(j);
+						JSONObject output = outputs.optJSONObject(j);
 						String outputName = output.getString("name");
 
 						// determine the output file's data type
@@ -560,15 +567,15 @@ public class GalaxyApplicationMaster extends HiWay {
 
 			// (2) Second pass: Parse Edges
 			for (int i = 0; i < steps.length(); i++) {
-				JSONObject step = steps.getJSONObject(Integer.toString(i));
+				JSONObject step = steps.optJSONObject(Integer.toString(i));
 				long id = step.getLong("id");
 				String type = step.getString("type");
 				if (type.equals("tool")) {
 					GalaxyTaskInstance task = (GalaxyTaskInstance) tasks.get(id);
-					JSONObject input_connections = step.getJSONObject("input_connections");
+					JSONObject input_connections = step.optJSONObject("input_connections");
 					for (Iterator<?> it = input_connections.keys(); it.hasNext();) {
 						String input_connection_key = (String) it.next();
-						JSONObject input_connection = input_connections.getJSONObject(input_connection_key);
+						JSONObject input_connection = input_connections.optJSONObject(input_connection_key);
 						long parentId = input_connection.getLong("id");
 						String idName = parentId + "_" + input_connection.getString("output_name");
 
