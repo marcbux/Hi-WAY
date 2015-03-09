@@ -188,7 +188,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 	 * A method for setting the tool state of this task instance from the raw string of the workflow description file to the JSON object provided in the Python
 	 * parameter script. There are several string operations that have to be performed before the tool state can be interpreted as a JSON object.
 	 * 
-	 * @param toolState
+	 * @param tool_state
 	 *            the tool state string, as extracted from the workflow description file
 	 * 
 	 */
@@ -283,7 +283,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 	 * A method for preparing the Python script that is responsible for populating the tool state with metadata and making it accessible for Cheetah to compile
 	 * the template.
 	 * 
-	 * @throws JSONException
+	 * @throws JSONException JSONException
 	 */
 	public void prepareParamScript() throws JSONException {
 		// (1) populate the tool state by mapping parameters and adding additional parameters

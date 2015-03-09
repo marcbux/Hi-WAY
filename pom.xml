@@ -2,7 +2,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.hu-berlin.wbi.hiway</groupId>
 	<artifactId>hiway</artifactId>
-	<version>1.0.0-SNAPSHOT</version>
+	<version>1.0.0-beta</version>
 	<packaging>pom</packaging>
 	<name>Hi-WAY</name>
 	<description>The Heterogeneity-incorporating Workflow ApplicationMaster for YARN (Hi-WAY) provides the means to execute arbitrary scientific workflows on top of Apache's Hadoop 2.x (YARN). In this context, scientific workflows are directed acyclic graphs (DAGs), in which nodes are executables accessible from the command line (e.g. tar, cat, or any other executable in the PATH of the worker nodes), and edges represent data dependencies between these executables.</description>
@@ -62,7 +62,7 @@
 	<properties>
 		<jdk.version>1.7</jdk.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<cuneiform.version>2.0.0-SNAPSHOT</cuneiform.version>
+		<cuneiform.version>2.0.0-beta</cuneiform.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>

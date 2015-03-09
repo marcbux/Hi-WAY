@@ -55,8 +55,8 @@ import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
  * </p>
  * 
  * <p>
- * [1] Topcuoglu, H., Hariri, S., & Wu, M.-Y. (2002). <i>Performance-Effective and Low-Complexity Task Scheduling for Heterogeneous Computing.</i> IEEE
- * Transactions on Parallel and Distributed Systems, 13(3), 260�274.
+ * [1] Topcuoglu, H., Hariri, S., and Wu, M.-Y. (2002). <i>Performance-Effective and Low-Complexity Task Scheduling for Heterogeneous Computing.</i> IEEE
+ * Transactions on Parallel and Distributed Systems, 13(3), 260-274.
  * </p>
  * 
  * @author Marc Bux

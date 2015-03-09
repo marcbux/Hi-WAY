@@ -141,6 +141,7 @@ public class GalaxyTool {
 	 * @param jo
 	 *            the JSON object whose values are to be mapped
 	 * @throws JSONException
+	 *             JSONException
 	 */
 	public void mapParams(JSONObject jo) throws JSONException {
 		if (jo.length() == 0)
@@ -168,7 +169,7 @@ public class GalaxyTool {
 	 * A function that appends the string ".path" to all occurrences of a file parameter name in the template; this is done since a file parameter has a whole
 	 * JSON object / Python dictionary of attributes (e.g., its path, its metadata, its extension) and therefore can't be accessed directly by its name
 	 * 
-	 * @param name
+	 * @param fileName
 	 *            the name of a file parameter
 	 */
 	public void setPath(String fileName) {

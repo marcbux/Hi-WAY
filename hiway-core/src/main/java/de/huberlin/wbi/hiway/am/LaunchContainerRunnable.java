@@ -57,6 +57,10 @@ public class LaunchContainerRunnable implements Runnable {
 	 *            Allocated container
 	 * @param containerListener
 	 *            Callback handler of the container
+	 * @param task
+	 *            The task to be launched
+	 * @param am
+	 *            The Application Master
 	 */
 	public LaunchContainerRunnable(Container lcontainer, NMCallbackHandler containerListener, TaskInstance task, HiWay am) {
 		this.container = lcontainer;

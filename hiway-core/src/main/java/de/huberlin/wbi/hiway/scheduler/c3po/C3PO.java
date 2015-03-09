@@ -88,7 +88,6 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
  * could look as follows:
  * </p>
  * 
- * <p>
  * <table border="1">
  * <tr>
  * <th>runtime estimates</th>
@@ -114,7 +113,10 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
  * <td>5 (0.25)</td>
  * <td>30 (0.3)</td>
  * </tr>
+ * <caption>runtime estimates</caption>
  * </table>
+ * 
+ * <p>
  * <i>These runtime estimates are based on past runtime measurements. How exactly the estimates are derived from measurements depends on the concrete
  * implementation of C3PO. In the default approach, the runtime of the last task execution serves as the runtime estimate for the next task execution. The
  * values in brackets correspond to the normalized, task-specific runtime estimates across all machines. These values serve as an indicator for how well a task
@@ -122,7 +124,6 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
  * comparably good at running Shake and Roll tasks.</i>
  * </p>
  * 
- * <p>
  * <table border="1">
  * <tr>
  * <th>contribution to workflow runtime</th>
@@ -148,7 +149,10 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
  * <td>700 (0.35)</td>
  * <td>900 (0.45)</td>
  * </tr>
+ * <caption>contribution to workflow runtime</caption>
  * </table>
+ * 
+ * <p>
  * <i>The total runtime that each job (collection of similar tasks) contributes to the remaining workflow execution time. The first row contains the average
  * runtime of a task across all machines. The number of remaining tasks of a certain type can be found in the second row. The third row lists the product, which
  * can be used as an estimate of the combined runtime of all remaining tasks of similar kind. The numbers in brackets correspond to the normalized values, i.e.,
@@ -157,6 +161,8 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
  * 
  * <p>
  * These measurements provide C3PO with two important scheduling guidelines:
+ * </p>
+ * 
  * <ol>
  * <li><b>Conservatism</b>, measured as the suitability of each task for being executed on each machine and inferred from its runtime estimates. According the
  * the mantra "<i>Do what you do best</i>", C3PO attempts to assign tasks to machines which have proven to execute these tasks with above-average runtime.</li>
@@ -164,6 +170,8 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
  * left over at the end. By favoring the assignments of these kinds of tasks from the beginning C3PO is able to harness the benefits of worker specialization
  * until the end of workflow execution. This principle is also called "<i>Business before Pleasure</i>".</li>
  * </ol>
+ * 
+ * <p>
  * Based on these two guidelines, C3PO selects an appropriate task via sampling. For instance, Charlie would most likely &ndash; though not necessarily &ndash;
  * be assigned a Roll task: Judging from its past runtime estimates it is highly suited to execute Roll tasks (<b>Conservatism</b>:
  * "<i>Do what you do best</i>") and Roll tasks contribute stronger to overall remaining workload than the even better-suited Shake tasks (<b>Outlook</b>:

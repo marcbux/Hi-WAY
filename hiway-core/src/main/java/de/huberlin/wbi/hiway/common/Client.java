@@ -178,7 +178,7 @@ public class Client {
 	 * @param args
 	 *            Parsed command line options.
 	 * @return Whether the init was successful to run the client.
-	 * @throws ParseException
+	 * @throws ParseException ParseException
 	 */
 	public boolean init(String[] args) throws ParseException {
 
@@ -291,8 +291,8 @@ public class Client {
 	 * Main run function for the client.
 	 * 
 	 * @return true if application completed successfully.
-	 * @throws IOException
-	 * @throws YarnException
+	 * @throws IOException IOException
+	 * @throws YarnException YarnException
 	 */
 	public boolean run() throws IOException, YarnException {
 		System.out.println("Running Client");

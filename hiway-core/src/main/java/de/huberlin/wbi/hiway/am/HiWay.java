@@ -156,6 +156,8 @@ public abstract class HiWay {
 	/**
 	 * The main routine.
 	 * 
+	 * @param appMaster
+	 *            The Application Master
 	 * @param args
 	 *            Command line arguments passed to the ApplicationMaster.
 	 */
@@ -514,7 +516,7 @@ public abstract class HiWay {
 	 *            Command line arguments.
 	 * @return Whether init successful and run should be invoked.
 	 * @throws ParseException
-	 * @throws IOException
+	 *             ParseException
 	 */
 	public boolean init(String[] args) throws ParseException {
 
@@ -639,8 +641,11 @@ public abstract class HiWay {
 	/**
 	 * Main run function for the application master
 	 * 
+	 * @return True if there were no errors
 	 * @throws YarnException
+	 *             YarnException
 	 * @throws IOException
+	 *             IOException
 	 */
 	@SuppressWarnings("unchecked")
 	public boolean run() throws YarnException, IOException {
