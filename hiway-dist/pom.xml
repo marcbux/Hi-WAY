@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>de.hu-berlin.wbi.hiway</groupId>
 		<artifactId>hiway</artifactId>
-		<version>1.0.0-beta</version>
+		<version>1.0.1-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>hiway-dist</artifactId>

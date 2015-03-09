@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>de.hu-berlin.wbi.hiway</groupId>
 		<artifactId>hiway-addons</artifactId>
-		<version>1.0.0-beta</version>
+		<version>1.0.1-SNAPSHOT</version>
 	</parent>
 	<artifactId>hiway-logstats</artifactId>
 	<dependencies>
