@@ -42,6 +42,7 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.json.JSONArray;
@@ -154,7 +155,12 @@ public class GalaxyTaskInstance extends TaskInstance {
 				JSONObject fileJo = new JSONObject();
 				fileJo.putOpt("path", fileName);
 				fileJo.putOpt("name", fileName.split("\\.(?=[^\\.]+$)")[0]);
-				fileJo.putOpt("files_path", data.getLocalDirectory());
+				Path dir = data.getLocalDirectory();
+				String dirString = (dir == null) ? "" : dir.toString();
+				if (dirString.length() == 0) {
+					dirString = ".";
+				}
+				fileJo.putOpt("files_path", dirString);
 				if (data.hasDataType()) {
 					GalaxyDataType dataType = data.getDataType();
 					String fileExt = dataType.getExtension();
