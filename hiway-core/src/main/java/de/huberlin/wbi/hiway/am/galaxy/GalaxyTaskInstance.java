@@ -194,7 +194,6 @@ public class GalaxyTaskInstance extends TaskInstance {
 	 */
 	public void addToolState(String tool_state) {
 		String tool_state_json = tool_state;
-		tool_state_json = tool_state_json.replaceAll("\"null\"", "\"\"");
 		// replace "{ }" "[ ]" with { } [ ]
 		tool_state_json = tool_state_json.replaceAll("\"\\{", "\\{");
 		tool_state_json = tool_state_json.replaceAll("\\}\"", "\\}");
