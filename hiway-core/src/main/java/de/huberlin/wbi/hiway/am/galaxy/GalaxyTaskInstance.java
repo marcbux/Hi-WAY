@@ -194,6 +194,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 	 */
 	public void addToolState(String tool_state) {
 		String tool_state_json = tool_state;
+		tool_state_json = tool_state_json.replaceAll("\"null\"", "\"\"");
 		// replace "{ }" "[ ]" with { } [ ]
 		tool_state_json = tool_state_json.replaceAll("\"\\{", "\\{");
 		tool_state_json = tool_state_json.replaceAll("\\}\"", "\\}");
@@ -207,8 +208,9 @@ public class GalaxyTaskInstance extends TaskInstance {
 		tool_state_json = tool_state_json.replaceAll(": ?\",", ": \"\",");
 		// replace UnvalidatedValue with their actual value
 		tool_state_json = tool_state_json.replaceAll("\\{\"__class__\":\\s?\"UnvalidatedValue\",\\s?\"value\":\\s?([^\\}]*)\\}", "$1");
-		// replace "null" with ""
-		tool_state_json = tool_state_json.replaceAll("\"null\"", "\"\"");
+		// replace "null" with {"path": ""}
+		// this is done such that otpional files will still be accessible by Cheetah as id.path
+		tool_state_json = tool_state_json.replaceAll("\"null\"", "{\"path\": \"\"}");
 		try {
 			this.toolState = new JSONObject(tool_state_json);
 		} catch (JSONException e) {
