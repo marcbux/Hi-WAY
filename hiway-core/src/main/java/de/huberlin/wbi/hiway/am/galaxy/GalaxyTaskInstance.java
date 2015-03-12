@@ -214,6 +214,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 		try {
 			this.toolState = new JSONObject(tool_state_json);
 		} catch (JSONException e) {
+			System.err.println(tool_state_json);
 			e.printStackTrace();
 			System.exit(-1);
 		}
