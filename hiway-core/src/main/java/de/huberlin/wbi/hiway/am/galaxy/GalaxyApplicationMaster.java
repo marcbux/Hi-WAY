@@ -625,6 +625,8 @@ public class GalaxyApplicationMaster extends HiWay {
 				String name = tableEl.getAttribute("name");
 				String comment_char = tableEl.getAttribute("comment_char");
 				String[] columns = columnsEl.getFirstChild().getNodeValue().split(", ");
+				if (!fileEl.hasAttribute("path"))
+					continue;
 				String path = fileEl.getAttribute("path");
 				if (!path.startsWith("/"))
 					path = galaxyPath + "/" + path;
