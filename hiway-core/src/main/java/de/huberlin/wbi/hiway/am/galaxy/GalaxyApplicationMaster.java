@@ -181,6 +181,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			String type = paramEl.getAttribute("type");
 			switch (type) {
 			case "data":
+				param.addMapping("", "{\"path\": \"\"}");
 				tool.setPath(name);
 				break;
 			case "boolean":
