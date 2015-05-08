@@ -330,6 +330,7 @@ public class C3PO extends Scheduler {
 			normalizeWeights(runtimeEstimatesPerNode.get(nodeId).values());
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public TaskInstance getNextTask(Container container) {
 		TaskInstance task = null;
@@ -381,10 +382,10 @@ public class C3PO extends Scheduler {
 				taskToContainers.get(task).add(container);
 
 				if (replicate) {
-					System.out.println("Assigned speculative copy of task " + task + " to container " + container.getId().getContainerId() + " on node "
+					System.out.println("Assigned speculative copy of task " + task + " to container " + container.getId().getId() + " on node "
 							+ container.getNodeId().getHost());
 				} else {
-					System.out.println("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node "
+					System.out.println("Assigned task " + task + " to container " + container.getId().getId() + " on node "
 							+ container.getNodeId().getHost());
 				}
 

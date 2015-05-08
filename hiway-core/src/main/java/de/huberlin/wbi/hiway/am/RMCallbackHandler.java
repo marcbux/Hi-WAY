@@ -53,7 +53,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 	private HiWay am;
 	// a data structure storing the invocation launched by each container
-	private Map<Long, HiWayInvocation> containerIdToInvocation = new HashMap<>();
+	private Map<Integer, HiWayInvocation> containerIdToInvocation = new HashMap<>();
 
 	// a queue for allocated containers that have yet to be assigned a task
 	private Queue<Container> containerQueue = new LinkedList<>();
@@ -87,8 +87,9 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 		return progress;
 	}
 
+	@SuppressWarnings("deprecation")
 	protected void launchTask(TaskInstance task, Container allocatedContainer) {
-		containerIdToInvocation.put(allocatedContainer.getId().getContainerId(), new HiWayInvocation(task));
+		containerIdToInvocation.put(allocatedContainer.getId().getId(), new HiWayInvocation(task));
 		System.out.println("Launching workflow task on a new container." + ", task=" + task + ", containerId=" + allocatedContainer.getId()
 				+ ", containerNode=" + allocatedContainer.getNodeId().getHost() + ":" + allocatedContainer.getNodeId().getPort() + ", containerNodeURI="
 				+ allocatedContainer.getNodeHttpAddress() + ", containerResourceMemory" + allocatedContainer.getResource().getMemory());
@@ -165,6 +166,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 		launchTasks();
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public void onContainersCompleted(List<ContainerStatus> completedContainers) {
 		System.out.println("Got response from RM for container ask, completedCnt=" + completedContainers.size());
@@ -193,9 +195,9 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 			String diagnostics = containerStatus.getDiagnostics();
 			ContainerId containerId = containerStatus.getContainerId();
 
-			if (containerIdToInvocation.containsKey(containerId.getContainerId())) {
+			if (containerIdToInvocation.containsKey(containerId.getId())) {
 
-				HiWayInvocation invocation = containerIdToInvocation.get(containerStatus.getContainerId().getContainerId());
+				HiWayInvocation invocation = containerIdToInvocation.get(containerStatus.getContainerId().getId());
 				TaskInstance finishedTask = invocation.task;
 
 				if (exitStatus == 0) {

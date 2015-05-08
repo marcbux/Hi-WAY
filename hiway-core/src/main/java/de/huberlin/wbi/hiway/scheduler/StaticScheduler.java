@@ -80,18 +80,19 @@ public abstract class StaticScheduler extends Scheduler {
 		System.out.println("Added task " + task + " to queue " + node);
 	}
 
+	@SuppressWarnings("deprecation")
 	@Override
 	public TaskInstance getNextTask(Container container) {
 		numberOfRemainingTasks--;
 		numberOfRunningTasks++;
 		String node = container.getNodeId().getHost();
 
-		System.out.println("Looking for task on container " + container.getId().getContainerId() + " on node " + node);
+		System.out.println("Looking for task on container " + container.getId().getId() + " on node " + node);
 		System.out.println("Queue: " + queues.get(node).toString());
 
 		TaskInstance task = queues.get(node).remove();
 
-		System.out.println("Assigned task " + task + " to container " + container.getId().getContainerId() + " on node " + node);
+		System.out.println("Assigned task " + task + " to container " + container.getId().getId() + " on node " + node);
 		task.incTries();
 
 		return task;

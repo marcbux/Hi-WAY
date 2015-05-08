@@ -282,20 +282,22 @@ public abstract class Scheduler {
 		return relaxLocality;
 	}
 
+	@SuppressWarnings("deprecation")
 	public Collection<ContainerId> taskCompleted(TaskInstance task, ContainerStatus containerStatus, long runtimeInMs) {
 
 		numberOfRunningTasks--;
 		numberOfFinishedTasks++;
 
-		System.out.println("Task " + task + " in container " + containerStatus.getContainerId().getContainerId() + " finished after " + runtimeInMs + " ms");
+		System.out.println("Task " + task + " in container " + containerStatus.getContainerId().getId() + " finished after " + runtimeInMs + " ms");
 
 		return new ArrayList<>();
 	}
 
+	@SuppressWarnings("deprecation")
 	public Collection<ContainerId> taskFailed(TaskInstance task, ContainerStatus containerStatus) {
 		numberOfRunningTasks--;
 
-		System.out.println("Task " + task + " on container " + containerStatus.getContainerId().getContainerId() + " failed");
+		System.out.println("Task " + task + " on container " + containerStatus.getContainerId().getId() + " failed");
 		if (task.retry(maxRetries)) {
 			System.out.println("Retrying task " + task + ".");
 			addTask(task);

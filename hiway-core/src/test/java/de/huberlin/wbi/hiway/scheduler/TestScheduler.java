@@ -53,6 +53,7 @@ import de.huberlin.wbi.hiway.scheduler.gq.GreedyQueue;
 
 public class TestScheduler {
 
+	@SuppressWarnings("deprecation")
 	private static void run(Scheduler scheduler, List<String> nodeNames, List<String> taskNames, int[][] runtimes) {
 
 		Queue<NodeId> availableNodes = new LinkedList<>();
@@ -69,7 +70,7 @@ public class TestScheduler {
 		while (!scheduler.nothingToSchedule() || !runningTasks.isEmpty()) {
 			if (!scheduler.nothingToSchedule() && !availableNodes.isEmpty()) {
 				NodeId nodeId = availableNodes.remove();
-				ContainerId containerId = ContainerId.newContainerId(null, runningId++);
+				ContainerId containerId = ContainerId.newInstance(null, runningId++);
 				Container container = Container.newInstance(containerId, nodeId, "", null, null, null);
 				TaskInstance task = scheduler.getNextTask(container);
 				runningTasks.put(container, task);

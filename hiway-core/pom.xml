@@ -10,7 +10,7 @@
 	<name>Hi-WAY core</name>
 	<url>https://github.com/marcbux/Hi-WAY</url>
 	<properties>
-		<hadoop.version>2.6.0</hadoop.version>
+		<hadoop.version>2.7.0</hadoop.version>
 		<hiwayDB.version>0.0.1-SNAPSHOT</hiwayDB.version>
 		<client.class>de.huberlin.wbi.hiway.common.Client</client.class>
 	</properties>
