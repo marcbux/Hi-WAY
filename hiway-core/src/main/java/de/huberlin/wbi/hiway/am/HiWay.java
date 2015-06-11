@@ -323,7 +323,7 @@ public abstract class HiWay {
 			System.exit(-1);
 		}
 	}
-
+	
 	private void finish() {
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_TIME, Long.toString(System.currentTimeMillis()
 				- amRMClient.getStartTime())));
@@ -379,13 +379,9 @@ public abstract class HiWay {
 				String statlog = hdfsApplicationDirectory + "/" + appId + ".log";
 
 				try (BufferedWriter writer = new BufferedWriter(new FileWriter(summaryPath.toString()))) {
-					Collection<String> output = new ArrayList<>();
-					for (Data outputFile : getOutputFiles()) {
-						output.add(outputFile.getHdfsPath().toString());
-					}
 					JSONObject obj = new JSONObject();
 					try {
-						obj.put("output", output);
+						obj.put("output", getOutput());
 						obj.put("stdout", stdout);
 						obj.put("stderr", stderr);
 						obj.put("statlog", statlog);
@@ -475,6 +471,14 @@ public abstract class HiWay {
 
 	public AtomicInteger getNumKilledContainers() {
 		return numKilledContainers;
+	}
+
+	protected Collection<String> getOutput() {
+		Collection<String> output = new ArrayList<>();
+		for (Data outputFile : getOutputFiles()) {
+			output.add(outputFile.getHdfsPath().toString());
+		}
+		return output;
 	}
 
 	public Collection<Data> getOutputFiles() {

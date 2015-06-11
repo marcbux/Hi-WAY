@@ -36,6 +36,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -62,6 +63,8 @@ public class CuneiformApplicationMaster extends HiWay {
 	}
 
 	private BaseCreActor creActor;
+	private BaseRepl repl;
+
 	private final TicketSrcActor ticketSrc;
 
 	public CuneiformApplicationMaster() {
@@ -77,6 +80,19 @@ public class CuneiformApplicationMaster extends HiWay {
 	}
 
 	@Override
+	protected Collection<String> getOutput() {
+		try {
+			if (repl.hasAns()) {
+				return repl.getAns().normalize();
+			}
+		} catch (NotDerivableException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		return super.getOutput();
+	}
+
+	@Override
 	public UUID getRunId() {
 		return (ticketSrc.getRunId());
 	}
@@ -84,7 +100,7 @@ public class CuneiformApplicationMaster extends HiWay {
 	@Override
 	public void parseWorkflow() {
 		System.out.println("Parsing Cuneiform workflow " + getWorkflowFile());
-		BaseRepl repl = new HiWayRepl(ticketSrc, this);
+		repl = new HiWayRepl(ticketSrc, this);
 
 		StringBuffer buf = new StringBuffer();
 
