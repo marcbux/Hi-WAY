@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Records;
 
+import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.hiway.am.NMCallbackHandler;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
@@ -127,6 +128,9 @@ public class LaunchContainerRunnable implements Runnable {
 		if (invocScript.length() > 0) {
 			vargs.add("--invocScript " + invocScript);
 		}
+		
+		vargs.add(">> " + Invocation.STDOUT_FILENAME);
+		vargs.add("2>> " + Invocation.STDERR_FILENAME);
 
 		// Get final commmand
 		StringBuilder command = new StringBuilder();

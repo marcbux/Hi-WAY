@@ -66,6 +66,7 @@ public class Worker {
 			e.printStackTrace();
 			System.exit(-1);
 		}
+		System.exit(0);
 	}
 
 	protected static void writeEntryToLog(JsonReportEntry entry) throws IOException {
@@ -102,10 +103,13 @@ public class Worker {
 		Process process;
 		int exitValue = -1;
 		try {
-			File stdOutFile = new File(Invocation.STDOUT_FILENAME);
-			File stdErrFile = new File(Invocation.STDERR_FILENAME);
-			processBuilder.redirectOutput(stdOutFile);
-			processBuilder.redirectError(stdErrFile);
+//			File stdOutFile = new File(Invocation.STDOUT_FILENAME);
+//			File stdErrFile = new File(Invocation.STDERR_FILENAME);
+//			stdOutFile.createNewFile();
+//			stdErrFile.createNewFile();
+//			processBuilder.redirectOutput(stdOutFile);
+//			processBuilder.redirectError(stdErrFile);
+			processBuilder.inheritIO();
 			process = processBuilder.start();
 			exitValue = process.waitFor();
 		} catch (IOException | InterruptedException e) {
