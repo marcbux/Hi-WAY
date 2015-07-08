@@ -36,6 +36,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -80,16 +81,24 @@ public class CuneiformApplicationMaster extends HiWay {
 	}
 
 	@Override
-	protected Collection<String> getOutput() {
+	public Collection<Data> getOutputFiles() {
+		Collection<Data> outputFiles = new ArrayList<>();
+		
 		try {
 			if (repl.hasAns()) {
-				return repl.getAns().normalize();
+				Collection<String> output = repl.getAns().normalize();
+				for (String fileName : getFiles().keySet()) {
+					if (output.contains(fileName)) {
+						outputFiles.add(getFiles().get(fileName));
+					}
+				}
 			}
 		} catch (NotDerivableException e) {
 			e.printStackTrace();
 			System.exit(-1);
 		}
-		return super.getOutput();
+		
+		return outputFiles;
 	}
 
 	@Override
