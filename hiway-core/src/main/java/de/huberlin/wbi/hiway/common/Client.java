@@ -469,7 +469,7 @@ public class Client {
 		// Monitor the application
 		boolean success = monitorApplication(appId);
 
-		if (summary != null) {
+		if (success && summary != null) {
 			summary.stageIn();
 		}
 
