@@ -252,7 +252,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 				BufferedWriter templateWriter = new BufferedWriter(new FileWriter(templateData.getLocalPath().toString()));
 				BufferedWriter postScriptWriter = new BufferedWriter(new FileWriter(postSriptData.getLocalPath().toString()))) {
 			preScriptWriter.write(galaxyTool.getEnv());
-			preScriptWriter.write("GALAXY_SLOTS=$(nproc)");
+			preScriptWriter.write("GALAXY_SLOTS=$(nproc)\n");
 			paramScriptWriter.write(paramScript.toString());
 			templateWriter.write(galaxyTool.getTemplate());
 			postScriptWriter.write(getPostScript());
