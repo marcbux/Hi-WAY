@@ -32,6 +32,7 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.common;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Map;
 
@@ -223,11 +224,16 @@ public class Data implements Comparable<Data> {
 	public void stageIn() throws IOException {
 		Path hdfsPath = getHdfsPath();
 		Path localPath = getLocalPath();
-		System.out.println("Staging in: " + hdfsPath + " -> " + localPath);
+		System.out.print("Attempting to stage in: " + hdfsPath + " -> " + localPath);
 		if (localDirectory.depth() > 0) {
 			localFs.mkdirs(localDirectory);
 		}
-		hdfs.copyToLocalFile(false, hdfsPath, localPath);
+		try {
+			hdfs.copyToLocalFile(false, hdfsPath, localPath);
+			System.out.println(" (succeeded)");
+		} catch (FileNotFoundException e) {
+			System.out.println(" (failed)");
+		}
 	}
 
 	public void stageOut() throws IOException {
@@ -237,8 +243,13 @@ public class Data implements Comparable<Data> {
 		if (hdfsDirectory.depth() > 0) {
 			mkHdfsDir(hdfsDirectory);
 		}
-		System.out.println("Staging out: " + localPath + " -> " + hdfsPath);
-		hdfs.copyFromLocalFile(false, true, localPath, hdfsPath);
+		System.out.print("Attempting to stage out: " + localPath + " -> " + hdfsPath);
+		try {
+			hdfs.copyFromLocalFile(false, true, localPath, hdfsPath);
+			System.out.println(" (succeeded)");
+		} catch (FileNotFoundException e) {
+			System.out.println(" (failed)");
+		}
 	}
 
 	@Override
