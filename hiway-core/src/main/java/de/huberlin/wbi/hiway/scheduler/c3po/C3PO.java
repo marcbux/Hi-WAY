@@ -305,7 +305,7 @@ public class C3PO extends Scheduler {
 				} catch (IOException e) {
 					System.err.println("Error during hdfs block location determination.");
 					e.printStackTrace();
-					System.exit(-1);
+					dataLocalityStatistic.weight = 0d;
 				}
 			}
 		}
