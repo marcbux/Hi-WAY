@@ -78,7 +78,6 @@ import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -795,11 +794,12 @@ public abstract class HiWay {
 		metrics.waitingTask();
 
 		// set the priority for the request
-		Priority pri = Records.newRecord(Priority.class);
+		Priority pri = Priority.newInstance(requestPriority);
 		pri.setPriority(requestPriority);
 
 		// set up resource type requirements
-		Resource capability = Records.newRecord(Resource.class);
+		Resource capability = Resource.newInstance(containerMemory,
+				containerCores);
 		capability.setMemory(containerMemory);
 		capability.setVirtualCores(containerCores);
 

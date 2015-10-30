@@ -100,6 +100,7 @@ public class Worker {
 		script.setExecutable(true);
 		ProcessBuilder processBuilder = new ProcessBuilder(script.getPath());
 		processBuilder.directory(new File("."));
+		processBuilder.environment().remove("MALLOC_ARENA_MAX");
 		Process process;
 		int exitValue = -1;
 		try {
