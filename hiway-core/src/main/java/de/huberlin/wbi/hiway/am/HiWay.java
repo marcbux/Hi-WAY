@@ -271,16 +271,16 @@ public abstract class HiWay {
 	@SuppressWarnings("static-method")
 	public void evaluateReport(TaskInstance task, ContainerId containerId) {
 		try {
-			Data reportFile = new Data(Invocation.REPORT_FILENAME, containerId.toString());
+			Data reportFile = new Data(task.getId() + "_" + Invocation.REPORT_FILENAME, containerId.toString());
 			reportFile.stageIn();
-			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME, containerId.toString());
+			Data stdoutFile = new Data(task.getId() + "_" + Invocation.STDOUT_FILENAME, containerId.toString());
 			stdoutFile.stageIn();
-			Data stderrFile = new Data(Invocation.STDERR_FILENAME, containerId.toString());
+			Data stderrFile = new Data(task.getId() + "_" + Invocation.STDERR_FILENAME, containerId.toString());
 			stderrFile.stageIn();
 
 			// (a) evaluate report
 			Set<JsonReportEntry> report = task.getReport();
-			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.REPORT_FILENAME))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(task.getId() + "_" + Invocation.REPORT_FILENAME))) {
 				String line;
 				while ((line = reader.readLine()) != null) {
 					line = line.trim();
@@ -289,7 +289,7 @@ public abstract class HiWay {
 					report.add(new JsonReportEntry(line));
 				}
 			}
-			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.STDOUT_FILENAME))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(task.getId() + "_" + Invocation.STDOUT_FILENAME))) {
 				String line;
 				StringBuffer sb = new StringBuffer();
 				while ((line = reader.readLine()) != null) {
@@ -302,7 +302,7 @@ public abstract class HiWay {
 					report.add(re);
 				}
 			}
-			try (BufferedReader reader = new BufferedReader(new FileReader(Invocation.STDERR_FILENAME))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(task.getId() + "_" + Invocation.STDERR_FILENAME))) {
 				String line;
 				StringBuffer sb = new StringBuffer();
 				while ((line = reader.readLine()) != null) {
@@ -833,7 +833,7 @@ public abstract class HiWay {
 					System.err.println(String.format("%02d  %s", Integer.valueOf(++i), line));
 			}
 
-			Data stdoutFile = new Data(Invocation.STDOUT_FILENAME, containerId.toString());
+			Data stdoutFile = new Data(task.getId() + "_" + Invocation.STDOUT_FILENAME, containerId.toString());
 			stdoutFile.stageIn();
 
 			System.err.println("[out]");
@@ -842,7 +842,7 @@ public abstract class HiWay {
 					System.err.println(line);
 			}
 
-			Data stderrFile = new Data(Invocation.STDERR_FILENAME, containerId.toString());
+			Data stderrFile = new Data(task.getId() + "_" + Invocation.STDERR_FILENAME, containerId.toString());
 			stderrFile.stageIn();
 
 			System.err.println("[err]");

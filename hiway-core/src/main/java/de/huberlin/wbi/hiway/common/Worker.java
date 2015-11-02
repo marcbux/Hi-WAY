@@ -69,8 +69,8 @@ public class Worker {
 		System.exit(0);
 	}
 
-	protected static void writeEntryToLog(JsonReportEntry entry) throws IOException {
-		try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(Invocation.REPORT_FILENAME), true))) {
+	protected static void writeEntryToLog(JsonReportEntry entry, long id) throws IOException {
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(new File(id + "_" + Invocation.REPORT_FILENAME), true))) {
 			writer.write(entry.toString() + "\n");
 		}
 	}
@@ -96,7 +96,7 @@ public class Worker {
 	}
 
 	private int exec() {
-		File script = new File("./" + containerId);
+		File script = new File("./" + id);
 		script.setExecutable(true);
 		ProcessBuilder processBuilder = new ProcessBuilder(script.getPath());
 		processBuilder.directory(new File("."));
@@ -104,12 +104,12 @@ public class Worker {
 		Process process;
 		int exitValue = -1;
 		try {
-//			File stdOutFile = new File(Invocation.STDOUT_FILENAME);
-//			File stdErrFile = new File(Invocation.STDERR_FILENAME);
-//			stdOutFile.createNewFile();
-//			stdErrFile.createNewFile();
-//			processBuilder.redirectOutput(stdOutFile);
-//			processBuilder.redirectError(stdErrFile);
+			// File stdOutFile = new File(Invocation.STDOUT_FILENAME);
+			// File stdErrFile = new File(Invocation.STDERR_FILENAME);
+			// stdOutFile.createNewFile();
+			// stdErrFile.createNewFile();
+			// processBuilder.redirectOutput(stdOutFile);
+			// processBuilder.redirectError(stdErrFile);
 			processBuilder.inheritIO();
 			process = processBuilder.start();
 			exitValue = process.waitFor();
@@ -188,7 +188,7 @@ public class Worker {
 		long toc = System.currentTimeMillis();
 		JSONObject obj = new JSONObject();
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEIN, obj));
+		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEIN, obj), id);
 
 		tic = System.currentTimeMillis();
 		int exitValue = exec();
@@ -201,7 +201,7 @@ public class Worker {
 				while ((line = reader.readLine()) != null) {
 					sb.append(line).append("\n");
 				}
-				writeEntryToLog(new JsonReportEntry(workflowId, taskId, taskName, langLabel, id, JsonReportEntry.KEY_INVOC_SCRIPT, sb.toString()));
+				writeEntryToLog(new JsonReportEntry(workflowId, taskId, taskName, langLabel, id, JsonReportEntry.KEY_INVOC_SCRIPT, sb.toString()), id);
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.exit(-1);
@@ -210,11 +210,11 @@ public class Worker {
 
 		obj = new JSONObject();
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, JsonReportEntry.KEY_INVOC_TIME, obj));
+		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, JsonReportEntry.KEY_INVOC_TIME, obj), id);
 
 		tic = System.currentTimeMillis();
-		new Data(Invocation.STDOUT_FILENAME, containerId).stageOut();
-		new Data(Invocation.STDERR_FILENAME, containerId).stageOut();
+		new Data(id + "_" + Invocation.STDOUT_FILENAME, containerId).stageOut();
+		new Data(id + "_" + Invocation.STDERR_FILENAME, containerId).stageOut();
 		if (exitValue != 0) {
 			System.exit(exitValue);
 		}
@@ -222,9 +222,9 @@ public class Worker {
 		toc = System.currentTimeMillis();
 		obj = new JSONObject();
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT, obj));
+		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT, obj), id);
 
-		new Data(Invocation.REPORT_FILENAME, containerId).stageOut();
+		new Data(id + "_" + Invocation.REPORT_FILENAME, containerId).stageOut();
 	}
 
 	public void stageIn() throws IOException, JSONException {
@@ -235,17 +235,17 @@ public class Worker {
 			JSONObject obj = new JSONObject();
 			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, input.getLocalPath().toString(),
-					HiwayDBI.KEY_FILE_TIME_STAGEIN, obj));
+					HiwayDBI.KEY_FILE_TIME_STAGEIN, obj), id);
 			if (determineFileSizes) {
 				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, input.getLocalPath().toString(),
-						JsonReportEntry.KEY_FILE_SIZE_STAGEIN, Long.toString((new File(input.getLocalPath().toString())).length())));
+						JsonReportEntry.KEY_FILE_SIZE_STAGEIN, Long.toString((new File(input.getLocalPath().toString())).length())), id);
 			}
 
 		}
 	}
 
 	public void stageOut() throws IOException, JSONException {
-		try (BufferedReader logReader = new BufferedReader(new FileReader(new File(Invocation.REPORT_FILENAME)))) {
+		try (BufferedReader logReader = new BufferedReader(new FileReader(new File(id + "_" + Invocation.REPORT_FILENAME)))) {
 			String line;
 			while ((line = logReader.readLine()) != null) {
 				JsonReportEntry entry = new JsonReportEntry(line);
@@ -264,10 +264,10 @@ public class Worker {
 			JSONObject obj = new JSONObject();
 			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, output.getLocalPath().toString(),
-					HiwayDBI.KEY_FILE_TIME_STAGEOUT, obj));
+					HiwayDBI.KEY_FILE_TIME_STAGEOUT, obj), id);
 			if (determineFileSizes) {
 				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, output.getLocalPath().toString(),
-						JsonReportEntry.KEY_FILE_SIZE_STAGEOUT, Long.toString((new File(output.getLocalPath().toString())).length())));
+						JsonReportEntry.KEY_FILE_SIZE_STAGEOUT, Long.toString((new File(output.getLocalPath().toString())).length())), id);
 			}
 		}
 	}

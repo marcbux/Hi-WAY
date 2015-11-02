@@ -154,7 +154,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 		Map<String, LocalResource> localResources = new HashMap<>();
 		try {
 			String containerId = container.getId().toString();
-			File script = new File(containerId);
+			File script = new File(String.valueOf(getId()));
 			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(script))) {
 				scriptWriter.write(getCommand());
 			} catch (IOException e) {

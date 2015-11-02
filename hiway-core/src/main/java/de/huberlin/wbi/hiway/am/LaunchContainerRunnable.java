@@ -129,8 +129,8 @@ public class LaunchContainerRunnable implements Runnable {
 			vargs.add("--invocScript " + invocScript);
 		}
 		
-		vargs.add(">> " + Invocation.STDOUT_FILENAME);
-		vargs.add("2>> " + Invocation.STDERR_FILENAME);
+		vargs.add(">> " + task.getId() + "_" + Invocation.STDOUT_FILENAME);
+		vargs.add("2>> " + task.getId() + "_" + Invocation.STDERR_FILENAME);
 
 		// Get final commmand
 		StringBuilder command = new StringBuilder();

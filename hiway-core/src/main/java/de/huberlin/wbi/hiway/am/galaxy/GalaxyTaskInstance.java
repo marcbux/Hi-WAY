@@ -88,10 +88,10 @@ public class GalaxyTaskInstance extends TaskInstance {
 		StringBuilder commandSb = new StringBuilder();
 		commandSb.append("PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n");
 		commandSb.append("PYTHON_EGG_CACHE=.; export PYTHON_EGG_CACHE\n");
-		commandSb.append("python params.py\n");
-		commandSb.append("cat pre.sh > script.sh\n");
-		commandSb.append("echo `cheetah fill template.tmpl --pickle params.p -p` >> script.sh\n");
-		commandSb.append("cat post.sh >> script.sh\n");
+		commandSb.append("python params_" + id + ".py\n");
+		commandSb.append("cat pre_" + id + ".sh > script.sh\n");
+		commandSb.append("echo `cheetah fill template_" + id + ".tmpl --pickle params.p -p` >> script.sh\n");
+		commandSb.append("cat post_" + id + ".sh >> script.sh\n");
 		commandSb.append("bash ").append(getInvocScript()).append("\n");
 		setCommand(commandSb.toString());
 	}
@@ -242,10 +242,10 @@ public class GalaxyTaskInstance extends TaskInstance {
 
 		// The task isntance's bash script is built by appending the pre script, the template compiled by Cheetah using the parameters set in the params Python
 		// script, and the post script
-		Data preSriptData = new Data("pre.sh", containerId);
-		Data paramScriptData = new Data("params.py", containerId);
-		Data templateData = new Data("template.tmpl", containerId);
-		Data postSriptData = new Data("post.sh", containerId);
+		Data preSriptData = new Data("pre_" + getId() + ".sh", containerId);
+		Data paramScriptData = new Data("params_" + getId() + ".py", containerId);
+		Data templateData = new Data("template_" + getId() + ".tmpl", containerId);
+		Data postSriptData = new Data("post_" + getId() + ".sh", containerId);
 
 		try (BufferedWriter preScriptWriter = new BufferedWriter(new FileWriter(preSriptData.getLocalPath().toString()));
 				BufferedWriter paramScriptWriter = new BufferedWriter(new FileWriter(paramScriptData.getLocalPath().toString()));

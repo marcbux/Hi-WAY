@@ -132,14 +132,14 @@ public class CuneiformApplicationMaster extends HiWay {
 		String line;
 		try {
 			StringBuffer buf = new StringBuffer();
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(Invocation.STDOUT_FILENAME)))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(task.getId() + "_" + Invocation.STDOUT_FILENAME)))) {
 				while ((line = reader.readLine()) != null)
 					buf.append(line).append('\n');
 			}
 			String stdOut = buf.toString();
 
 			buf = new StringBuffer();
-			try (BufferedReader reader = new BufferedReader(new FileReader(new File(Invocation.STDERR_FILENAME)))) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(new File(task.getId() + "_" + Invocation.STDERR_FILENAME)))) {
 				while ((line = reader.readLine()) != null)
 					buf.append(line).append('\n');
 			}
