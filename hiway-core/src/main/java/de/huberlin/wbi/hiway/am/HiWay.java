@@ -623,9 +623,11 @@ public abstract class HiWay {
 		if (!cliParser.hasOption("workflow")) {
 			throw new IllegalArgumentException("No workflow file specified to be executed by application master");
 		}
-
-		workflowPath = new Path(cliParser.getOptionValue("workflow"));
+		
+		String[] workflowParams = cliParser.getOptionValue("workflow").split(",");
+		workflowPath = new Path(workflowParams[0]);
 		workflowFile = new Data(workflowPath);
+		workflowFile.setInput(Boolean.parseBoolean(workflowParams[1]));
 		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(conf.get(HiWayConfiguration.HIWAY_SCHEDULER,
 				HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
 
@@ -677,8 +679,7 @@ public abstract class HiWay {
 			nmClientAsync.init(conf);
 			nmClientAsync.start();
 
-			Data workflowData = new Data(workflowPath);
-			workflowData.stageIn();
+			workflowFile.stageIn();
 
 			// Register self with ResourceManager. This will start heartbeating to the RM.
 			appMasterHostname = NetUtils.getHostname();

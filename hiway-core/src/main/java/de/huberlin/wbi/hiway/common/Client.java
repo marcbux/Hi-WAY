@@ -136,6 +136,7 @@ public class Client {
 	// the workflow format and its path in the file system
 	private Data workflow;
 	private Path workflowPath;
+	private String workflowParam;
 
 	private HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS workflowType;
 	// a handle to the YARN ApplicationsManager (ASM)
@@ -178,7 +179,8 @@ public class Client {
 	 * @param args
 	 *            Parsed command line options.
 	 * @return Whether the init was successful to run the client.
-	 * @throws ParseException ParseException
+	 * @throws ParseException
+	 *             ParseException
 	 */
 	public boolean init(String[] args) throws ParseException {
 
@@ -220,12 +222,8 @@ public class Client {
 			}
 		}
 
-		try {
-			workflowPath = new Path(new File(cliParser.getOptionValue("workflow")).getCanonicalPath());
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		}
+		workflowParam = cliParser.getOptionValue("workflow");
+		workflowPath = new Path(workflowParam);
 		workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.valueOf(cliParser.getOptionValue("language",
 				HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform.toString()));
 
@@ -291,8 +289,10 @@ public class Client {
 	 * Main run function for the client.
 	 * 
 	 * @return true if application completed successfully.
-	 * @throws IOException IOException
-	 * @throws YarnException YarnException
+	 * @throws IOException
+	 *             IOException
+	 * @throws YarnException
+	 *             YarnException
 	 */
 	public boolean run() throws IOException, YarnException {
 		System.out.println("Running Client");
@@ -348,14 +348,22 @@ public class Client {
 		Data.setHdfsApplicationDirectory(hdfsApplicationDirectory);
 		Data.setHdfs(hdfs);
 		workflow = new Data(workflowPath);
+		workflow.setInput(true);
+
+		// Copy the application master jar to the filesystem
+		System.out.println("Looking for workflow at HDFS location " + workflow.getHdfsPath());
+		if (hdfs.exists(workflow.getHdfsPath())) {
+			System.out.println("Workflow found in HDFS at location " + workflow.getHdfsPath());
+		} else {
+			workflow.setInput(false);
+			workflow.stageOut();
+		}
+
 		if (summaryPath != null)
 			summary = new Data(summaryPath);
 
 		// Set up the container launch context for the application master
 		ContainerLaunchContext amContainer = Records.newRecord(ContainerLaunchContext.class);
-
-		// Copy the application master jar to the filesystem
-		workflow.stageOut();
 
 		/* set the env variables to be setup in the env where the application master will be run */
 		System.out.println("Set the environment for the application master");
@@ -401,7 +409,7 @@ public class Client {
 			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS);
 		}
 
-		vargs.add("--workflow " + workflow.getName());
+		vargs.add("--workflow " + workflowParam + "," + workflow.isInput());
 		if (summary != null) {
 			vargs.add("--summary " + summary.getName());
 		}
