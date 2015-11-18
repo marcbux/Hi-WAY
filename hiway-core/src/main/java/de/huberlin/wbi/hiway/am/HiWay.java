@@ -39,6 +39,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -253,9 +255,12 @@ public abstract class HiWay {
 	private BufferedWriter statLog;
 	private volatile boolean success;
 	private Path summaryPath;
+	
+	private Path workflowPath;
+	private boolean workflowIsInput;
 	private Data workflowFile;
 
-	private Path workflowPath;
+	
 
 	public HiWay() {
 		conf = new HiWayConfiguration();
@@ -625,9 +630,13 @@ public abstract class HiWay {
 		}
 		
 		String[] workflowParams = cliParser.getOptionValue("workflow").split(",");
-		workflowPath = new Path(workflowParams[0]);
-		workflowFile = new Data(workflowPath);
-		workflowFile.setInput(Boolean.parseBoolean(workflowParams[1]));
+		try {
+			workflowPath = new Path(new URI(workflowParams[0]).getPath());
+		} catch (URISyntaxException e) {
+			workflowPath = new Path(workflowParams[0]);
+		}
+		workflowIsInput = Boolean.parseBoolean(workflowParams[1]);
+		
 		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(conf.get(HiWayConfiguration.HIWAY_SCHEDULER,
 				HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
 
@@ -679,7 +688,17 @@ public abstract class HiWay {
 			nmClientAsync.init(conf);
 			nmClientAsync.start();
 
-			workflowFile.stageIn();
+			if (hdfs.exists(workflowPath)) {
+				Path localPath = new Path(workflowPath.getName());
+				hdfs.copyToLocalFile(false, workflowPath, localPath);
+				workflowPath = localPath;
+				workflowFile = new Data(workflowPath);
+				workflowFile.stageOut();
+			} else {
+				workflowFile = new Data(workflowPath);
+				workflowFile.setInput(workflowIsInput);
+				workflowFile.stageIn();
+			}
 
 			// Register self with ResourceManager. This will start heartbeating to the RM.
 			appMasterHostname = NetUtils.getHostname();

@@ -34,6 +34,8 @@ package de.huberlin.wbi.hiway.common;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -114,7 +116,7 @@ public class Client {
 		System.err.println("Application failed to complete successfully");
 		System.exit(2);
 	}
-
+	
 	// amount of memory resource to request for to run the App Master
 	private int amMemory = 4096;
 	// the priority of the AM container
@@ -223,7 +225,13 @@ public class Client {
 		}
 
 		workflowParam = cliParser.getOptionValue("workflow");
-		workflowPath = new Path(workflowParam);
+		
+		try {
+			workflowPath = new Path(new URI(workflowParam).getPath());
+		} catch (URISyntaxException e) {
+			workflowPath = new Path(workflowParam);
+		}
+		
 		workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.valueOf(cliParser.getOptionValue("language",
 				HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform.toString()));
 
@@ -351,9 +359,10 @@ public class Client {
 		workflow.setInput(true);
 
 		// Copy the application master jar to the filesystem
-		System.out.println("Looking for workflow at HDFS location " + workflow.getHdfsPath());
 		if (hdfs.exists(workflow.getHdfsPath())) {
 			System.out.println("Workflow found in HDFS at location " + workflow.getHdfsPath());
+		} else if (hdfs.exists(workflowPath)) {
+			System.out.println("Workflow found in HDFS at location " + workflowPath);
 		} else {
 			workflow.setInput(false);
 			workflow.stageOut();
