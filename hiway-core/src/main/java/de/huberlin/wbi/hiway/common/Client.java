@@ -269,7 +269,7 @@ public class Client {
 					System.out.println(report.getDiagnostics());
 					return true;
 				}
-				System.out.println("Application did finish unsuccessfully." + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
+				System.out.println("Application finished unsuccessfully." + " YarnState=" + state.toString() + ", DSFinalStatus=" + dsStatus.toString()
 						+ ". Breaking monitoring loop");
 
 				return false;

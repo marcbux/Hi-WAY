@@ -204,7 +204,7 @@ public class Data implements Comparable<Data> {
 		if (dir == null || hdfs.isDirectory(dir))
 			return;
 		mkHdfsDir(dir.getParent());
-		System.out.println("Creating directoy: " + dir);
+		System.out.println("Creating directory: " + dir);
 		hdfs.mkdirs(dir);
 		hdfs.setPermission(dir, new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
 	}
