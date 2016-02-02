@@ -32,6 +32,9 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.common;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
@@ -42,11 +45,20 @@ public class HiWayConfiguration extends YarnConfiguration {
 	}
 
 	public static enum HIWAY_SCHEDULER_OPTS {
-		c3po, cloning, conservative, greedyQueue, heft, outlooking, placementAware, staticRoundRobin
+		c3po, greedy, heft, dataAware, roundRobin
 	}
 
 	public static enum HIWAY_WORKFLOW_LANGUAGE_OPTS {
 		cuneiform, dax, galaxy, log
+	}
+
+	public static final Map<String, HIWAY_WORKFLOW_LANGUAGE_OPTS> HIWAY_WORKFLOW_LANGUAGE_EXTS;
+	static {
+		HIWAY_WORKFLOW_LANGUAGE_EXTS = new HashMap<>();
+		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("cf", HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform);
+		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("xml", HIWAY_WORKFLOW_LANGUAGE_OPTS.dax);
+		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("ga", HIWAY_WORKFLOW_LANGUAGE_OPTS.galaxy);
+		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("log", HIWAY_WORKFLOW_LANGUAGE_OPTS.log);
 	}
 
 	public static final String HIWAY_AM_APPLICATION_TYPE = "hiway.am.application.type";

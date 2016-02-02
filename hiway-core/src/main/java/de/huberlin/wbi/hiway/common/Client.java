@@ -32,8 +32,13 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.common;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -116,7 +121,7 @@ public class Client {
 		System.err.println("Application failed to complete successfully");
 		System.exit(2);
 	}
-	
+
 	// amount of memory resource to request for to run the App Master
 	private int amMemory = 4096;
 	// the priority of the AM container
@@ -136,9 +141,9 @@ public class Client {
 	private Data summary;
 	private Path summaryPath;
 	// the workflow format and its path in the file system
-	private Data workflow;
-	private Path workflowPath;
 	private String workflowParam;
+	private String scheduler;
+	private String memory;
 
 	private HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS workflowType;
 	// a handle to the YARN ApplicationsManager (ASM)
@@ -149,14 +154,21 @@ public class Client {
 		yarnClient = YarnClient.createYarnClient();
 		yarnClient.init(conf);
 		opts = new Options();
-		opts.addOption("s", "summary", true, "The name of the json summary file. No file is created if this parameter is not specified.");
-		opts.addOption("w", "workflow", true, "The workflow file to be executed by the Application Master");
+		opts.addOption("w", "workflow", false, "(Deprecated) The workflow file to be executed by the Application Master.");
+		opts.addOption("u", "summary", true, "The name of the json summary file. No file is created if this parameter is not specified.");
+		opts.addOption("m", "memory", true, "The amount of memory (in MB) to be allocated per worker container. Overrides settings in hiway-site.xml.");
+		String schedulers = "";
+		for (HiWayConfiguration.HIWAY_SCHEDULER_OPTS policy : HiWayConfiguration.HIWAY_SCHEDULER_OPTS.values()) {
+			schedulers += ", " + policy.toString();
+		}
+		opts.addOption("s", "scheduler", true, "The scheduling policy that is to be employed. Valid arguments: " + schedulers.substring(2) + "."
+				+ " Overrides settings in hiway-site.xml.");
 		String workflowFormats = "";
 		for (HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS language : HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.values()) {
 			workflowFormats += ", " + language.toString();
 		}
-		opts.addOption("l", "language", true, "The input file format. Valid arguments: " + workflowFormats.substring(2) + ". Default: "
-				+ HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform);
+		opts.addOption("l", "language", true, "The input file format. Will be automatically detected if not specified explicitly. Valid arguments: "
+				+ workflowFormats.substring(2) + ".");
 		opts.addOption("debug", false, "Dump out debug information");
 		opts.addOption("help", false, "Print usage");
 	}
@@ -196,7 +208,13 @@ public class Client {
 		CommandLine cliParser = new GnuParser().parse(opts, args);
 
 		if (args.length == 0) {
-			throw new IllegalArgumentException("No args specified for client to initialize");
+			printUsage();
+			throw new IllegalArgumentException("No args specified for client to initialize.");
+		}
+
+		if (cliParser.getArgs().length == 0) {
+			printUsage();
+			throw new IllegalArgumentException("No workflow file specified.");
 		}
 
 		if (cliParser.hasOption("help")) {
@@ -224,16 +242,27 @@ public class Client {
 			}
 		}
 
-		workflowParam = cliParser.getOptionValue("workflow");
-		
-		try {
-			workflowPath = new Path(new URI(workflowParam).getPath());
-		} catch (URISyntaxException e) {
-			workflowPath = new Path(workflowParam);
+		if (cliParser.hasOption("memory")) {
+			memory = cliParser.getOptionValue("memory");
 		}
-		
-		workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.valueOf(cliParser.getOptionValue("language",
-				HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform.toString()));
+
+		if (cliParser.hasOption("scheduler")) {
+			scheduler = cliParser.getOptionValue("scheduler");
+		}
+
+		workflowParam = cliParser.getArgs()[0];
+
+		if (cliParser.hasOption("language")) {
+			workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.valueOf(cliParser.getOptionValue("language",
+					HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform.toString()));
+		} else {
+			for (String extension : HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_EXTS.keySet()) {
+				if (workflowParam.endsWith(extension)) {
+					workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_EXTS.get(extension);
+					break;
+				}
+			}
+		}
 
 		clientTimeout = conf.getInt(HiWayConfiguration.HIWAY_AM_TIMEOUT, HiWayConfiguration.HIWAY_AM_TIMEOUT_DEFAULT) * 1000;
 
@@ -290,7 +319,7 @@ public class Client {
 	 * Helper function to print out usage.
 	 */
 	private void printUsage() {
-		new HelpFormatter().printHelp("Client", opts);
+		new HelpFormatter().printHelp("hiway [options] workflow", opts);
 	}
 
 	/**
@@ -345,7 +374,7 @@ public class Client {
 		// set the application name
 		ApplicationSubmissionContext appContext = app.getApplicationSubmissionContext();
 		appContext.setApplicationType(conf.get(HiWayConfiguration.HIWAY_AM_APPLICATION_TYPE, HiWayConfiguration.HIWAY_AM_APPLICATION_TYPE_DEFAULT));
-		appContext.setApplicationName("run " + workflowPath.getName() + " (type: " + workflowType.toString() + ")");
+		appContext.setApplicationName("run " + workflowParam + " (type: " + workflowType.toString() + ")");
 		ApplicationId appId = appContext.getApplicationId();
 		String hdfsBaseDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE, HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE_DEFAULT);
 		String hdfsSandboxDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE, HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE_DEFAULT);
@@ -355,17 +384,65 @@ public class Client {
 		Path hdfsApplicationDirectory = new Path(hdfsSandboxDirectory, appId.toString());
 		Data.setHdfsApplicationDirectory(hdfsApplicationDirectory);
 		Data.setHdfs(hdfs);
-		workflow = new Data(workflowPath);
-		workflow.setInput(true);
 
-		// Copy the application master jar to the filesystem
-		if (hdfs.exists(workflow.getHdfsPath())) {
-			System.out.println("Workflow found in HDFS at location " + workflow.getHdfsPath());
-		} else if (hdfs.exists(workflowPath)) {
-			System.out.println("Workflow found in HDFS at location " + workflowPath);
+		Path wfSource, wfDest, wfTemp = null;
+		try {
+			wfSource = new Path(new URI(workflowParam).getPath());
+		} catch (URISyntaxException e) {
+			wfSource = new Path(workflowParam);
+		}
+		wfDest = new Path(hdfsApplicationDirectory + "/" + wfSource.getName());
+
+		// (1) if workflow file in hdfs, then transfer to temp file in local fs
+		if (hdfs.exists(wfSource)) {
+			wfTemp = new Path("./." + wfSource.getName());
+			System.out.println("Workflow found in HDFS at location " + wfSource);
+			hdfs.copyToLocalFile(false, wfSource, wfTemp);
+		}
+
+		// (2) if galaxy workflow, then copy and replace input ports
+		if (workflowType.equals(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.galaxy)) {
+			List<String> lines = new ArrayList<>();
+			try (BufferedReader reader = new BufferedReader(new FileReader(wfTemp == null ? wfSource.toString() : wfTemp.toString()))) {
+				String line;
+				while ((line = reader.readLine()) != null) {
+					if (line.contains("\"name\": \"Input dataset\"")) {
+						String inputLine = lines.get(lines.size() - 3);
+						String portName = inputLine.substring(inputLine.indexOf("\"name\": \"") + 9, inputLine.lastIndexOf("\""));
+
+						System.out.println("Enter file location in HDFS for Galaxy workflow input port \"" + portName
+								+ "\". Press return or wait 30 seconds to use default value \"" + portName + "\".");
+						BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+						long startTime = System.currentTimeMillis();
+						while ((System.currentTimeMillis() - startTime) < 30 * 1000 && !in.ready()) {
+						}
+
+						if (in.ready()) {
+							String newPortName = in.readLine();
+							if (newPortName.length() > 0) {
+								inputLine = inputLine.replace(portName, newPortName);
+								lines.set(lines.size() - 3, inputLine);
+							}
+						}
+					}
+					lines.add(line);
+				}
+			}
+
+			wfTemp = new Path("./." + wfSource.getName());
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(wfTemp.toString()))) {
+				for (String line : lines) {
+					writer.write(line);
+					writer.newLine();
+				}
+			}
+		}
+
+		if (wfTemp != null) {
+			hdfs.copyFromLocalFile(wfTemp, wfDest);
+			new File(wfTemp.toString()).delete();
 		} else {
-			workflow.setInput(false);
-			workflow.stageOut();
+			hdfs.copyFromLocalFile(wfSource, wfDest);
 		}
 
 		if (summaryPath != null)
@@ -418,16 +495,25 @@ public class Client {
 			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS);
 		}
 
-		vargs.add("--workflow " + workflowParam + "," + workflow.isInput());
+		if (scheduler != null) {
+			vargs.add("--scheduler " + scheduler);
+		}
+		
+		if (memory != null) {
+			vargs.add("--memory " + memory);
+		}
+		
 		if (summary != null) {
 			vargs.add("--summary " + summary.getName());
 		}
+		
 		vargs.add("--appid " + appId.toString());
 
 		if (debugFlag) {
 			vargs.add("--debug");
 		}
 
+		vargs.add(workflowParam);
 		vargs.add("> >(tee AppMaster.stdout " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout)");
 		vargs.add("2> >(tee AppMaster.stderr " + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stderr >&2)");
 

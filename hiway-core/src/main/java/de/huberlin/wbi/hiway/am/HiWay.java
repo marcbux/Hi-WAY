@@ -192,7 +192,7 @@ public abstract class HiWay {
 	 *            Parsed command line options.
 	 */
 	private static void printUsage(Options opts) {
-		new HelpFormatter().printHelp("ApplicationMaster", opts);
+		new HelpFormatter().printHelp("hiway [options] workflow", opts);
 	}
 
 	private AMRMClientAsync.CallbackHandler allocListener;
@@ -255,12 +255,10 @@ public abstract class HiWay {
 	private BufferedWriter statLog;
 	private volatile boolean success;
 	private Path summaryPath;
-	
+
 	private Path workflowPath;
 	private boolean workflowIsInput;
 	private Data workflowFile;
-
-	
 
 	public HiWay() {
 		conf = new HiWayConfiguration();
@@ -327,7 +325,7 @@ public abstract class HiWay {
 			System.exit(-1);
 		}
 	}
-	
+
 	private void finish() {
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_TIME, Long.toString(System.currentTimeMillis()
 				- amRMClient.getStartTime())));
@@ -532,8 +530,14 @@ public abstract class HiWay {
 
 		Options opts = new Options();
 		opts.addOption("app_attempt_id", true, "App Attempt ID. Not to be used unless for testing purposes");
-		opts.addOption("workflow", true, "The workflow file to be executed by the Application Master");
-		opts.addOption("s", "summary", true, "The name of the json summary file. No file is created if this parameter is not specified.");
+		opts.addOption("u", "summary", true, "The name of the json summary file. No file is created if this parameter is not specified.");
+		opts.addOption("m", "memory", true, "The amount of memory (in MB) to be allocated per worker container. Overrides settings in hiway-site.xml.");
+		String schedulers = "";
+		for (HiWayConfiguration.HIWAY_SCHEDULER_OPTS policy : HiWayConfiguration.HIWAY_SCHEDULER_OPTS.values()) {
+			schedulers += ", " + policy.toString();
+		}
+		opts.addOption("s", "scheduler", true, "The scheduling policy that is to be employed. Valid arguments: " + schedulers.substring(2) + "."
+				+ " Overrides settings in hiway-site.xml.");
 		opts.addOption("debug", false, "Dump out debug information");
 		opts.addOption("appid", true, "Id of this Application Master.");
 
@@ -543,6 +547,11 @@ public abstract class HiWay {
 		if (args.length == 0) {
 			printUsage(opts);
 			throw new IllegalArgumentException("No args specified for application master to initialize");
+		}
+		
+		if (cliParser.getArgs().length == 0) {
+			printUsage(opts);
+			throw new IllegalArgumentException("No workflow file specified.");
 		}
 
 		if (!cliParser.hasOption("appid")) {
@@ -624,23 +633,25 @@ public abstract class HiWay {
 			}
 			shellEnv.put(key, val);
 		}
-
-		if (!cliParser.hasOption("workflow")) {
-			throw new IllegalArgumentException("No workflow file specified to be executed by application master");
-		}
 		
-		String[] workflowParams = cliParser.getOptionValue("workflow").split(",");
+		String workflowParam = cliParser.getArgs()[0];
 		try {
-			workflowPath = new Path(new URI(workflowParams[0]).getPath());
+			workflowPath = new Path(new URI(workflowParam).getPath());
 		} catch (URISyntaxException e) {
-			workflowPath = new Path(workflowParams[0]);
+			workflowPath = new Path(workflowParam);
 		}
-		workflowIsInput = Boolean.parseBoolean(workflowParams[1]);
-		
+
 		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(conf.get(HiWayConfiguration.HIWAY_SCHEDULER,
 				HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
+		if (cliParser.hasOption("scheduler")) {
+			schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(cliParser.getOptionValue("scheduler"));
+		}
 
 		containerMemory = conf.getInt(HiWayConfiguration.HIWAY_WORKER_MEMORY, HiWayConfiguration.HIWAY_WORKER_MEMORY_DEFAULT);
+		if (cliParser.hasOption("memory")) {
+			containerMemory = Integer.parseInt(cliParser.getOptionValue("memory"));
+		}
+		
 		containerCores = conf.getInt(HiWayConfiguration.HIWAY_WORKER_VCORES, HiWayConfiguration.HIWAY_WORKER_VCORES_DEFAULT);
 		requestPriority = conf.getInt(HiWayConfiguration.HIWAY_WORKER_PRIORITY, HiWayConfiguration.HIWAY_WORKER_PRIORITY_DEFAULT);
 		return true;
@@ -705,41 +716,41 @@ public abstract class HiWay {
 			RegisterApplicationMasterResponse response = amRMClient.registerApplicationMaster(appMasterHostname, appMasterRpcPort, appMasterTrackingUrl);
 
 			switch (schedulerName) {
-			case staticRoundRobin:
+			case roundRobin:
 			case heft:
-				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.staticRoundRobin) ? new RoundRobin(getWorkflowName(), hdfs, conf)
+				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.roundRobin) ? new RoundRobin(getWorkflowName(), hdfs, conf)
 						: new HEFT(getWorkflowName(), hdfs, conf);
 				break;
-			case greedyQueue:
+			case greedy:
 				scheduler = new GreedyQueue(getWorkflowName(), conf, hdfs);
 				break;
 			default:
 				C3PO c3po = new C3PO(getWorkflowName(), hdfs, conf);
 				switch (schedulerName) {
-				case conservative:
-					c3po.setConservatismWeight(12d);
-					c3po.setnClones(0);
-					c3po.setPlacementAwarenessWeight(0.01d);
-					c3po.setOutlookWeight(0.01d);
-					break;
-				case cloning:
-					c3po.setConservatismWeight(0.01d);
-					c3po.setnClones(1);
-					c3po.setPlacementAwarenessWeight(0.01d);
-					c3po.setOutlookWeight(0.01d);
-					break;
-				case placementAware:
+				// case conservative:
+				// c3po.setConservatismWeight(12d);
+				// c3po.setnClones(0);
+				// c3po.setPlacementAwarenessWeight(0.01d);
+				// c3po.setOutlookWeight(0.01d);
+				// break;
+				// case cloning:
+				// c3po.setConservatismWeight(0.01d);
+				// c3po.setnClones(1);
+				// c3po.setPlacementAwarenessWeight(0.01d);
+				// c3po.setOutlookWeight(0.01d);
+				// break;
+				case dataAware:
 					c3po.setConservatismWeight(0.01d);
 					c3po.setnClones(0);
 					c3po.setPlacementAwarenessWeight(12d);
 					c3po.setOutlookWeight(0.01d);
 					break;
-				case outlooking:
-					c3po.setConservatismWeight(0.01d);
-					c3po.setnClones(0);
-					c3po.setPlacementAwarenessWeight(0.01d);
-					c3po.setOutlookWeight(12d);
-					break;
+				// case outlooking:
+				// c3po.setConservatismWeight(0.01d);
+				// c3po.setnClones(0);
+				// c3po.setPlacementAwarenessWeight(0.01d);
+				// c3po.setOutlookWeight(12d);
+				// break;
 				default:
 					c3po.setConservatismWeight(3d);
 					c3po.setnClones(2);
@@ -818,8 +829,7 @@ public abstract class HiWay {
 		pri.setPriority(requestPriority);
 
 		// set up resource type requirements
-		Resource capability = Resource.newInstance(containerMemory,
-				containerCores);
+		Resource capability = Resource.newInstance(containerMemory, containerCores);
 		capability.setMemory(containerMemory);
 		capability.setVirtualCores(containerCores);
 
