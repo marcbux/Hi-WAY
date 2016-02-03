@@ -101,9 +101,9 @@ public abstract class Scheduler {
 	}
 
 	public void addEntryToDB(JsonReportEntry entry) {
-		System.out.println("HiwayDB: Adding entry " + entry + " to database.");
+//		System.out.println("HiwayDB: Adding entry " + entry + " to database.");
 		dbInterface.logToDB(entry);
-		System.out.println("HiwayDB: Added entry to database.");
+//		System.out.println("HiwayDB: Added entry to database.");
 	}
 
 	protected abstract void addTask(TaskInstance task);
@@ -141,9 +141,9 @@ public abstract class Scheduler {
 		int run = getNumberOfRunningTasks();
 		int rem = numberOfRemainingTasks;
 
-		System.out.println("Scheduled Containers Finished: " + fin);
-		System.out.println("Scheduled Containers Running: " + run);
-		System.out.println("Scheduled Containers Remaining: " + rem);
+//		System.out.println("Scheduled Containers Finished: " + fin);
+//		System.out.println("Scheduled Containers Running: " + run);
+//		System.out.println("Scheduled Containers Remaining: " + rem);
 
 		return fin + run + rem;
 	}
@@ -156,7 +156,7 @@ public abstract class Scheduler {
 		return !unissuedNodeRequests.isEmpty();
 	}
 
-	public void initialize() {
+	public void initializeProvenanceManager() {
 		maxRetries = conf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT);
 
 		HiWayConfiguration.HIWAY_DB_TYPE_OPTS dbType = HiWayConfiguration.HIWAY_DB_TYPE_OPTS.valueOf(conf.get(HiWayConfiguration.HIWAY_DB_TYPE,
@@ -319,16 +319,16 @@ public abstract class Scheduler {
 	public void updateRuntimeEstimates(String runId) {
 		System.out.println("Updating Runtime Estimates.");
 
-		System.out.println("HiwayDB: Querying Host Names from database.");
+//		System.out.println("HiwayDB: Querying Host Names from database.");
 		Collection<String> newHostIds = dbInterface.getHostNames();
-		System.out.println("HiwayDB: Retrieved Host Names " + newHostIds.toString() + " from database.");
+//		System.out.println("HiwayDB: Retrieved Host Names " + newHostIds.toString() + " from database.");
 		newHostIds.removeAll(getNodeIds());
 		for (String newHostId : newHostIds) {
 			newHost(newHostId);
 		}
-		System.out.println("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
+//		System.out.println("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
 		Collection<Long> newTaskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
-		System.out.println("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
+//		System.out.println("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
 
 		newTaskIds.removeAll(getTaskIds());
 		for (long newTaskId : newTaskIds) {
@@ -339,10 +339,10 @@ public abstract class Scheduler {
 			long oldMaxTimestamp = maxTimestampPerHost.get(hostName);
 			long newMaxTimestamp = oldMaxTimestamp;
 			for (long taskId : getTaskIds()) {
-				System.out.println("HiwayDB: Querying InvocStats for task id " + taskId + " on host " + hostName + " since timestamp " + oldMaxTimestamp
-						+ " from database.");
+//				System.out.println("HiwayDB: Querying InvocStats for task id " + taskId + " on host " + hostName + " since timestamp " + oldMaxTimestamp
+//						+ " from database.");
 				Collection<InvocStat> invocStats = dbInterface.getLogEntriesForTaskOnHostSince(taskId, hostName, oldMaxTimestamp);
-				System.out.println("HiwayDB: Retrieved InvocStats " + invocStats.toString() + " from database.");
+//				System.out.println("HiwayDB: Retrieved InvocStats " + invocStats.toString() + " from database.");
 				for (InvocStat stat : invocStats) {
 					newMaxTimestamp = Math.max(newMaxTimestamp, stat.getTimestamp());
 					updateRuntimeEstimate(stat);

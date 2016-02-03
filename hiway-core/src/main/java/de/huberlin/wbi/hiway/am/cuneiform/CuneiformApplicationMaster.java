@@ -38,6 +38,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -107,7 +108,7 @@ public class CuneiformApplicationMaster extends HiWay {
 	}
 
 	@Override
-	public void parseWorkflow() {
+	public Collection<TaskInstance> parseWorkflow() {
 		System.out.println("Parsing Cuneiform workflow " + getWorkflowFile());
 		repl = new HiWayRepl(ticketSrc, this);
 
@@ -123,6 +124,8 @@ public class CuneiformApplicationMaster extends HiWay {
 			System.exit(-1);
 		}
 		repl.interpret(buf.toString());
+		
+		return new LinkedList<>();
 	}
 
 	@Override

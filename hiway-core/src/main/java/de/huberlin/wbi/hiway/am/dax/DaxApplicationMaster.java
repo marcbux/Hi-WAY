@@ -34,6 +34,7 @@ package de.huberlin.wbi.hiway.am.dax;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -69,7 +70,7 @@ public class DaxApplicationMaster extends HiWay {
 	}
 
 	@Override
-	public void parseWorkflow() {
+	public Collection<TaskInstance> parseWorkflow() {
 		Map<Object, TaskInstance> tasks = new HashMap<>();
 		System.out.println("Parsing Pegasus DAX " + getWorkflowFile());
 
@@ -193,7 +194,7 @@ public class DaxApplicationMaster extends HiWay {
 			System.exit(-1);
 		}
 
-		getScheduler().addTasks(tasks.values());
+		return tasks.values();
 	}
 
 }

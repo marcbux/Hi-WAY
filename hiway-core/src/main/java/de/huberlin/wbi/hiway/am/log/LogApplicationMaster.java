@@ -35,6 +35,7 @@ package de.huberlin.wbi.hiway.am.log;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,7 +55,7 @@ public class LogApplicationMaster extends HiWay {
 	}
 
 	@Override
-	public void parseWorkflow() {
+	public Collection<TaskInstance> parseWorkflow() {
 		System.out.println("Parsing Hi-WAY log " + getWorkflowFile());
 		Map<Long, TaskInstance> tasks = new HashMap<>();
 		Map<Data, TaskInstance> taskProcucingThisFile = new HashMap<>();
@@ -140,7 +141,7 @@ public class LogApplicationMaster extends HiWay {
 			}
 		}
 
-		getScheduler().addTasks(tasks.values());
+		return tasks.values();
 	}
 
 	private void updateAndRegisterEntry(JsonReportEntry entry, TaskInstance task) {

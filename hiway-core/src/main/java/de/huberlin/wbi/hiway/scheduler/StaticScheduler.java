@@ -32,6 +32,7 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.scheduler;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -63,13 +64,8 @@ public abstract class StaticScheduler extends Scheduler {
 		schedule = new HashMap<>();
 		queues = new HashMap<>();
 		relaxLocality = false;
-
-		for (String node : runtimeEstimatesPerNode.keySet()) {
-			Queue<TaskInstance> queue = new LinkedList<>();
-			queues.put(node, queue);
-		}
 	}
-
+	
 	@Override
 	public void addTaskToQueue(TaskInstance task) {
 		String node = schedule.get(task);
@@ -97,6 +93,13 @@ public abstract class StaticScheduler extends Scheduler {
 
 		return task;
 	}
+	
+	@Override
+	protected void newHost(String nodeId) {
+		super.newHost(nodeId);
+		Queue<TaskInstance> queue = new LinkedList<>();
+		queues.put(nodeId, queue);
+	}
 
 	@Override
 	public int getNumberOfReadyTasks() {
@@ -105,6 +108,15 @@ public abstract class StaticScheduler extends Scheduler {
 			readyTasks += queue.size();
 		}
 		return readyTasks;
+	}
+	
+	@Override
+	public void addTasks(Collection<TaskInstance> tasks) {
+		if (queues.size() == 0) {
+			System.out.println("No provenance data available for static scheduling. Aborting.");
+			System.exit(-1);
+		}
+		super.addTasks(tasks);
 	}
 
 }

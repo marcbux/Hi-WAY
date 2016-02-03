@@ -38,6 +38,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -420,7 +421,7 @@ public class GalaxyApplicationMaster extends HiWay {
 	}
 
 	@Override
-	public void parseWorkflow() {
+	public Collection<TaskInstance> parseWorkflow() {
 		System.out.println("Parsing Galaxy workflow " + getWorkflowFile());
 		Map<Long, TaskInstance> tasks = new HashMap<>();
 		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath().toString()))) {
@@ -606,7 +607,7 @@ public class GalaxyApplicationMaster extends HiWay {
 			System.exit(-1);
 		}
 
-		getScheduler().addTasks(tasks.values());
+		return tasks.values();
 	}
 
 	/**

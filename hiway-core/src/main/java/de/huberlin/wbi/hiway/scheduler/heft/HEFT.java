@@ -73,14 +73,17 @@ public class HEFT extends StaticScheduler {
 		readyTimePerTask = new HashMap<>();
 		freeTimeSlotStartsPerNode = new HashMap<>();
 		freeTimeSlotLengthsPerNode = new HashMap<>();
-		for (String node : runtimeEstimatesPerNode.keySet()) {
-			TreeSet<Double> occupiedTimeSlotStarts = new TreeSet<>();
-			occupiedTimeSlotStarts.add(0d);
-			freeTimeSlotStartsPerNode.put(node, occupiedTimeSlotStarts);
-			Map<Double, Double> freeTimeSlotLengths = new HashMap<>();
-			freeTimeSlotLengths.put(0d, Double.MAX_VALUE);
-			freeTimeSlotLengthsPerNode.put(node, freeTimeSlotLengths);
-		}
+	}
+	
+	@Override
+	protected void newHost(String nodeId) {
+		super.newHost(nodeId);
+		TreeSet<Double> occupiedTimeSlotStarts = new TreeSet<>();
+		occupiedTimeSlotStarts.add(0d);
+		freeTimeSlotStartsPerNode.put(nodeId, occupiedTimeSlotStarts);
+		Map<Double, Double> freeTimeSlotLengths = new HashMap<>();
+		freeTimeSlotLengths.put(0d, Double.MAX_VALUE);
+		freeTimeSlotLengthsPerNode.put(nodeId, freeTimeSlotLengths);
 	}
 
 	@Override
@@ -159,6 +162,11 @@ public class HEFT extends StaticScheduler {
 
 	@Override
 	public void addTasks(Collection<TaskInstance> tasks) {
+		if (queues.size() == 0) {
+			System.out.println("No provenance data available for static scheduling. Aborting.");
+			System.exit(-1);
+		}
+		
 		List<TaskInstance> taskList = new LinkedList<>(tasks);
 		Collections.sort(taskList, new DepthComparator());
 

@@ -420,29 +420,15 @@ public class C3PO extends Scheduler {
 		for (OutlookEstimate jobStatistic : jobStatistics.values()) {
 			rem += jobStatistic.remainingTasks;
 		}
-		System.out.println("Scheduled Containers Finished: " + fin);
-		System.out.println("Scheduled Containers Running: " + run);
-		System.out.println("Scheduled Containers Remaining: " + rem);
+//		System.out.println("Scheduled Containers Finished: " + fin);
+//		System.out.println("Scheduled Containers Running: " + run);
+//		System.out.println("Scheduled Containers Remaining: " + rem);
 
 		return fin + run + rem;
 	}
 
 	public void init() {
 
-	}
-
-	@Override
-	public void initialize() {
-		super.initialize();
-		System.out.println("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
-		Collection<Long> newTaskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
-		System.out.println("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
-		for (long taskId : newTaskIds) {
-			System.out.println("HiwayDB: Querying Task Name for Task Id " + taskId + " from database.");
-			String taskName = dbInterface.getTaskName(taskId);
-			taskIdToName.put(taskId, taskName);
-			System.out.println("HiwayDB: Retrieved Task Name " + taskName + " from database.");
-		}
 	}
 
 	private void multiplyWeights(Map<Long, Estimate> weights, Map<Long, ? extends Estimate> statistics, double factor) {
@@ -453,6 +439,10 @@ public class C3PO extends Scheduler {
 	@Override
 	protected void newTask(long taskId) {
 		super.newTask(taskId);
+		System.out.println("HiwayDB: Querying Task Name for Task Id " + taskId + " from database.");
+		String taskName = dbInterface.getTaskName(taskId);
+		taskIdToName.put(taskId, taskName);
+		System.out.println("HiwayDB: Retrieved Task Name " + taskName + " from database.");
 		for (Map<Long, RuntimeEstimate> runtimeEstimates : runtimeEstimatesPerNode.values()) {
 			runtimeEstimates.put(taskId, new RuntimeEstimate());
 		}

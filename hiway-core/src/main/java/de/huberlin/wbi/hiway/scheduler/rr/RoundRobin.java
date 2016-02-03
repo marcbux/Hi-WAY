@@ -57,9 +57,8 @@ public class RoundRobin extends StaticScheduler {
 
 	public RoundRobin(String workflowName, FileSystem hdfs, HiWayConfiguration conf) {
 		super(workflowName, hdfs, conf);
-		nodeIterator = queues.keySet().iterator();
 	}
-
+	
 	@Override
 	protected void addTask(TaskInstance task) {
 		numberOfRemainingTasks++;
@@ -76,6 +75,9 @@ public class RoundRobin extends StaticScheduler {
 
 	@Override
 	public void addTasks(Collection<TaskInstance> tasks) {
+		if (nodeIterator == null) {
+			nodeIterator = queues.keySet().iterator();
+		}
 		List<TaskInstance> taskList = new LinkedList<>(tasks);
 		Collections.sort(taskList, new DepthComparator());
 		super.addTasks(taskList);

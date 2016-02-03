@@ -152,8 +152,11 @@ public class LogParser implements HiwayDBI {
 			switch (entry.getKey()) {
 			case HiwayDBI.KEY_WF_NAME:
 				runToWorkflowName.put(runId, entry.getValueRawString());
-				Set<Long> taskIds = new HashSet<>();
-				workflowNameToTaskIds.put(entry.getValueRawString(), taskIds);
+				String workflowName = entry.getValueRawString();
+				if (!workflowNameToTaskIds.containsKey(workflowName)) {
+					Set<Long> taskIds = new HashSet<>();
+					workflowNameToTaskIds.put(workflowName, taskIds);
+				}
 				break;
 			case JsonReportEntry.KEY_INVOC_TIME:
 				invocStat.setRealTime(entry.getValueJsonObj().getLong("realTime"), entry.getTimestamp());

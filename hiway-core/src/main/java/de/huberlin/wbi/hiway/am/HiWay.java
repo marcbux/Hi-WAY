@@ -356,12 +356,12 @@ public abstract class HiWay {
 		String appMessage = null;
 		success = true;
 
-		System.out.println("Failed Containers: " + numFailedContainers.get());
-		System.out.println("Completed Containers: " + numCompletedContainers.get());
+//		System.out.println("Failed Containers: " + numFailedContainers.get());
+//		System.out.println("Completed Containers: " + numCompletedContainers.get());
 
 		int numTotalContainers = scheduler.getNumberOfTotalTasks();
 
-		System.out.println("Total Scheduled Containers: " + numTotalContainers);
+//		System.out.println("Total Scheduled Containers: " + numTotalContainers);
 
 		if (numFailedContainers.get() == 0 && numCompletedContainers.get() == numTotalContainers) {
 			appStatus = FinalApplicationStatus.SUCCEEDED;
@@ -661,7 +661,7 @@ public abstract class HiWay {
 		return determineFileSizes;
 	}
 
-	public abstract void parseWorkflow();
+	public abstract Collection<TaskInstance> parseWorkflow();
 
 	/**
 	 * Main run function for the application master
@@ -760,11 +760,17 @@ public abstract class HiWay {
 				scheduler = c3po;
 			}
 
-			scheduler.initialize();
+			scheduler.initializeProvenanceManager();
 			writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
-			parseWorkflow();
-			scheduler.updateRuntimeEstimates(getRunId().toString());
 			federatedReport = new Data(appId + ".log");
+			
+			// parse workflow, obtain ready tasks
+			Collection<TaskInstance> readyTasks = parseWorkflow();
+			
+			// scheduler updates runtime estimates for all tasks comprising the workflow
+			scheduler.updateRuntimeEstimates(getRunId().toString());
+			
+			scheduler.addTasks(readyTasks);
 
 			// Dump out information about cluster capability as seen by the resource manager
 			int maxMem = response.getMaximumResourceCapability().getMemory();
