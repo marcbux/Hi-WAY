@@ -125,6 +125,8 @@ public class DaxApplicationMaster extends HiWay {
 				NodeList usesNds = jobEl.getElementsByTagName("uses");
 				for (int j = 0; j < usesNds.getLength(); j++) {
 					Element usesEl = (Element) usesNds.item(j);
+					if (usesEl.hasAttribute("type") && usesEl.getAttribute("type").compareTo("executable") == 0)
+						continue;
 					String link = usesEl.getAttribute("link");
 					String fileName = usesEl.getAttribute("file");
 					long size = usesEl.hasAttribute("size") ? Long.parseLong(usesEl.getAttribute("size")) : 0l;
@@ -144,8 +146,10 @@ public class DaxApplicationMaster extends HiWay {
 						if (!getFiles().containsKey(fileName))
 							getFiles().put(fileName, new Data(fileName));
 						data = getFiles().get(fileName);
-						task.addOutputData(data, size);
-						data.setInput(false);
+						if (!task.getInputData().contains(data)) {
+							task.addOutputData(data, size);
+							data.setInput(false);
+						}
 						outputs.add(fileName);
 						break;
 					default:
@@ -196,5 +200,4 @@ public class DaxApplicationMaster extends HiWay {
 
 		return tasks.values();
 	}
-
 }
