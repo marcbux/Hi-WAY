@@ -114,7 +114,7 @@ public class Worker {
 		return exitValue;
 	}
 
-	public void init(String[] args) throws ParseException {
+	public void init(String[] args) throws ParseException, IOException {
 		conf = new HiWayConfiguration();
 		try {
 			hdfs = FileSystem.get(conf);
@@ -131,8 +131,6 @@ public class Worker {
 		opts.addOption("taskName", true, "");
 		opts.addOption("langLabel", true, "");
 		opts.addOption("id", true, "");
-		opts.addOption("input", true, "");
-		opts.addOption("output", true, "");
 		opts.addOption("size", false, "");
 		opts.addOption("invocScript", true, "if set, this parameter provides the Worker with the path to the script that is to be stored in invoc-script");
 
@@ -153,26 +151,27 @@ public class Worker {
 		taskName = cliParser.getOptionValue("taskName");
 		langLabel = cliParser.getOptionValue("langLabel");
 		id = Long.parseLong(cliParser.getOptionValue("id"));
-		if (cliParser.hasOption("input")) {
-			for (String inputList : cliParser.getOptionValues("input")) {
-				String[] inputElements = inputList.split(",");
-				String otherContainerId = inputElements[2].equals("null") ? null : inputElements[2];
-				Data input = new Data(inputElements[0], otherContainerId);
-				input.setInput(Boolean.parseBoolean(inputElements[1]));
-				inputFiles.add(input);
-			}
-		}
 		if (cliParser.hasOption("size")) {
 			determineFileSizes = true;
-		}
-		if (cliParser.hasOption("output")) {
-			for (String output : cliParser.getOptionValues("output")) {
-				outputFiles.add(new Data(output, containerId));
-			}
 		}
 		if (cliParser.hasOption("invocScript")) {
 			invocScript = cliParser.getOptionValue("invocScript");
 		}
+		
+		try (BufferedReader reader = new BufferedReader(new FileReader(id + "_data"))) {
+			int n = Integer.parseInt(reader.readLine());
+			for (int i = 0; i < n; i++) {
+				String[] inputElements = reader.readLine().split(",");
+				String otherContainerId = inputElements.length > 2 ? inputElements[2] : null;
+				Data input = new Data(inputElements[0], otherContainerId);
+				input.setInput(Boolean.parseBoolean(inputElements[1]));
+				inputFiles.add(input);
+			}
+			n = Integer.parseInt(reader.readLine());
+			for (int i = 0; i < n; i++) {
+				outputFiles.add(new Data(reader.readLine(), containerId));
+			}
+		}		
 	}
 
 	public void run() throws IOException, JSONException {

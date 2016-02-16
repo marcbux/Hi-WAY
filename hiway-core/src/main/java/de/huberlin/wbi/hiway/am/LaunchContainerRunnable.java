@@ -25,15 +25,20 @@
  */
 package de.huberlin.wbi.hiway.am;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 
 import org.apache.hadoop.yarn.api.ContainerManagementProtocol;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
+import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -96,7 +101,42 @@ public class LaunchContainerRunnable implements Runnable {
 		// Set the environment
 		ctx.setEnvironment(am.getShellEnv());
 
-		ctx.setLocalResources(task.buildScriptsAndSetResources(container));
+		Data dataTable = new Data(task.getId() + "_data", container.getId().toString());
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(dataTable.getLocalPath().toString()))) {
+			writer.write(Integer.toString(task.getInputData().size()));
+			writer.newLine();
+			for (Data inputData : task.getInputData()) {
+				writer.write(inputData.getLocalPath().toString());
+				writer.write(",");
+				writer.write(Boolean.toString(inputData.isInput()));
+				if (inputData.getContainerId() != null) {
+					writer.write(",");
+					writer.write(inputData.getContainerId());
+				}
+				writer.newLine();
+			}
+			writer.write(Integer.toString(task.getOutputData().size()));
+			writer.newLine();
+			for (Data outputData : task.getOutputData()) {
+				writer.write(outputData.getLocalPath().toString());
+				writer.newLine();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		
+		Map<String, LocalResource> localResources = task.buildScriptsAndSetResources(container);
+		
+		try {
+			dataTable.stageOut();
+			dataTable.addToLocalResourceMap(localResources);
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		
+		ctx.setLocalResources(localResources);
 
 		// Set the necessary command to execute on the allocated container
 		Vector<CharSequence> vargs = new Vector<>(5);
@@ -114,12 +154,6 @@ public class LaunchContainerRunnable implements Runnable {
 		vargs.add("--taskName " + task.getTaskName());
 		vargs.add("--langLabel " + task.getLanguageLabel());
 		vargs.add("--id " + task.getId());
-		for (Data inputData : task.getInputData()) {
-			vargs.add("--input " + inputData.getLocalPath() + "," + inputData.isInput() + "," + inputData.getContainerId());
-		}
-		for (Data outputData : task.getOutputData()) {
-			vargs.add("--output " + outputData.getLocalPath());
-		}
 		if (am.isDetermineFileSizes()) {
 			vargs.add("--size");
 		}
@@ -128,7 +162,7 @@ public class LaunchContainerRunnable implements Runnable {
 		if (invocScript.length() > 0) {
 			vargs.add("--invocScript " + invocScript);
 		}
-		
+
 		vargs.add(">> " + task.getId() + "_" + Invocation.STDOUT_FILENAME);
 		vargs.add("2>> " + task.getId() + "_" + Invocation.STDERR_FILENAME);
 
