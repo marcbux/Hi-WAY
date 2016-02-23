@@ -73,6 +73,8 @@ import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
  * 
  */
 public class LogParser {
+	
+	private static boolean average = true;
 
 	public class JsonReportEntryComparatorByTimestamp implements Comparator<JsonReportEntry> {
 		@Override
@@ -143,6 +145,7 @@ public class LogParser {
 				value = entry.getValueJsonObj();
 				switch (value.getString("type")) {
 				case "container-requested":
+					if (!execQ.isEmpty())
 					expandEntry(entry, execQ.remove());
 					break;
 				case "container-allocated":
@@ -191,6 +194,14 @@ public class LogParser {
 			exec += invoc.getExecTime();
 			stageout += invoc.getStageoutTime();
 			shutdown += invoc.getShutdownTime();
+		}
+		if (average) {
+			sched /= invocs.size();
+			startup /= invocs.size();
+			stagein /= invocs.size();
+			exec /= invocs.size();
+			stageout /= invocs.size();
+			shutdown /= invocs.size();
 		}
 		String lifecycle = sched + "\t" + startup + "\t" + stagein + "\t" + exec + "\t" + stageout + "\t" + shutdown + "\t";
 		long idle = run.getMaxConcurrentNodes() * (run.getRuntime()) - run.getNoTaskReadyTime() - sched - startup - stagein - exec - stageout - shutdown;

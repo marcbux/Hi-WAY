@@ -33,7 +33,7 @@
 package de.huberlin.wbi.hiway.scheduler;
 
 public class RuntimeEstimate extends Estimate {
-	public long averageRuntime;
-	public int finishedTasks;
-	public long timeSpent;
+	public long averageRuntime = 0;
+	public int finishedTasks = 0;
+	public long timeSpent = 0;
 }

@@ -39,6 +39,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -68,13 +69,17 @@ public class HEFT extends StaticScheduler {
 	private Map<String, TreeSet<Double>> freeTimeSlotStartsPerNode;
 	private Map<TaskInstance, Double> readyTimePerTask;
 
+	private Map<String, TreeMap<Double, TaskInstance>> taskOnsetPerNode;
+
 	public HEFT(String workflowName, FileSystem hdfs, HiWayConfiguration conf) {
 		super(workflowName, hdfs, conf);
 		readyTimePerTask = new HashMap<>();
 		freeTimeSlotStartsPerNode = new HashMap<>();
 		freeTimeSlotLengthsPerNode = new HashMap<>();
+
+		 taskOnsetPerNode = new HashMap<>();
 	}
-	
+
 	@Override
 	protected void newHost(String nodeId) {
 		super.newHost(nodeId);
@@ -84,33 +89,49 @@ public class HEFT extends StaticScheduler {
 		Map<Double, Double> freeTimeSlotLengths = new HashMap<>();
 		freeTimeSlotLengths.put(0d, Double.MAX_VALUE);
 		freeTimeSlotLengthsPerNode.put(nodeId, freeTimeSlotLengths);
+		TreeMap<Double, TaskInstance> nodeSchedule = new TreeMap<>();
+		 taskOnsetPerNode.put(nodeId, nodeSchedule);
 	}
 
 	@Override
 	protected void addTask(TaskInstance task) {
 		numberOfRemainingTasks++;
 		Collection<String> nodes = runtimeEstimatesPerNode.keySet();
+
+		// the readytime of a task is the time from workflow onset after which this task will be ready (according to the schedule)
+		// if the task is an input task, its ready time will still be 0
+		// otherwise, its readytime will have been set already as all predecessor tasks have a higher upward rank will have been scheduled already (during which
+		// this task's readytime was updated)
 		double readyTime = readyTimePerTask.get(task);
 
 		String bestNode = null;
 		double bestNodeFreeTimeSlotActualStart = Double.MAX_VALUE;
 		double bestFinish = Double.MAX_VALUE;
 
+		// compute the finish time of executing this task on each node; chose the earliest finish time
 		for (String node : nodes) {
+			// note that the weight is 1 ms if no runtime estimate is available yet
 			double computationCost = runtimeEstimatesPerNode.get(node).get(task.getTaskId()).weight;
 
-			/* the readytime of this task will have been set by now, as all predecessor tasks have a higher upward rank and thus have been assigned to a vm
-			 * already */
+			// note that at the beginning, all nodes have a free timeslot of length MAX_VALUE starting at time 0
 			TreeSet<Double> freeTimeSlotStarts = freeTimeSlotStartsPerNode.get(node);
 			Map<Double, Double> freeTimeSlotLengths = freeTimeSlotLengthsPerNode.get(node);
 
+			// freeTimeSlotStartsAfterReadyTime is the (sorted) set of timeslots available once this task is ready
 			SortedSet<Double> freeTimeSlotStartsAfterReadyTime = (freeTimeSlotStarts.floor(readyTime) != null) ? freeTimeSlotStarts.tailSet(freeTimeSlotStarts
 					.floor(readyTime)) : freeTimeSlotStarts.tailSet(freeTimeSlotStarts.ceiling(readyTime));
 
+			// iterate through timeslots
 			for (double freeTimeSlotStart : freeTimeSlotStartsAfterReadyTime) {
+
+				// task onset could be later than timeslot onset
 				double freeTimeSlotActualStart = Math.max(readyTime, freeTimeSlotStart);
+
+				// if finishtime of task on this node is worse than the current optimum, we don't have to look at this node any more
 				if (freeTimeSlotActualStart + computationCost > bestFinish)
 					break;
+
+				// otherwise, we found a new best node, but only if the computation cost does not exceed the length of the timeslot
 				double freeTimeSlotLength = freeTimeSlotLengths.get(freeTimeSlotStart);
 				if (freeTimeSlotActualStart > freeTimeSlotStart)
 					freeTimeSlotLength -= freeTimeSlotActualStart - freeTimeSlotStart;
@@ -124,6 +145,7 @@ public class HEFT extends StaticScheduler {
 
 		// assign task to node
 		schedule.put(task, bestNode);
+		taskOnsetPerNode.get(bestNode).put(bestNodeFreeTimeSlotActualStart, task);
 		System.out.println("Task " + task + " scheduled on node " + bestNode);
 		if (task.readyToExecute()) {
 			addTaskToQueue(task);
@@ -141,10 +163,12 @@ public class HEFT extends StaticScheduler {
 			System.exit(-1);
 		}
 
+		// once the task has been scheduled on a node, update that node's free timeslots
 		double timeslotStart = freeTimeSlotStartsPerNode.get(bestNode).floor(bestNodeFreeTimeSlotActualStart);
 		double timeslotLength = freeTimeSlotLengthsPerNode.get(bestNode).get(timeslotStart);
 		double diff = bestNodeFreeTimeSlotActualStart - timeslotStart;
-		// add time slots before and after
+
+		// add time slot before
 		if (bestNodeFreeTimeSlotActualStart > timeslotStart) {
 			freeTimeSlotLengthsPerNode.get(bestNode).put(timeslotStart, diff);
 		} else {
@@ -152,6 +176,7 @@ public class HEFT extends StaticScheduler {
 			freeTimeSlotLengthsPerNode.get(bestNode).remove(timeslotStart);
 		}
 
+		// add time slot after
 		double computationCost = bestFinish - bestNodeFreeTimeSlotActualStart;
 		double actualTimeSlotLength = timeslotLength - diff;
 		if (computationCost < actualTimeSlotLength) {
@@ -166,7 +191,8 @@ public class HEFT extends StaticScheduler {
 			System.out.println("No provenance data available for static scheduling. Aborting.");
 			System.exit(-1);
 		}
-		
+
+		// obtain task list and sort by depth
 		List<TaskInstance> taskList = new LinkedList<>(tasks);
 		Collections.sort(taskList, new DepthComparator());
 
@@ -176,6 +202,8 @@ public class HEFT extends StaticScheduler {
 		for (int i = taskList.size() - 1; i >= 0; i--) {
 			TaskInstance task = taskList.get(i);
 			readyTimePerTask.put(task, 0d);
+
+			// maxSuccessorRank is the maximum upward rank of the current task's children
 			double maxSuccessorRank = 0;
 			try {
 				for (TaskInstance child : task.getChildTasks()) {
@@ -188,12 +216,14 @@ public class HEFT extends StaticScheduler {
 				System.exit(-1);
 			}
 
+			// averageComputationCost is the average cost for executing this task on any node
 			double averageComputationCost = 0;
 			for (String node : nodes) {
 				averageComputationCost += runtimeEstimatesPerNode.get(node).get(task.getTaskId()).weight;
 			}
 			averageComputationCost /= nodes.size();
 
+			// set upward rank of this task
 			// note that the upward rank of a task will always be greater than that of its successors
 			try {
 				task.setUpwardRank(averageComputationCost + maxSuccessorRank);
@@ -206,11 +236,31 @@ public class HEFT extends StaticScheduler {
 		// Phase 1: Task Prioritizing (sort by decreasing order of rank)
 		Collections.sort(taskList, new UpwardsRankComparator());
 
-		// Phase 2: Processor Selection
+		// Phase 2: Processor Selection; schedule tasks w/ higher rank (critical tasks at the beginning of the wf) first
 		for (TaskInstance task : taskList) {
 			addTask(task);
 		}
-
+		
+		printSchedule();
+	}
+	
+	public void printSchedule() {
+		StringBuilder sb = new StringBuilder("HEFT Schedule:\n");
+		for (String node : taskOnsetPerNode.keySet()) {
+			sb.append(node);
+			sb.append(": ");
+			for (Double onset : taskOnsetPerNode.get(node).keySet()) {
+				sb.append(onset);
+				sb.append("-");
+				TaskInstance task = taskOnsetPerNode.get(node).get(onset);
+				sb.append(task.getTaskName());
+				sb.append("-");
+				sb.append(onset + runtimeEstimatesPerNode.get(node).get(task.getTaskId()).weight);
+				sb.append(" ");
+			}
+			sb.append("\n");
+		}
+		System.out.println(sb.toString());
 	}
 
 }

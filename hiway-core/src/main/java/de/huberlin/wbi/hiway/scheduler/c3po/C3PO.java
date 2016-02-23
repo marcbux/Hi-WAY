@@ -385,8 +385,7 @@ public class C3PO extends Scheduler {
 					System.out.println("Assigned speculative copy of task " + task + " to container " + container.getId().getId() + " on node "
 							+ container.getNodeId().getHost());
 				} else {
-					System.out.println("Assigned task " + task + " to container " + container.getId().getId() + " on node "
-							+ container.getNodeId().getHost());
+					System.out.println("Assigned task " + task + " to container " + container.getId().getId() + " on node " + container.getNodeId().getHost());
 				}
 
 				task.incTries();
@@ -420,9 +419,9 @@ public class C3PO extends Scheduler {
 		for (OutlookEstimate jobStatistic : jobStatistics.values()) {
 			rem += jobStatistic.remainingTasks;
 		}
-//		System.out.println("Scheduled Containers Finished: " + fin);
-//		System.out.println("Scheduled Containers Running: " + run);
-//		System.out.println("Scheduled Containers Remaining: " + rem);
+		// System.out.println("Scheduled Containers Finished: " + fin);
+		// System.out.println("Scheduled Containers Running: " + run);
+		// System.out.println("Scheduled Containers Remaining: " + rem);
 
 		return fin + run + rem;
 	}
@@ -595,6 +594,8 @@ public class C3PO extends Scheduler {
 		OutlookEstimate jobStatistic = jobStatistics.get(stat.getTaskId());
 		jobStatistic.finishedTasks++;
 		jobStatistic.timeSpent += stat.getRealTime();
+		// if data staging time is to be considered as well:
+		// jobStatistic.timeSpent = runtimeEstimatesPerNode.get(stat.getHostName()).get(stat.getTaskId()).timeSpent;
 	}
 
 }
