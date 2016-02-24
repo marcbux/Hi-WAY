@@ -78,6 +78,7 @@ import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.impl.NMClientAsyncImpl;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.security.AMRMTokenIdentifier;
@@ -718,8 +719,9 @@ public abstract class HiWay {
 			switch (schedulerName) {
 			case roundRobin:
 			case heft:
+				int workerMemory = conf.getInt(YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
 				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.roundRobin) ? new RoundRobin(getWorkflowName(), hdfs, conf)
-						: new HEFT(getWorkflowName(), hdfs, conf);
+						: new HEFT(getWorkflowName(), hdfs, conf, workerMemory / containerMemory);
 				break;
 			case greedy:
 				scheduler = new GreedyQueue(getWorkflowName(), conf, hdfs);

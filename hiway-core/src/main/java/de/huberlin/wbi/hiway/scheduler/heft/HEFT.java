@@ -32,6 +32,7 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.scheduler.heft;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -65,32 +66,52 @@ import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
  */
 public class HEFT extends StaticScheduler {
 
-	private Map<String, Map<Double, Double>> freeTimeSlotLengthsPerNode;
-	private Map<String, TreeSet<Double>> freeTimeSlotStartsPerNode;
+	private int containers;
+
+	private Map<String, ArrayList<TreeSet<Double>>> freeTimeSlotStartsPerNode;
+	private Map<String, ArrayList<Map<Double, Double>>> freeTimeSlotLengthsPerNode;
 	private Map<TaskInstance, Double> readyTimePerTask;
 
-	private Map<String, TreeMap<Double, TaskInstance>> taskOnsetPerNode;
+	private Map<String, ArrayList<TreeMap<Double, TaskInstance>>> taskOnsetsPerNode;
 
-	public HEFT(String workflowName, FileSystem hdfs, HiWayConfiguration conf) {
+	public HEFT(String workflowName, FileSystem hdfs, HiWayConfiguration conf, int containers) {
 		super(workflowName, hdfs, conf);
+		
+		this.containers = containers;
+		System.out.println("HEFT has detected " + containers + " containers per worker node.");
+		
 		readyTimePerTask = new HashMap<>();
 		freeTimeSlotStartsPerNode = new HashMap<>();
 		freeTimeSlotLengthsPerNode = new HashMap<>();
-
-		 taskOnsetPerNode = new HashMap<>();
+		taskOnsetsPerNode = new HashMap<>();
 	}
 
 	@Override
 	protected void newHost(String nodeId) {
 		super.newHost(nodeId);
-		TreeSet<Double> occupiedTimeSlotStarts = new TreeSet<>();
-		occupiedTimeSlotStarts.add(0d);
-		freeTimeSlotStartsPerNode.put(nodeId, occupiedTimeSlotStarts);
-		Map<Double, Double> freeTimeSlotLengths = new HashMap<>();
-		freeTimeSlotLengths.put(0d, Double.MAX_VALUE);
-		freeTimeSlotLengthsPerNode.put(nodeId, freeTimeSlotLengths);
-		TreeMap<Double, TaskInstance> nodeSchedule = new TreeMap<>();
-		 taskOnsetPerNode.put(nodeId, nodeSchedule);
+		
+		ArrayList<TreeSet<Double>> freeTimeSlotStartsPerContainer = new ArrayList<>();
+		freeTimeSlotStartsPerNode.put(nodeId, freeTimeSlotStartsPerContainer);
+		for (int i = 0; i < containers; i++) {
+			TreeSet<Double> freeTimeSlotStarts = new TreeSet<>();
+			freeTimeSlotStarts.add(0d);
+			freeTimeSlotStartsPerContainer.add(freeTimeSlotStarts);
+		}
+		
+		ArrayList<Map<Double, Double>> freeTimeSlotLengthsPerContainer = new ArrayList<>();
+		freeTimeSlotLengthsPerNode.put(nodeId,  freeTimeSlotLengthsPerContainer);
+		for (int i = 0; i < containers; i++) {
+			Map<Double, Double> freeTimeSlotLengths = new HashMap<>();
+			freeTimeSlotLengths.put(0d, Double.MAX_VALUE);
+			freeTimeSlotLengthsPerContainer.add(freeTimeSlotLengths);
+		}
+		
+		ArrayList<TreeMap<Double, TaskInstance>> taskOnsetsPerContainer = new ArrayList<>();
+		taskOnsetsPerNode.put(nodeId, taskOnsetsPerContainer);
+		for (int i = 0; i < containers; i++) {
+			TreeMap<Double, TaskInstance> taskOnsets = new TreeMap<>();
+			taskOnsetsPerContainer.add(taskOnsets);
+		}
 	}
 
 	@Override
@@ -105,47 +126,54 @@ public class HEFT extends StaticScheduler {
 		double readyTime = readyTimePerTask.get(task);
 
 		String bestNode = null;
+		int bestI = -1;
 		double bestNodeFreeTimeSlotActualStart = Double.MAX_VALUE;
 		double bestFinish = Double.MAX_VALUE;
 
 		// compute the finish time of executing this task on each node; chose the earliest finish time
 		for (String node : nodes) {
+			ArrayList<TreeSet<Double>> freeTimeSlotStartsPerContainer = freeTimeSlotStartsPerNode.get(node);
+			ArrayList<Map<Double, Double>> freeTimeSlotLengthsPerContainer = freeTimeSlotLengthsPerNode.get(node);
+			
 			// note that the weight is 1 ms if no runtime estimate is available yet
 			double computationCost = runtimeEstimatesPerNode.get(node).get(task.getTaskId()).weight;
+			
+			for (int i = 0; i < containers; i++) {
+				// note that at the beginning, all nodes have a free timeslot of length MAX_VALUE starting at time 0
+				TreeSet<Double> freeTimeSlotStarts = freeTimeSlotStartsPerContainer.get(i);
+				Map<Double, Double> freeTimeSlotLengths = freeTimeSlotLengthsPerContainer.get(i);
 
-			// note that at the beginning, all nodes have a free timeslot of length MAX_VALUE starting at time 0
-			TreeSet<Double> freeTimeSlotStarts = freeTimeSlotStartsPerNode.get(node);
-			Map<Double, Double> freeTimeSlotLengths = freeTimeSlotLengthsPerNode.get(node);
+				// freeTimeSlotStartsAfterReadyTime is the (sorted) set of timeslots available once this task is ready
+				SortedSet<Double> freeTimeSlotStartsAfterReadyTime = (freeTimeSlotStarts.floor(readyTime) != null) ? freeTimeSlotStarts.tailSet(freeTimeSlotStarts
+						.floor(readyTime)) : freeTimeSlotStarts.tailSet(freeTimeSlotStarts.ceiling(readyTime));
 
-			// freeTimeSlotStartsAfterReadyTime is the (sorted) set of timeslots available once this task is ready
-			SortedSet<Double> freeTimeSlotStartsAfterReadyTime = (freeTimeSlotStarts.floor(readyTime) != null) ? freeTimeSlotStarts.tailSet(freeTimeSlotStarts
-					.floor(readyTime)) : freeTimeSlotStarts.tailSet(freeTimeSlotStarts.ceiling(readyTime));
+				// iterate through timeslots
+				for (double freeTimeSlotStart : freeTimeSlotStartsAfterReadyTime) {
 
-			// iterate through timeslots
-			for (double freeTimeSlotStart : freeTimeSlotStartsAfterReadyTime) {
+					// task onset could be later than timeslot onset
+					double freeTimeSlotActualStart = Math.max(readyTime, freeTimeSlotStart);
 
-				// task onset could be later than timeslot onset
-				double freeTimeSlotActualStart = Math.max(readyTime, freeTimeSlotStart);
+					// if finishtime of task on this node is worse than the current optimum, we don't have to look at this node any more
+					if (freeTimeSlotActualStart + computationCost > bestFinish)
+						break;
 
-				// if finishtime of task on this node is worse than the current optimum, we don't have to look at this node any more
-				if (freeTimeSlotActualStart + computationCost > bestFinish)
-					break;
-
-				// otherwise, we found a new best node, but only if the computation cost does not exceed the length of the timeslot
-				double freeTimeSlotLength = freeTimeSlotLengths.get(freeTimeSlotStart);
-				if (freeTimeSlotActualStart > freeTimeSlotStart)
-					freeTimeSlotLength -= freeTimeSlotActualStart - freeTimeSlotStart;
-				if (computationCost < freeTimeSlotLength) {
-					bestNode = node;
-					bestNodeFreeTimeSlotActualStart = freeTimeSlotActualStart;
-					bestFinish = freeTimeSlotActualStart + computationCost;
+					// otherwise, we found a new best node, but only if the computation cost does not exceed the length of the timeslot
+					double freeTimeSlotLength = freeTimeSlotLengths.get(freeTimeSlotStart);
+					if (freeTimeSlotActualStart > freeTimeSlotStart)
+						freeTimeSlotLength -= freeTimeSlotActualStart - freeTimeSlotStart;
+					if (computationCost < freeTimeSlotLength) {
+						bestNode = node;
+						bestI = i;
+						bestNodeFreeTimeSlotActualStart = freeTimeSlotActualStart;
+						bestFinish = freeTimeSlotActualStart + computationCost;
+					}
 				}
 			}
 		}
 
 		// assign task to node
 		schedule.put(task, bestNode);
-		taskOnsetPerNode.get(bestNode).put(bestNodeFreeTimeSlotActualStart, task);
+		taskOnsetsPerNode.get(bestNode).get(bestI).put(bestNodeFreeTimeSlotActualStart, task);
 		System.out.println("Task " + task + " scheduled on node " + bestNode);
 		if (task.readyToExecute()) {
 			addTaskToQueue(task);
@@ -164,24 +192,24 @@ public class HEFT extends StaticScheduler {
 		}
 
 		// once the task has been scheduled on a node, update that node's free timeslots
-		double timeslotStart = freeTimeSlotStartsPerNode.get(bestNode).floor(bestNodeFreeTimeSlotActualStart);
-		double timeslotLength = freeTimeSlotLengthsPerNode.get(bestNode).get(timeslotStart);
+		double timeslotStart = freeTimeSlotStartsPerNode.get(bestNode).get(bestI).floor(bestNodeFreeTimeSlotActualStart);
+		double timeslotLength = freeTimeSlotLengthsPerNode.get(bestNode).get(bestI).get(timeslotStart);
 		double diff = bestNodeFreeTimeSlotActualStart - timeslotStart;
 
 		// add time slot before
 		if (bestNodeFreeTimeSlotActualStart > timeslotStart) {
-			freeTimeSlotLengthsPerNode.get(bestNode).put(timeslotStart, diff);
+			freeTimeSlotLengthsPerNode.get(bestNode).get(bestI).put(timeslotStart, diff);
 		} else {
-			freeTimeSlotStartsPerNode.get(bestNode).remove(timeslotStart);
-			freeTimeSlotLengthsPerNode.get(bestNode).remove(timeslotStart);
+			freeTimeSlotStartsPerNode.get(bestNode).get(bestI).remove(timeslotStart);
+			freeTimeSlotLengthsPerNode.get(bestNode).get(bestI).remove(timeslotStart);
 		}
 
 		// add time slot after
 		double computationCost = bestFinish - bestNodeFreeTimeSlotActualStart;
 		double actualTimeSlotLength = timeslotLength - diff;
 		if (computationCost < actualTimeSlotLength) {
-			freeTimeSlotStartsPerNode.get(bestNode).add(bestFinish);
-			freeTimeSlotLengthsPerNode.get(bestNode).put(bestFinish, actualTimeSlotLength - computationCost);
+			freeTimeSlotStartsPerNode.get(bestNode).get(bestI).add(bestFinish);
+			freeTimeSlotLengthsPerNode.get(bestNode).get(bestI).put(bestFinish, actualTimeSlotLength - computationCost);
 		}
 	}
 
@@ -240,25 +268,31 @@ public class HEFT extends StaticScheduler {
 		for (TaskInstance task : taskList) {
 			addTask(task);
 		}
-		
+
 		printSchedule();
 	}
-	
+
 	public void printSchedule() {
 		StringBuilder sb = new StringBuilder("HEFT Schedule:\n");
-		for (String node : taskOnsetPerNode.keySet()) {
-			sb.append(node);
-			sb.append(": ");
-			for (Double onset : taskOnsetPerNode.get(node).keySet()) {
-				sb.append(onset);
+		for (String node : taskOnsetsPerNode.keySet()) {
+			ArrayList<TreeMap<Double, TaskInstance>> taskOnsetsPerContainer = taskOnsetsPerNode.get(node);
+			for (int i = 0; i < containers; i++) {
+				TreeMap<Double, TaskInstance> taskOnsets = taskOnsetsPerContainer.get(i);
+				sb.append(node);
 				sb.append("-");
-				TaskInstance task = taskOnsetPerNode.get(node).get(onset);
-				sb.append(task.getTaskName());
-				sb.append("-");
-				sb.append(onset + runtimeEstimatesPerNode.get(node).get(task.getTaskId()).weight);
-				sb.append(" ");
+				sb.append(i + 1);
+				sb.append(": ");
+				for (Double onset : taskOnsets.keySet()) {
+					sb.append(onset);
+					sb.append("-");
+					TaskInstance task = taskOnsets.get(onset);
+					sb.append(task.getTaskName());
+					sb.append("-");
+					sb.append(onset + runtimeEstimatesPerNode.get(node).get(task.getTaskId()).weight);
+					sb.append(" ");
+				}
+				sb.append("\n");
 			}
-			sb.append("\n");
 		}
 		System.out.println(sb.toString());
 	}
