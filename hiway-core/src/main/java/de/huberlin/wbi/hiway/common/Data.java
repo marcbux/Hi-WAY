@@ -50,6 +50,8 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
 
+import de.huberlin.wbi.hiway.am.HiWay;
+
 /**
  * A file stored locally and in HDFS. HDFS directory paths are all relative to the HDFS user directory.
  * 
@@ -204,7 +206,8 @@ public class Data implements Comparable<Data> {
 		if (dir == null || hdfs.isDirectory(dir))
 			return;
 		mkHdfsDir(dir.getParent());
-		System.out.println("Creating directory: " + dir);
+		if (HiWay.verbose)
+			System.out.println("Creating directory: " + dir);
 		hdfs.mkdirs(dir);
 		hdfs.setPermission(dir, new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
 	}
@@ -224,15 +227,18 @@ public class Data implements Comparable<Data> {
 	public void stageIn() throws IOException {
 		Path hdfsPath = getHdfsPath();
 		Path localPath = getLocalPath();
-		System.out.print("Attempting to stage in: " + hdfsPath + " -> " + localPath);
+		if (HiWay.verbose)
+			System.out.print("Attempting to stage in: " + hdfsPath + " -> " + localPath);
 		if (localDirectory.depth() > 0) {
 			localFs.mkdirs(localDirectory);
 		}
 		try {
 			hdfs.copyToLocalFile(false, hdfsPath, localPath);
-			System.out.println(" (succeeded)");
+			if (HiWay.verbose)
+				System.out.println(" (succeeded)");
 		} catch (FileNotFoundException e) {
-			System.out.println(" (failed)");
+			if (HiWay.verbose)
+				System.out.println(" (failed)");
 		}
 	}
 
@@ -243,12 +249,15 @@ public class Data implements Comparable<Data> {
 		if (hdfsDirectory.depth() > 0) {
 			mkHdfsDir(hdfsDirectory);
 		}
-		System.out.print("Attempting to stage out: " + localPath + " -> " + hdfsPath);
+		if (HiWay.verbose)
+			System.out.print("Attempting to stage out: " + localPath + " -> " + hdfsPath);
 		try {
 			hdfs.copyFromLocalFile(false, true, localPath, hdfsPath);
-			System.out.println(" (succeeded)");
+			if (HiWay.verbose)
+				System.out.println(" (succeeded)");
 		} catch (FileNotFoundException e) {
-			System.out.println(" (failed)");
+			if (HiWay.verbose)
+				System.out.println(" (failed)");
 		}
 	}
 

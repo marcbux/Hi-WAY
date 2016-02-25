@@ -161,7 +161,8 @@ public class DaxApplicationMaster extends HiWay {
 				}
 
 				task.setCommand(taskName + arguments.toString());
-				System.out.println("Adding task " + task + ": " + task.getInputData() + " -> " + task.getOutputData());
+				if (HiWay.verbose)
+					System.out.println("Adding task " + task + ": " + task.getInputData() + " -> " + task.getOutputData());
 			}
 
 			NodeList childNds = doc.getElementsByTagName("child");

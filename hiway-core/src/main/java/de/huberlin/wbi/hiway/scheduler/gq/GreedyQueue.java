@@ -72,14 +72,13 @@ public class GreedyQueue extends Scheduler {
 		System.out.println("Added task " + task + " to queue");
 	}
 
-	@SuppressWarnings("deprecation")
 	@Override
 	public TaskInstance getNextTask(Container container) {
 		numberOfRemainingTasks--;
 		numberOfRunningTasks++;
 		TaskInstance task = queue.remove();
 
-		System.out.println("Assigned task " + task + " to container " + container.getId().getId() + " on node " + container.getNodeId().getHost());
+		System.out.println("Assigned task " + task + " to container " + container.getId() + "@" + container.getNodeId().getHost());
 		task.incTries();
 		return task;
 	}

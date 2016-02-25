@@ -117,6 +117,10 @@ public abstract class Scheduler {
 
 	public abstract void addTaskToQueue(TaskInstance task);
 
+	public HiwayDBI getDbInterface() {
+		return dbInterface;
+	}
+
 	public String[] getNextNodeRequest() {
 		return unissuedNodeRequests.remove();
 	}
@@ -283,22 +287,20 @@ public abstract class Scheduler {
 		return relaxLocality;
 	}
 
-	@SuppressWarnings("deprecation")
 	public Collection<ContainerId> taskCompleted(TaskInstance task, ContainerStatus containerStatus, long runtimeInMs) {
 
 		numberOfRunningTasks--;
 		numberOfFinishedTasks++;
 
-		System.out.println("Task " + task + " in container " + containerStatus.getContainerId().getId() + " finished after " + runtimeInMs + " ms");
+		System.out.println("Task " + task + " on container " + containerStatus.getContainerId() + " completed successfully after " + runtimeInMs + " ms");
 
 		return new ArrayList<>();
 	}
 
-	@SuppressWarnings("deprecation")
 	public Collection<ContainerId> taskFailed(TaskInstance task, ContainerStatus containerStatus) {
 		numberOfRunningTasks--;
 
-		System.out.println("Task " + task + " on container " + containerStatus.getContainerId().getId() + " failed");
+		System.out.println("Task " + task + " on container " + containerStatus.getContainerId() + " failed");
 		if (task.retry(maxRetries)) {
 			System.out.println("Retrying task " + task + ".");
 			addTask(task);
@@ -309,7 +311,7 @@ public abstract class Scheduler {
 
 		return new ArrayList<>();
 	}
-
+	
 	protected void updateRuntimeEstimate(InvocStat stat) {
 		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostName()).get(stat.getTaskId());
 		re.finishedTasks += 1;

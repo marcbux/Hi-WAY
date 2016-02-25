@@ -45,24 +45,16 @@ public class HiWayConfiguration extends YarnConfiguration {
 	}
 
 	public static enum HIWAY_SCHEDULER_OPTS {
-		c3po, greedy, heft, dataAware, roundRobin
+		c3po, dataAware, greedy, heft, roundRobin
 	}
 
 	public static enum HIWAY_WORKFLOW_LANGUAGE_OPTS {
 		cuneiform, dax, galaxy, log
 	}
 
-	public static final Map<String, HIWAY_WORKFLOW_LANGUAGE_OPTS> HIWAY_WORKFLOW_LANGUAGE_EXTS;
-	static {
-		HIWAY_WORKFLOW_LANGUAGE_EXTS = new HashMap<>();
-		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("cf", HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform);
-		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("xml", HIWAY_WORKFLOW_LANGUAGE_OPTS.dax);
-		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("ga", HIWAY_WORKFLOW_LANGUAGE_OPTS.galaxy);
-		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("log", HIWAY_WORKFLOW_LANGUAGE_OPTS.log);
-	}
-
 	public static final String HIWAY_AM_APPLICATION_TYPE = "hiway.am.application.type";
 	public static final String HIWAY_AM_APPLICATION_TYPE_DEFAULT = "Hi-WAY";
+
 	public static final String HIWAY_AM_DIRECTORY_BASE = "hiway.am.directory.base";
 	public static final String HIWAY_AM_DIRECTORY_BASE_DEFAULT = "/";
 	public static final String HIWAY_AM_DIRECTORY_CACHE = "hiway.am.directory.cache";
@@ -79,25 +71,25 @@ public class HiWayConfiguration extends YarnConfiguration {
 	public static final int HIWAY_AM_TIMEOUT_DEFAULT = 604800;
 	public static final String HIWAY_AM_VCORES = "hiway.am.vcores";
 	public static final int HIWAY_AM_VCORES_DEFAULT = 1;
-
 	public static final String HIWAY_DB_NOSQL_BUCKET = "hiway.db.nosql.bucket";
 	public static final String HIWAY_DB_NOSQL_PASSWORD = "hiway.db.nosql.password";
+
 	public static final String HIWAY_DB_NOSQL_URLS = "hiway.db.nosql.urls";
 	public static final String HIWAY_DB_SQL_PASSWORD = "hiway.db.sql.password";
 	public static final String HIWAY_DB_SQL_URL = "hiway.db.sql.url";
 	public static final String HIWAY_DB_SQL_USER = "hiway.db.sql.user";
 	public static final String HIWAY_DB_TYPE = "hiway.db.type";
 	public static final HIWAY_DB_TYPE_OPTS HIWAY_DB_TYPE_DEFAULT = HIWAY_DB_TYPE_OPTS.local;
-
 	public static final String HIWAY_GALAXY_PATH = "hiway.galaxy.path";
-
 	public static final String HIWAY_SCHEDULER = "hiway.scheduler";
+
 	public static final HIWAY_SCHEDULER_OPTS HIWAY_SCHEDULER_DEFAULT = HIWAY_SCHEDULER_OPTS.c3po;
 
 	public static final String HIWAY_SITE_XML = "hiway-site.xml";
-
 	public static final String HIWAY_WORKER_CLASS = "de.huberlin.wbi.hiway.common.Worker";
+
 	public static final String HIWAY_WORKER_MEMORY = "hiway.worker.memory";
+
 	public static final int HIWAY_WORKER_MEMORY_DEFAULT = 1024;
 	public static final String HIWAY_WORKER_PRIORITY = "hiway.worker.priority";
 	public static final int HIWAY_WORKER_PRIORITY_DEFAULT = 0;
@@ -105,11 +97,19 @@ public class HiWayConfiguration extends YarnConfiguration {
 	public static final String HIWAY_WORKER_SHELL_ENV_DEFAULT = "";
 	public static final String HIWAY_WORKER_VCORES = "hiway.worker.vcores";
 	public static final int HIWAY_WORKER_VCORES_DEFAULT = 1;
-
 	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS = "de.huberlin.wbi.hiway.am.cuneiform.CuneiformApplicationMaster";
 	public static final String HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS = "de.huberlin.wbi.hiway.am.dax.DaxApplicationMaster";
+
+	public static final Map<String, HIWAY_WORKFLOW_LANGUAGE_OPTS> HIWAY_WORKFLOW_LANGUAGE_EXTS;
 	public static final String HIWAY_WORKFLOW_LANGUAGE_GALAXY_CLASS = "de.huberlin.wbi.hiway.am.galaxy.GalaxyApplicationMaster";
 	public static final String HIWAY_WORKFLOW_LANGUAGE_LOG_CLASS = "de.huberlin.wbi.hiway.am.log.LogApplicationMaster";
+	static {
+		HIWAY_WORKFLOW_LANGUAGE_EXTS = new HashMap<>();
+		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("cf", HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform);
+		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("xml", HIWAY_WORKFLOW_LANGUAGE_OPTS.dax);
+		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("ga", HIWAY_WORKFLOW_LANGUAGE_OPTS.galaxy);
+		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("log", HIWAY_WORKFLOW_LANGUAGE_OPTS.log);
+	}
 
 	static {
 		addDefaultResource(HIWAY_SITE_XML);

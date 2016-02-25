@@ -41,6 +41,7 @@ import java.util.Queue;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 
+import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
@@ -65,7 +66,16 @@ public abstract class StaticScheduler extends Scheduler {
 		queues = new HashMap<>();
 		relaxLocality = false;
 	}
-	
+
+	@Override
+	public void addTasks(Collection<TaskInstance> tasks) {
+		if (queues.size() == 0) {
+			System.out.println("No provenance data available for static scheduling. Aborting.");
+			System.exit(-1);
+		}
+		super.addTasks(tasks);
+	}
+
 	@Override
 	public void addTaskToQueue(TaskInstance task) {
 		String node = schedule.get(task);
@@ -73,32 +83,25 @@ public abstract class StaticScheduler extends Scheduler {
 		nodes[0] = node;
 		unissuedNodeRequests.add(nodes);
 		queues.get(node).add(task);
-		System.out.println("Added task " + task + " to queue " + node);
+		if (HiWay.verbose)
+			System.out.println("Added task " + task + " to queue " + node);
 	}
 
-	@SuppressWarnings("deprecation")
 	@Override
 	public TaskInstance getNextTask(Container container) {
 		numberOfRemainingTasks--;
 		numberOfRunningTasks++;
 		String node = container.getNodeId().getHost();
 
-		System.out.println("Looking for task on container " + container.getId().getId() + " on node " + node);
-		System.out.println("Queue: " + queues.get(node).toString());
+		if (HiWay.verbose)
+			System.out.println("Looking for task on container " + container.getId() + " on node " + node + "; Queue:" + queues.get(node).toString());
 
 		TaskInstance task = queues.get(node).remove();
 
-		System.out.println("Assigned task " + task + " to container " + container.getId().getId() + " on node " + node);
+		System.out.println("Assigned task " + task + " to container " + container.getId() + "@" + node);
 		task.incTries();
 
 		return task;
-	}
-	
-	@Override
-	protected void newHost(String nodeId) {
-		super.newHost(nodeId);
-		Queue<TaskInstance> queue = new LinkedList<>();
-		queues.put(nodeId, queue);
 	}
 
 	@Override
@@ -109,14 +112,12 @@ public abstract class StaticScheduler extends Scheduler {
 		}
 		return readyTasks;
 	}
-	
+
 	@Override
-	public void addTasks(Collection<TaskInstance> tasks) {
-		if (queues.size() == 0) {
-			System.out.println("No provenance data available for static scheduling. Aborting.");
-			System.exit(-1);
-		}
-		super.addTasks(tasks);
+	protected void newHost(String nodeId) {
+		super.newHost(nodeId);
+		Queue<TaskInstance> queue = new LinkedList<>();
+		queues.put(nodeId, queue);
 	}
 
 }

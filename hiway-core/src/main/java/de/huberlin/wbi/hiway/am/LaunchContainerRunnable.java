@@ -80,7 +80,8 @@ public class LaunchContainerRunnable implements Runnable {
 	 */
 	@Override
 	public void run() {
-		System.out.println("Setting up container launch container for containerid=" + container.getId());
+		if (HiWay.verbose)
+			System.out.println("Setting up container launch container for containerid=" + container.getId());
 		ContainerLaunchContext ctx = Records.newRecord(ContainerLaunchContext.class);
 
 		// Set the environment
@@ -125,9 +126,9 @@ public class LaunchContainerRunnable implements Runnable {
 			e.printStackTrace();
 			System.exit(-1);
 		}
-		
+
 		Map<String, LocalResource> localResources = task.buildScriptsAndSetResources(container);
-		
+
 		try {
 			dataTable.stageOut();
 			dataTable.addToLocalResourceMap(localResources);
@@ -135,7 +136,7 @@ public class LaunchContainerRunnable implements Runnable {
 			e.printStackTrace();
 			System.exit(-1);
 		}
-		
+
 		ctx.setLocalResources(localResources);
 
 		// Set the necessary command to execute on the allocated container

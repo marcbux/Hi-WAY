@@ -53,7 +53,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 	private HiWay am;
 	// a data structure storing the invocation launched by each container
-	private Map<Integer, HiWayInvocation> containerIdToInvocation = new HashMap<>();
+	private Map<ContainerId, HiWayInvocation> containerIdToInvocation = new HashMap<>();
 
 	// a queue for allocated containers that have yet to be assigned a task
 	private Queue<Container> containerQueue = new LinkedList<>();
@@ -87,12 +87,8 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 		return progress;
 	}
 
-	@SuppressWarnings("deprecation")
 	protected void launchTask(TaskInstance task, Container allocatedContainer) {
-		containerIdToInvocation.put(allocatedContainer.getId().getId(), new HiWayInvocation(task));
-		System.out.println("Launching workflow task on a new container." + ", task=" + task + ", containerId=" + allocatedContainer.getId()
-				+ ", containerNode=" + allocatedContainer.getNodeId().getHost() + ":" + allocatedContainer.getNodeId().getPort() + ", containerNodeURI="
-				+ allocatedContainer.getNodeHttpAddress() + ", containerResourceMemory" + allocatedContainer.getResource().getMemory());
+		containerIdToInvocation.put(allocatedContainer.getId(), new HiWayInvocation(task));
 
 		LaunchContainerRunnable runnableLaunchContainer = new LaunchContainerRunnable(allocatedContainer, am.getContainerListener(), task, am);
 		Thread launchThread = new Thread(runnableLaunchContainer);
@@ -103,7 +99,6 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 		am.getMetrics().endWaitingTask();
 		am.getMetrics().runningTask();
 		am.getMetrics().launchedTask();
-
 	}
 
 	protected void launchTasks() {
@@ -135,7 +130,11 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void onContainersAllocated(List<Container> allocatedContainers) {
-		System.out.println("Got response from RM for container ask, allocatedCnt=" + allocatedContainers.size());
+		if (HiWay.verbose) {
+			for (Container container : allocatedContainers) {
+				System.out.println("Allocated container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
+			}
+		}
 
 		for (Container container : allocatedContainers) {
 			JSONObject value = new JSONObject();
@@ -155,10 +154,14 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 			ContainerRequest request = findFirstMatchingRequest(container);
 
 			if (request != null) {
+				if (HiWay.verbose)
+					System.out.println("Removing container request " + request.getNodes() + "," + request.getRelaxLocality());
 				am.getAmRMClient().removeContainerRequest(request);
 				am.getNumAllocatedContainers().incrementAndGet();
 				containerQueue.add(container);
 			} else {
+				if (HiWay.verbose)
+					System.out.println("Releasing container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
 				am.getAmRMClient().releaseAssignedContainer(container.getId());
 			}
 		}
@@ -166,10 +169,8 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 		launchTasks();
 	}
 
-	@SuppressWarnings("deprecation")
 	@Override
 	public void onContainersCompleted(List<ContainerStatus> completedContainers) {
-		System.out.println("Got response from RM for container ask, completedCnt=" + completedContainers.size());
 		for (ContainerStatus containerStatus : completedContainers) {
 
 			JSONObject value = new JSONObject();
@@ -182,9 +183,6 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 			} catch (JSONException e) {
 				onError(e);
 			}
-
-			System.out.println("Got container status for containerID=" + containerStatus.getContainerId() + ", state=" + containerStatus.getState()
-					+ ", exitStatus=" + containerStatus.getExitStatus() + ", diagnostics=" + containerStatus.getDiagnostics());
 			am.writeEntryToLog(new JsonReportEntry(am.getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 
 			// non complete containers should not be here
@@ -195,15 +193,19 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 			String diagnostics = containerStatus.getDiagnostics();
 			ContainerId containerId = containerStatus.getContainerId();
 
-			if (containerIdToInvocation.containsKey(containerId.getId())) {
+			// The container was released by the framework (e.g., it was a speculative copy of a finished task)
+			if (diagnostics.equals(SchedulerUtils.RELEASED_CONTAINER)) {
+				System.out.println("Container was released." + ", containerID=" + containerStatus.getContainerId() + ", state=" + containerStatus.getState()
+						+ ", exitStatus=" + containerStatus.getExitStatus() + ", diagnostics=" + containerStatus.getDiagnostics());
+			} else if (exitStatus == ExitCode.FORCE_KILLED.getExitCode()) {
+				System.out.println("Container was force killed." + ", containerID=" + containerStatus.getContainerId() + ", state="
+						+ containerStatus.getState() + ", exitStatus=" + containerStatus.getExitStatus() + ", diagnostics=" + containerStatus.getDiagnostics());
+			} else if (containerIdToInvocation.containsKey(containerId)) {
 
-				HiWayInvocation invocation = containerIdToInvocation.get(containerStatus.getContainerId().getId());
+				HiWayInvocation invocation = containerIdToInvocation.get(containerStatus.getContainerId());
 				TaskInstance finishedTask = invocation.task;
 
 				if (exitStatus == 0) {
-
-					System.out.println("Container completed successfully." + ", containerId=" + containerStatus.getContainerId());
-
 					// this task might have been completed previously (e.g., via speculative replication)
 					if (!finishedTask.isCompleted()) {
 						finishedTask.setCompleted();
@@ -230,15 +232,6 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 					}
 				}
 
-				// The container was released by the framework (e.g., it was a speculative copy of a finished task)
-				else if (diagnostics.equals(SchedulerUtils.RELEASED_CONTAINER)) {
-					System.out.println("Container was released." + ", containerId=" + containerStatus.getContainerId());
-				}
-
-				else if (exitStatus == ExitCode.FORCE_KILLED.getExitCode()) {
-					System.out.println("Container was force killed." + ", containerId=" + containerStatus.getContainerId());
-				}
-
 				// The container failed horribly.
 				else {
 
@@ -247,16 +240,19 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 					am.getMetrics().failedTask();
 
 					if (exitStatus == ExitCode.TERMINATED.getExitCode()) {
-						System.out.println("Container was terminated." + ", containerId=" + containerStatus.getContainerId());
+						System.out.println("Container was terminated." + ", containerID=" + containerStatus.getContainerId() + ", state="
+								+ containerStatus.getState() + ", exitStatus=" + containerStatus.getExitStatus() + ", diagnostics="
+								+ containerStatus.getDiagnostics());
 					} else {
-						System.out.println("Container completed with failure." + ", containerId=" + containerStatus.getContainerId());
+						System.out.println("Container completed with failure." + ", containerID=" + containerStatus.getContainerId() + ", state="
+								+ containerStatus.getState() + ", exitStatus=" + containerStatus.getExitStatus() + ", diagnostics="
+								+ containerStatus.getDiagnostics());
 
 						Collection<ContainerId> toBeReleasedContainers = am.getScheduler().taskFailed(finishedTask, containerStatus);
 						for (ContainerId toBeReleasedContainer : toBeReleasedContainers) {
 							System.out.println("Killing speculative copy of task " + finishedTask + " on container " + toBeReleasedContainer);
 							am.getAmRMClient().releaseAssignedContainer(toBeReleasedContainer);
 							am.getNumKilledContainers().incrementAndGet();
-
 						}
 					}
 				}
@@ -265,7 +261,8 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 			/* The container was aborted by the framework without it having been assigned an invocation (e.g., because the RM allocated more containers than
 			 * requested) */
 			else {
-
+				System.out.println("Container failed." + ", containerID=" + containerStatus.getContainerId() + ", state=" + containerStatus.getState()
+						+ ", exitStatus=" + containerStatus.getExitStatus() + ", diagnostics=" + containerStatus.getDiagnostics());
 			}
 		}
 

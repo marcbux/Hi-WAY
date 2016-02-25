@@ -136,14 +136,16 @@ public class Client {
 	// debug flag
 	boolean debugFlag = false;
 	private FileSystem hdfs;
+	private String memory;
 	// command line options
 	private Options opts;
+	private String scheduler;
 	private Data summary;
 	private Path summaryPath;
+	private boolean verbose = false;
+	
 	// the workflow format and its path in the file system
 	private String workflowParam;
-	private String scheduler;
-	private String memory;
 
 	private HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS workflowType;
 	// a handle to the YARN ApplicationsManager (ASM)
@@ -169,6 +171,7 @@ public class Client {
 		}
 		opts.addOption("l", "language", true, "The input file format. Will be automatically detected if not specified explicitly. Valid arguments: "
 				+ workflowFormats.substring(2) + ".");
+		opts.addOption("v", "verbose", false, "Increase verbosity of output / reporting.");
 		opts.addOption("debug", false, "Dump out debug information");
 		opts.addOption("help", false, "Print usage");
 	}
@@ -224,6 +227,10 @@ public class Client {
 
 		if (cliParser.hasOption("debug")) {
 			debugFlag = true;
+		}
+		
+		if (cliParser.hasOption("verbose")) {
+			verbose = true;
 		}
 
 		amPriority = conf.getInt(HiWayConfiguration.HIWAY_AM_PRIORITY, HiWayConfiguration.HIWAY_AM_PRIORITY_DEFAULT);
@@ -511,6 +518,10 @@ public class Client {
 
 		if (debugFlag) {
 			vargs.add("--debug");
+		}
+		
+		if (verbose) {
+			vargs.add("--verbose");
 		}
 
 		vargs.add(workflowParam);

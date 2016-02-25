@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
@@ -125,6 +126,8 @@ import de.huberlin.wbi.hiway.scheduler.rr.RoundRobin;
  * </p>
  */
 public abstract class HiWay {
+
+	public static boolean verbose = false;
 
 	/**
 	 * If the debug flag is set, dump out contents of current working directory and the environment to stdout for debugging.
@@ -196,8 +199,7 @@ public abstract class HiWay {
 		new HelpFormatter().printHelp("hiway [options] workflow", opts);
 	}
 
-	private AMRMClientAsync.CallbackHandler allocListener;
-
+	private RMCallbackHandler allocListener;
 	// the yarn tokens to be passed to any launched containers
 	private ByteBuffer allTokens;
 	// a handle to the YARN ResourceManager
@@ -255,11 +257,12 @@ public abstract class HiWay {
 	private Map<String, String> shellEnv = new HashMap<>();
 	private BufferedWriter statLog;
 	private volatile boolean success;
+
 	private Path summaryPath;
+	private Data workflowFile;
+	private boolean workflowIsInput;
 
 	private Path workflowPath;
-	private boolean workflowIsInput;
-	private Data workflowFile;
 
 	public HiWay() {
 		conf = new HiWayConfiguration();
@@ -357,12 +360,12 @@ public abstract class HiWay {
 		String appMessage = null;
 		success = true;
 
-//		System.out.println("Failed Containers: " + numFailedContainers.get());
-//		System.out.println("Completed Containers: " + numCompletedContainers.get());
+		// System.out.println("Failed Containers: " + numFailedContainers.get());
+		// System.out.println("Completed Containers: " + numCompletedContainers.get());
 
 		int numTotalContainers = scheduler.getNumberOfTotalTasks();
 
-//		System.out.println("Total Scheduled Containers: " + numTotalContainers);
+		// System.out.println("Total Scheduled Containers: " + numTotalContainers);
 
 		if (numFailedContainers.get() == 0 && numCompletedContainers.get() == numTotalContainers) {
 			appStatus = FinalApplicationStatus.SUCCEEDED;
@@ -540,6 +543,7 @@ public abstract class HiWay {
 		opts.addOption("s", "scheduler", true, "The scheduling policy that is to be employed. Valid arguments: " + schedulers.substring(2) + "."
 				+ " Overrides settings in hiway-site.xml.");
 		opts.addOption("debug", false, "Dump out debug information");
+		opts.addOption("v", "verbose", false, "Increase verbosity of output / reporting.");
 		opts.addOption("appid", true, "Id of this Application Master.");
 
 		opts.addOption("help", false, "Print usage");
@@ -549,7 +553,7 @@ public abstract class HiWay {
 			printUsage(opts);
 			throw new IllegalArgumentException("No args specified for application master to initialize");
 		}
-		
+
 		if (cliParser.getArgs().length == 0) {
 			printUsage(opts);
 			throw new IllegalArgumentException("No workflow file specified.");
@@ -557,6 +561,10 @@ public abstract class HiWay {
 
 		if (!cliParser.hasOption("appid")) {
 			throw new IllegalArgumentException("No id of Application Master specified");
+		}
+
+		if (cliParser.hasOption("verbose")) {
+			verbose = true;
 		}
 
 		appId = cliParser.getOptionValue("appid");
@@ -634,7 +642,7 @@ public abstract class HiWay {
 			}
 			shellEnv.put(key, val);
 		}
-		
+
 		String workflowParam = cliParser.getArgs()[0];
 		try {
 			workflowPath = new Path(new URI(workflowParam).getPath());
@@ -652,7 +660,7 @@ public abstract class HiWay {
 		if (cliParser.hasOption("memory")) {
 			containerMemory = Integer.parseInt(cliParser.getOptionValue("memory"));
 		}
-		
+
 		containerCores = conf.getInt(HiWayConfiguration.HIWAY_WORKER_VCORES, HiWayConfiguration.HIWAY_WORKER_VCORES_DEFAULT);
 		requestPriority = conf.getInt(HiWayConfiguration.HIWAY_WORKER_PRIORITY, HiWayConfiguration.HIWAY_WORKER_PRIORITY_DEFAULT);
 		return true;
@@ -765,13 +773,13 @@ public abstract class HiWay {
 			scheduler.initializeProvenanceManager();
 			writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
 			federatedReport = new Data(appId + ".log");
-			
+
 			// parse workflow, obtain ready tasks
 			Collection<TaskInstance> readyTasks = parseWorkflow();
-			
+
 			// scheduler updates runtime estimates for all tasks comprising the workflow
 			scheduler.updateRuntimeEstimates(getRunId().toString());
-			
+
 			scheduler.addTasks(readyTasks);
 
 			// Dump out information about cluster capability as seen by the resource manager
@@ -796,10 +804,52 @@ public abstract class HiWay {
 					while (scheduler.hasNextNodeRequest()) {
 						ContainerRequest containerAsk = setupContainerAskForRM(scheduler.getNextNodeRequest());
 						amRMClient.addContainerRequest(containerAsk);
+						numRequestedContainers.incrementAndGet();
 					}
 					Thread.sleep(1000);
+
 					System.out.println("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
 							+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
+					if (verbose) {
+						// information on outstanding container request
+						StringBuilder sb = new StringBuilder("Open Container Requests:");
+						if (scheduler.relaxLocality()) {
+							List<? extends Collection<ContainerRequest>> requestCollections = amRMClient.getMatchingRequests(
+									Priority.newInstance(requestPriority), ResourceRequest.ANY, Resource.newInstance(containerMemory, containerCores));
+							int i = 0;
+							for (Collection<ContainerRequest> requestCollection : requestCollections) {
+								i += requestCollection.size();
+							}
+							if (i > 0) {
+								sb.append(" ");
+								sb.append(ResourceRequest.ANY);
+								sb.append(":");
+								sb.append(i);
+							}
+						} else {
+							for (String node : scheduler.getDbInterface().getHostNames()) {
+								List<? extends Collection<ContainerRequest>> requestCollections = amRMClient.getMatchingRequests(
+										Priority.newInstance(requestPriority), node, Resource.newInstance(containerMemory, containerCores));
+								int i = 0;
+								for (Collection<ContainerRequest> requestCollection : requestCollections) {
+									i += requestCollection.size();
+								}
+								if (i > 0) {
+									sb.append(" ");
+									sb.append(node);
+									sb.append(":");
+									sb.append(i);
+								}
+							}
+						}
+						System.out.println(sb.toString());
+						// nice to have would be:
+						// completed containers by task name
+						// running containers by task name and node
+						// ready containers by task name
+						// future containers by task name
+					}
+
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 					System.exit(-1);
@@ -834,12 +884,12 @@ public abstract class HiWay {
 
 		// set the priority for the request
 		Priority pri = Priority.newInstance(requestPriority);
-		pri.setPriority(requestPriority);
+		// pri.setPriority(requestPriority);
 
 		// set up resource type requirements
 		Resource capability = Resource.newInstance(containerMemory, containerCores);
-		capability.setMemory(containerMemory);
-		capability.setVirtualCores(containerCores);
+		// capability.setMemory(containerMemory);
+		// capability.setVirtualCores(containerCores);
 
 		ContainerRequest request = new ContainerRequest(capability, nodes, null, pri, scheduler.relaxLocality());
 		JSONObject value = new JSONObject();
@@ -854,7 +904,8 @@ public abstract class HiWay {
 			System.exit(-1);
 		}
 
-		System.out.println("Requested container ask: " + request.toString() + " Nodes" + Arrays.toString(nodes));
+		if (verbose)
+			System.out.println("Requested container ask: " + request.toString() + " Nodes" + Arrays.toString(nodes));
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 		return request;
 	}

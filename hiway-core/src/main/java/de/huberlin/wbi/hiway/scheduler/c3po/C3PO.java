@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
 import de.huberlin.hiwaydb.useDB.InvocStat;
+import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.Estimate;
@@ -285,7 +286,8 @@ public class C3PO extends Scheduler {
 			}
 		}
 		normalizeWeights(jobStatistics.values());
-		printJobStatisticsWeight();
+		if (HiWay.verbose)
+			printJobStatisticsWeight();
 	}
 
 	private void computePlacementAwarenessWeights(Container container, boolean replicate) {
@@ -310,7 +312,8 @@ public class C3PO extends Scheduler {
 			}
 		}
 		normalizeWeights(dataLocalityStatistics.values());
-		printPlacementAwarenessWeights(replicate);
+		if (HiWay.verbose)
+			printPlacementAwarenessWeights(replicate);
 	}
 
 	/* Conservatism: Equally high probability for tasks which this node has not executed yet; if no such tasks exist, assign higher probabilities to tasks which
@@ -325,12 +328,12 @@ public class C3PO extends Scheduler {
 			}
 			normalizeWeights(taskStatistics);
 		}
-		printTaskStatisticsWeights();
+		if (HiWay.verbose)
+			printTaskStatisticsWeights();
 		for (String nodeId : getNodeIds())
 			normalizeWeights(runtimeEstimatesPerNode.get(nodeId).values());
 	}
 
-	@SuppressWarnings("deprecation")
 	@Override
 	public TaskInstance getNextTask(Container container) {
 		TaskInstance task = null;
@@ -357,11 +360,13 @@ public class C3PO extends Scheduler {
 		multiplyWeights(combinedWeights, dataLocalityStatistics, placementAwarenessWeight);
 		normalizeWeights(combinedWeights.values());
 
-		System.out.println("Updated Decision Vector for node " + nodeId + ":");
-		System.out.println("\tConservatism (x" + (int) (conservatismWeight + 0.5d) + ")\t" + printWeights(runtimeEstimatesPerNode.get(nodeId)));
-		System.out.println("\tOutlook (x" + (int) (outlookWeight + 0.5d) + ")\t\t" + printWeights(jobStatistics));
-		System.out.println("\tPlacement (x" + (int) (placementAwarenessWeight + 0.5d) + ")\t\t" + printWeights(dataLocalityStatistics));
-		System.out.println("\tCombined\t\t" + printWeights(combinedWeights));
+		if (HiWay.verbose) {
+			System.out.println("Updated Decision Vector for node " + nodeId + ":");
+			System.out.println("\tConservatism (x" + (int) (conservatismWeight + 0.5d) + ")\t" + printWeights(runtimeEstimatesPerNode.get(nodeId)));
+			System.out.println("\tOutlook (x" + (int) (outlookWeight + 0.5d) + ")\t\t" + printWeights(jobStatistics));
+			System.out.println("\tPlacement (x" + (int) (placementAwarenessWeight + 0.5d) + ")\t\t" + printWeights(dataLocalityStatistics));
+			System.out.println("\tCombined\t\t" + printWeights(combinedWeights));
+		}
 
 		double sample = numGen.nextDouble();
 		double min = 0d;
@@ -382,10 +387,10 @@ public class C3PO extends Scheduler {
 				taskToContainers.get(task).add(container);
 
 				if (replicate) {
-					System.out.println("Assigned speculative copy of task " + task + " to container " + container.getId().getId() + " on node "
+					System.out.println("Assigned speculative copy of task " + task + " to container " + container.getId() + "@"
 							+ container.getNodeId().getHost());
 				} else {
-					System.out.println("Assigned task " + task + " to container " + container.getId().getId() + " on node " + container.getNodeId().getHost());
+					System.out.println("Assigned task " + task + " to container " + container.getId() + "@" + container.getNodeId().getHost());
 				}
 
 				task.incTries();
