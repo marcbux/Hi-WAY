@@ -182,9 +182,9 @@ public class Worker {
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEIN, obj));
 
-		tic = System.currentTimeMillis();
+//		tic = System.currentTimeMillis();
 		int exitValue = exec();
-		toc = System.currentTimeMillis();
+//		toc = System.currentTimeMillis();
 
 		if (invocScript.length() > 0) {
 			try (BufferedReader reader = new BufferedReader(new FileReader(invocScript))) {
@@ -200,9 +200,9 @@ public class Worker {
 			}
 		}
 
-		obj = new JSONObject();
-		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, JsonReportEntry.KEY_INVOC_TIME, obj));
+//		obj = new JSONObject();
+//		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
+//		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, JsonReportEntry.KEY_INVOC_TIME, obj));
 
 		tic = System.currentTimeMillis();
 		new Data(id + "_" + Invocation.STDOUT_FILENAME, containerId).stageOut();

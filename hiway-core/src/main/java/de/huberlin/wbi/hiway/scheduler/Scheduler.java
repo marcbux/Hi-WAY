@@ -55,7 +55,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.json.JSONException;
 
-import de.huberlin.hiwaydb.useDB.FileStat;
 import de.huberlin.hiwaydb.useDB.HiwayDB;
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.hiwaydb.useDB.HiwayDBNoSQL;
@@ -316,12 +315,12 @@ public abstract class Scheduler {
 		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostName()).get(stat.getTaskId());
 		re.finishedTasks += 1;
 		re.timeSpent += stat.getRealTime();
-		for (FileStat fileStat : stat.getInputFiles()) {
-			re.timeSpent += fileStat.getRealTime();
-		}
-		for (FileStat fileStat : stat.getOutputFiles()) {
-			re.timeSpent += fileStat.getRealTime();
-		}
+		// for (FileStat fileStat : stat.getInputFiles()) {
+		// re.timeSpent += fileStat.getRealTime();
+		// }
+		// for (FileStat fileStat : stat.getOutputFiles()) {
+		// re.timeSpent += fileStat.getRealTime();
+		// }
 		re.weight = re.averageRuntime = re.timeSpent / re.finishedTasks;
 	}
 

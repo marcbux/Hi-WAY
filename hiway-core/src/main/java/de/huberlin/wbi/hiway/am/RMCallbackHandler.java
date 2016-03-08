@@ -217,8 +217,18 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 							am.writeEntryToLog(entry);
 						}
 
-						Collection<ContainerId> toBeReleasedContainers = am.getScheduler().taskCompleted(finishedTask, containerStatus,
-								System.currentTimeMillis() - invocation.timestamp);
+						long runtime = System.currentTimeMillis() - invocation.timestamp;
+						JSONObject obj = new JSONObject();
+						try {
+							obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(runtime));
+						} catch (JSONException e) {
+							e.printStackTrace();
+							System.exit(-1);
+						}
+						am.writeEntryToLog(new JsonReportEntry(System.currentTimeMillis(), finishedTask.getWorkflowId(), finishedTask.getTaskId(),
+								finishedTask.getTaskName(), finishedTask.getLanguageLabel(), finishedTask.getId(), null, JsonReportEntry.KEY_INVOC_TIME, obj));
+
+						Collection<ContainerId> toBeReleasedContainers = am.getScheduler().taskCompleted(finishedTask, containerStatus, runtime);
 						for (ContainerId toBeReleasedContainer : toBeReleasedContainers) {
 							System.out.println("Killing speculative copy of task " + finishedTask + " on container " + toBeReleasedContainer);
 							am.getAmRMClient().releaseAssignedContainer(toBeReleasedContainer);
