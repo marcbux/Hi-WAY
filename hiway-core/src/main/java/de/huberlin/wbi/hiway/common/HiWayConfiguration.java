@@ -40,6 +40,8 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 public class HiWayConfiguration extends YarnConfiguration {
 
+	public static boolean verbose = false;
+	
 	public static enum HIWAY_DB_TYPE_OPTS {
 		local, NoSQL, SQL
 	}

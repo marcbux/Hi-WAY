@@ -55,6 +55,7 @@ import org.xml.sax.SAXException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.Data;
+import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
@@ -161,7 +162,7 @@ public class DaxApplicationMaster extends HiWay {
 				}
 
 				task.setCommand(taskName + arguments.toString());
-				if (HiWay.verbose)
+				if (HiWayConfiguration.verbose)
 					System.out.println("Adding task " + task + ": " + task.getInputData() + " -> " + task.getOutputData());
 			}
 

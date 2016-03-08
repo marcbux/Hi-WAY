@@ -51,7 +51,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
 import de.huberlin.hiwaydb.useDB.InvocStat;
-import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.Estimate;
@@ -286,7 +285,7 @@ public class C3PO extends Scheduler {
 			}
 		}
 		normalizeWeights(jobStatistics.values());
-		if (HiWay.verbose)
+		if (HiWayConfiguration.verbose)
 			printJobStatisticsWeight();
 	}
 
@@ -312,7 +311,7 @@ public class C3PO extends Scheduler {
 			}
 		}
 		normalizeWeights(dataLocalityStatistics.values());
-		if (HiWay.verbose)
+		if (HiWayConfiguration.verbose)
 			printPlacementAwarenessWeights(replicate);
 	}
 
@@ -328,7 +327,7 @@ public class C3PO extends Scheduler {
 			}
 			normalizeWeights(taskStatistics);
 		}
-		if (HiWay.verbose)
+		if (HiWayConfiguration.verbose)
 			printTaskStatisticsWeights();
 		for (String nodeId : getNodeIds())
 			normalizeWeights(runtimeEstimatesPerNode.get(nodeId).values());
@@ -360,7 +359,7 @@ public class C3PO extends Scheduler {
 		multiplyWeights(combinedWeights, dataLocalityStatistics, placementAwarenessWeight);
 		normalizeWeights(combinedWeights.values());
 
-		if (HiWay.verbose) {
+		if (HiWayConfiguration.verbose) {
 			System.out.println("Updated Decision Vector for node " + nodeId + ":");
 			System.out.println("\tConservatism (x" + (int) (conservatismWeight + 0.5d) + ")\t" + printWeights(runtimeEstimatesPerNode.get(nodeId)));
 			System.out.println("\tOutlook (x" + (int) (outlookWeight + 0.5d) + ")\t\t" + printWeights(jobStatistics));

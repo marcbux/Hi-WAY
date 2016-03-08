@@ -127,8 +127,6 @@ import de.huberlin.wbi.hiway.scheduler.rr.RoundRobin;
  */
 public abstract class HiWay {
 
-	public static boolean verbose = false;
-
 	/**
 	 * If the debug flag is set, dump out contents of current working directory and the environment to stdout for debugging.
 	 */
@@ -564,7 +562,7 @@ public abstract class HiWay {
 		}
 
 		if (cliParser.hasOption("verbose")) {
-			verbose = true;
+			HiWayConfiguration.verbose = true;
 		}
 
 		appId = cliParser.getOptionValue("appid");
@@ -810,7 +808,7 @@ public abstract class HiWay {
 
 					System.out.println("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
 							+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
-					if (verbose) {
+					if (HiWayConfiguration.verbose) {
 						// information on outstanding container request
 						StringBuilder sb = new StringBuilder("Open Container Requests:");
 						if (scheduler.relaxLocality()) {
@@ -904,7 +902,7 @@ public abstract class HiWay {
 			System.exit(-1);
 		}
 
-		if (verbose)
+		if (HiWayConfiguration.verbose)
 			System.out.println("Requested container ask: " + request.toString() + " Nodes" + Arrays.toString(nodes));
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 		return request;

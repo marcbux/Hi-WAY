@@ -80,7 +80,7 @@ public class LaunchContainerRunnable implements Runnable {
 	 */
 	@Override
 	public void run() {
-		if (HiWay.verbose)
+		if (HiWayConfiguration.verbose)
 			System.out.println("Setting up container launch container for containerid=" + container.getId());
 		ContainerLaunchContext ctx = Records.newRecord(ContainerLaunchContext.class);
 

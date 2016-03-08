@@ -142,7 +142,6 @@ public class Client {
 	private String scheduler;
 	private Data summary;
 	private Path summaryPath;
-	private boolean verbose = false;
 	
 	// the workflow format and its path in the file system
 	private String workflowParam;
@@ -230,7 +229,7 @@ public class Client {
 		}
 		
 		if (cliParser.hasOption("verbose")) {
-			verbose = true;
+			HiWayConfiguration.verbose = true;
 		}
 
 		amPriority = conf.getInt(HiWayConfiguration.HIWAY_AM_PRIORITY, HiWayConfiguration.HIWAY_AM_PRIORITY_DEFAULT);
@@ -520,7 +519,7 @@ public class Client {
 			vargs.add("--debug");
 		}
 		
-		if (verbose) {
+		if (HiWayConfiguration.verbose) {
 			vargs.add("--verbose");
 		}
 

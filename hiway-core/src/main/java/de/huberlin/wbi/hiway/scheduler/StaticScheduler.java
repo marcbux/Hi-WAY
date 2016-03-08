@@ -41,7 +41,6 @@ import java.util.Queue;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 
-import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
@@ -83,7 +82,7 @@ public abstract class StaticScheduler extends Scheduler {
 		nodes[0] = node;
 		unissuedNodeRequests.add(nodes);
 		queues.get(node).add(task);
-		if (HiWay.verbose)
+		if (HiWayConfiguration.verbose)
 			System.out.println("Added task " + task + " to queue " + node);
 	}
 
@@ -93,7 +92,7 @@ public abstract class StaticScheduler extends Scheduler {
 		numberOfRunningTasks++;
 		String node = container.getNodeId().getHost();
 
-		if (HiWay.verbose)
+		if (HiWayConfiguration.verbose)
 			System.out.println("Looking for task on container " + container.getId() + " on node " + node + "; Queue:" + queues.get(node).toString());
 
 		TaskInstance task = queues.get(node).remove();

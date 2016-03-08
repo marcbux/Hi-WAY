@@ -45,7 +45,6 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.fs.FileSystem;
 
-import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
@@ -147,7 +146,7 @@ public class HEFT extends StaticScheduler {
 		// assign task to node
 		schedule.put(task, bestNode);
 		taskOnsetsPerNode.get(bestNode).get(bestI).put(bestNodeFreeTimeSlotActualStart, task);
-		if (HiWay.verbose)
+		if (HiWayConfiguration.verbose)
 			System.out.println("Task " + task + " scheduled on node " + bestNode);
 		if (task.readyToExecute()) {
 			addTaskToQueue(task);

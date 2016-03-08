@@ -47,6 +47,7 @@ import org.json.JSONObject;
 
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
+import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
@@ -130,7 +131,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 	@SuppressWarnings("unchecked")
 	@Override
 	public void onContainersAllocated(List<Container> allocatedContainers) {
-		if (HiWay.verbose) {
+		if (HiWayConfiguration.verbose) {
 			for (Container container : allocatedContainers) {
 				System.out.println("Allocated container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
 			}
@@ -154,13 +155,13 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 			ContainerRequest request = findFirstMatchingRequest(container);
 
 			if (request != null) {
-				if (HiWay.verbose)
+				if (HiWayConfiguration.verbose)
 					System.out.println("Removing container request " + request.getNodes() + "," + request.getRelaxLocality());
 				am.getAmRMClient().removeContainerRequest(request);
 				am.getNumAllocatedContainers().incrementAndGet();
 				containerQueue.add(container);
 			} else {
-				if (HiWay.verbose)
+				if (HiWayConfiguration.verbose)
 					System.out.println("Releasing container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
 				am.getAmRMClient().releaseAssignedContainer(container.getId());
 			}
