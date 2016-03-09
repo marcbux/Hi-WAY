@@ -35,7 +35,7 @@
 		<dependency>
 			<groupId>de.hu-berlin.wbi.cuneiform</groupId>
 			<artifactId>cuneiform-core</artifactId>
-			<version>${cuneiform.version}</version>
+			<version>${cuneiformJ.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>mysql</groupId>

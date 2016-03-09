@@ -30,7 +30,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.am.cuneiform;
+package de.huberlin.wbi.hiway.am.cuneiformj;
 
 import java.util.UUID;
 
@@ -42,9 +42,9 @@ import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketSrcActor;
 //Repl - Read evaluation print loop
 public class HiWayRepl extends BaseRepl {
 
-	private CuneiformApplicationMaster am;
+	private CuneiformJApplicationMaster am;
 
-	public HiWayRepl(TicketSrcActor ticketSrc, CuneiformApplicationMaster am) {
+	public HiWayRepl(TicketSrcActor ticketSrc, CuneiformJApplicationMaster am) {
 		super(ticketSrc, null);
 		this.am = am;
 	}

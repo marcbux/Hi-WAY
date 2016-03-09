@@ -603,7 +603,6 @@ public class GalaxyApplicationMaster extends HiWay {
 
 		} catch (IOException | JSONException | WorkflowStructureUnknownException e) {
 			e.printStackTrace();
-			e.printStackTrace();
 			System.exit(-1);
 		}
 

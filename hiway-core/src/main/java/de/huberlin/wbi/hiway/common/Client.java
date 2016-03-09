@@ -260,7 +260,7 @@ public class Client {
 
 		if (cliParser.hasOption("language")) {
 			workflowType = HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.valueOf(cliParser.getOptionValue("language",
-					HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiform.toString()));
+					HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiformE.toString()));
 		} else {
 			for (String extension : HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_EXTS.keySet()) {
 				if (workflowParam.endsWith(extension)) {
@@ -498,7 +498,7 @@ public class Client {
 			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_GALAXY_CLASS);
 			break;
 		default:
-			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORM_CLASS);
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORMJ_CLASS);
 		}
 
 		if (scheduler != null) {

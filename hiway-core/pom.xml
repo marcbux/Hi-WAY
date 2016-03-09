@@ -18,7 +18,12 @@
 		<dependency>
 			<groupId>de.hu-berlin.wbi.cuneiform</groupId>
 			<artifactId>cuneiform-core</artifactId>
-			<version>${cuneiform.version}</version>
+			<version>${cuneiformJ.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>de.hu-berlin.wbi</groupId>
+			<artifactId>cf-java</artifactId>
+			<version>${cuneiformE.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>de.hu-berlin.wbi.hiway</groupId>

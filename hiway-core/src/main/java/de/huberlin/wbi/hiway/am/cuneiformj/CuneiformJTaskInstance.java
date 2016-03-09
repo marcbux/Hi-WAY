@@ -30,7 +30,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.am.cuneiform;
+package de.huberlin.wbi.hiway.am.cuneiformj;
 
 import java.util.Set;
 
@@ -38,11 +38,11 @@ import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
-public class CuneiformTaskInstance extends TaskInstance {
+public class CuneiformJTaskInstance extends TaskInstance {
 
 	private Invocation invocation;
 
-	public CuneiformTaskInstance(Invocation invocation) {
+	public CuneiformJTaskInstance(Invocation invocation) {
 		super(invocation.getTicketId(), invocation.getRunId(), invocation.getTaskName(), invocation.getTaskId(), invocation.getLangLabel());
 		this.invocation = invocation;
 	}

@@ -30,7 +30,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.am.cuneiform;
+package de.huberlin.wbi.hiway.am.cuneiformj;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -58,10 +58,10 @@ import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
-public class CuneiformApplicationMaster extends HiWay {
+public class CuneiformJApplicationMaster extends HiWay {
 
 	public static void main(String[] args) {
-		HiWay.loop(new CuneiformApplicationMaster(), args);
+		HiWay.loop(new CuneiformJApplicationMaster(), args);
 	}
 
 	private BaseCreActor creActor;
@@ -69,7 +69,7 @@ public class CuneiformApplicationMaster extends HiWay {
 
 	private final TicketSrcActor ticketSrc;
 
-	public CuneiformApplicationMaster() {
+	public CuneiformJApplicationMaster() {
 		super();
 		ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -147,7 +147,7 @@ public class CuneiformApplicationMaster extends HiWay {
 					buf.append(line).append('\n');
 			}
 			String stdErr = buf.toString();
-			Invocation invocation = ((CuneiformTaskInstance) task).getInvocation();
+			Invocation invocation = ((CuneiformJTaskInstance) task).getInvocation();
 			if (!task.retry(getConf().getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
 				ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, task.getCommand(), stdOut, stdErr));
 			}
@@ -160,7 +160,7 @@ public class CuneiformApplicationMaster extends HiWay {
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
 		try {
-			Invocation invocation = ((CuneiformTaskInstance) task).getInvocation();
+			Invocation invocation = ((CuneiformJTaskInstance) task).getInvocation();
 			invocation.evalReport(task.getReport());
 			ticketSrc.sendMsg(new TicketFinishedMsg(creActor, invocation.getTicket(), task.getReport()));
 			System.out.println("Message sent.");

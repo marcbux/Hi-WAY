@@ -30,7 +30,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package de.huberlin.wbi.hiway.am.cuneiform;
+package de.huberlin.wbi.hiway.am.cuneiformj;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,10 +49,10 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 //Cre - Cuneiform Runtime Environment
 public class HiWayCreActor extends BaseCreActor {
 
-	private CuneiformApplicationMaster am;
+	private CuneiformJApplicationMaster am;
 	private boolean init;
 
-	public HiWayCreActor(CuneiformApplicationMaster am) {
+	public HiWayCreActor(CuneiformJApplicationMaster am) {
 		super();
 		this.am = am;
 		this.init = true;
@@ -76,7 +76,7 @@ public class HiWayCreActor extends BaseCreActor {
 		Ticket ticket = msg.getTicket();
 
 		Invocation invoc = Invocation.createInvocation(ticket);
-		TaskInstance task = new CuneiformTaskInstance(invoc);
+		TaskInstance task = new CuneiformJTaskInstance(invoc);
 
 		try {
 			for (String inputName : invoc.getStageInList()) {

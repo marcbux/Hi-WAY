@@ -221,7 +221,7 @@ public abstract class HiWay {
 	private int containerMemory = 4096;
 	private boolean determineFileSizes = false;
 	// flags denoting workflow execution has finished and been successful
-	private volatile boolean done;
+	protected volatile boolean done;
 	// the report, in which provenance information is stored
 	private Data federatedReport;
 	// private BufferedWriter federatedReportWriter;
