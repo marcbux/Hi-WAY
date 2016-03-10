@@ -123,6 +123,7 @@ public class Client {
 	}
 
 	// amount of memory resource to request for to run the App Master
+	private int amVCores = 1;
 	private int amMemory = 4096;
 	// the priority of the AM container
 	private int amPriority = 0;
@@ -234,8 +235,14 @@ public class Client {
 
 		amPriority = conf.getInt(HiWayConfiguration.HIWAY_AM_PRIORITY, HiWayConfiguration.HIWAY_AM_PRIORITY_DEFAULT);
 		amQueue = conf.get(HiWayConfiguration.HIWAY_AM_QUEUE, HiWayConfiguration.HIWAY_AM_QUEUE_DEFAULT);
+		
+		amVCores = conf.getInt(HiWayConfiguration.HIWAY_AM_VCORES, HiWayConfiguration.HIWAY_AM_VCORES_DEFAULT);
+		if (amVCores <= 0) {
+			throw new IllegalArgumentException("Invalid vCores specified for application master, exiting." + " Specified vCores=" + amVCores);
+		}
+		
 		amMemory = conf.getInt(HiWayConfiguration.HIWAY_AM_MEMORY, HiWayConfiguration.HIWAY_AM_MEMORY_DEFAULT);
-		if (amMemory < 0) {
+		if (amMemory <= 0) {
 			throw new IllegalArgumentException("Invalid memory specified for application master, exiting." + " Specified memory=" + amMemory);
 		}
 
@@ -368,10 +375,17 @@ public class Client {
 		GetNewApplicationResponse appResponse = app.getNewApplicationResponse();
 
 		// Get min/max resource capabilities from RM and change memory ask if needed
+		int maxVC = appResponse.getMaximumResourceCapability().getVirtualCores();
+		System.out.println("Max vCores capabililty of resources in this cluster " + maxVC);
 		int maxMem = appResponse.getMaximumResourceCapability().getMemory();
 		System.out.println("Max mem capabililty of resources in this cluster " + maxMem);
 
 		// A resource ask cannot exceed the max.
+		if (amVCores > maxVC) {
+			System.out.println("AM vCores specified above max threshold of cluster. Using max value." + ", specified=" + amVCores + ", max=" + maxVC);
+			amVCores = maxVC;
+		}
+		
 		if (amMemory > maxMem) {
 			System.out.println("AM memory specified above max threshold of cluster. Using max value." + ", specified=" + amMemory + ", max=" + maxMem);
 			amMemory = maxMem;
@@ -540,6 +554,7 @@ public class Client {
 
 		// Set up resource type requirements
 		Resource capability = Records.newRecord(Resource.class);
+		capability.setVirtualCores(amVCores);
 		capability.setMemory(amMemory);
 		appContext.setResource(capability);
 
