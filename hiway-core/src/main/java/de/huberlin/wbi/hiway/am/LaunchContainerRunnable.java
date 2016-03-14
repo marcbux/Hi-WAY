@@ -44,6 +44,11 @@ import org.apache.hadoop.yarn.util.Records;
 
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.hiway.am.NMCallbackHandler;
+import de.huberlin.wbi.hiway.am.cuneiforme.CuneiformEApplicationMaster;
+import de.huberlin.wbi.hiway.am.cuneiformj.CuneiformJApplicationMaster;
+import de.huberlin.wbi.hiway.am.dax.DaxApplicationMaster;
+import de.huberlin.wbi.hiway.am.galaxy.GalaxyApplicationMaster;
+import de.huberlin.wbi.hiway.am.log.LogApplicationMaster;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
@@ -146,7 +151,17 @@ public class LaunchContainerRunnable implements Runnable {
 		// Set Xmx based on am memory size
 		vargs.add("-Xmx" + am.getContainerMemory() + "m");
 		// Set class name
-		vargs.add(HiWayConfiguration.HIWAY_WORKER_CLASS);
+		if (am instanceof CuneiformJApplicationMaster) {
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORMJ_WORKER_CLASS);
+		} else if (am instanceof CuneiformEApplicationMaster) {
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORME_WORKER_CLASS);
+		} else if (am instanceof GalaxyApplicationMaster) {
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_GALAXY_WORKER_CLASS);
+		} else if (am instanceof LogApplicationMaster) {
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_LOG_WORKER_CLASS);
+		} else if (am instanceof DaxApplicationMaster) {
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX_WORKER_CLASS);
+		}
 
 		vargs.add("--appId " + am.getAppId().toString());
 		vargs.add("--containerId " + container.getId().toString());

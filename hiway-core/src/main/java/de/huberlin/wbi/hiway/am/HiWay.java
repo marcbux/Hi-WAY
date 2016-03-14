@@ -225,7 +225,7 @@ public abstract class HiWay {
 	// the report, in which provenance information is stored
 	private Data federatedReport;
 	// private BufferedWriter federatedReportWriter;
-	private Map<String, Data> files = new HashMap<>();
+	protected Map<String, Data> files = new HashMap<>();
 	// a handle to the hdfs
 	private FileSystem hdfs;
 	private Path hdfsApplicationDirectory;

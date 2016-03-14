@@ -489,16 +489,16 @@ public class Client {
 
 		switch (workflowType) {
 		case dax:
-			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS);
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX_AM_CLASS);
 			break;
 		case log:
-			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_LOG_CLASS);
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_LOG_AM_CLASS);
 			break;
 		case galaxy:
-			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_GALAXY_CLASS);
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_GALAXY_AM_CLASS);
 			break;
 		default:
-			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORMJ_CLASS);
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORMJ_AM_CLASS);
 		}
 
 		if (scheduler != null) {

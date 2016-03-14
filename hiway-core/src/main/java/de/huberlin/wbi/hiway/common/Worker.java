@@ -75,26 +75,26 @@ public class Worker {
 		}
 	}
 
-	private String appId;
+	protected String appId;
 	protected HiWayConfiguration conf;
-	private String containerId;
-	private boolean determineFileSizes = false;
-	private FileSystem hdfs;
-	private long id;
-	private Set<Data> inputFiles;
-	private String invocScript = "";
-	private String langLabel;
-	private Set<Data> outputFiles;
-	private long taskId;
-	private String taskName;
-	private UUID workflowId;
+	protected String containerId;
+	protected boolean determineFileSizes = false;
+	protected FileSystem hdfs;
+	protected long id;
+	protected Set<Data> inputFiles;
+	protected String invocScript = "";
+	protected String langLabel;
+	protected Set<Data> outputFiles;
+	protected long taskId;
+	protected String taskName;
+	protected UUID workflowId;
 
 	public Worker() {
 		inputFiles = new HashSet<>();
 		outputFiles = new HashSet<>();
 	}
 
-	private int exec() {
+	protected int exec() {
 		File script = new File("./" + id);
 		script.setExecutable(true);
 		ProcessBuilder processBuilder = new ProcessBuilder(script.getPath());

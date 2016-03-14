@@ -33,16 +33,22 @@
 package de.huberlin.wbi.hiway.am.cuneiforme;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.json.JSONException;
 
+import de.huberlin.wbi.cfjava.cuneiform.Request;
 import de.huberlin.wbi.cfjava.cuneiform.Workflow;
 import de.huberlin.wbi.hiway.am.HiWay;
+import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
@@ -61,6 +67,8 @@ public class CuneiformEApplicationMaster extends HiWay {
 
 	@Override
 	public Collection<TaskInstance> parseWorkflow() {
+		Collection<TaskInstance> tasks = new LinkedList<>();
+
 		System.out.println("Parsing Cuneiform workflow " + getWorkflowFile());
 
 		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath().toString()))) {
@@ -74,11 +82,38 @@ public class CuneiformEApplicationMaster extends HiWay {
 			e.printStackTrace();
 			System.exit(-1);
 		}
-		
+
 		done = workflow.reduce();
 
-		// obtain requests, create task instances from them, and return them
-		return new LinkedList<>();
+		for (Request request : workflow.getRequestSet()) {
+			String taskName = request.getLam().getLamName();
+			int taskId = Math.abs(taskName.hashCode() + 1);
+			TaskInstance task = new TaskInstance(getRunId(), taskName, taskId);
+			
+			for (String fileName : request.getStageInFilenameSet()) {
+				if (!files.containsKey(fileName)) {
+					Data file = new Data(fileName);
+					file.setInput(true);
+					files.put(fileName, file);
+				}
+				task.addInputData(files.get(fileName));
+			}
+			
+			Data in = new Data("request_" + task.getId());
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter("request_" + task.getId()))) {
+				writer.write(request.toString());
+				task.addInputData(in);
+				in.stageOut();
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.exit(-1);
+			}
+			
+			task.setCommand("effi " + "request_" + task.getId() + " " + "reply_" + task.getId());
+			tasks.add(task);
+		}
+
+		return tasks;
 	}
 
 	@Override

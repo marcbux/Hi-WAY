@@ -88,7 +88,6 @@ public class HiWayConfiguration extends YarnConfiguration {
 	public static final HIWAY_SCHEDULER_OPTS HIWAY_SCHEDULER_DEFAULT = HIWAY_SCHEDULER_OPTS.c3po;
 
 	public static final String HIWAY_SITE_XML = "hiway-site.xml";
-	public static final String HIWAY_WORKER_CLASS = "de.huberlin.wbi.hiway.common.Worker";
 
 	public static final String HIWAY_WORKER_MEMORY = "hiway.worker.memory";
 
@@ -99,13 +98,13 @@ public class HiWayConfiguration extends YarnConfiguration {
 	public static final String HIWAY_WORKER_SHELL_ENV_DEFAULT = "";
 	public static final String HIWAY_WORKER_VCORES = "hiway.worker.vcores";
 	public static final int HIWAY_WORKER_VCORES_DEFAULT = 1;
-	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORMJ_CLASS = "de.huberlin.wbi.hiway.am.cuneiform.CuneiformJApplicationMaster";
-	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORME_CLASS = "de.huberlin.wbi.hiway.am.cuneiform.CuneiformEApplicationMaster";
-	public static final String HIWAY_WORKFLOW_LANGUAGE_DAX_CLASS = "de.huberlin.wbi.hiway.am.dax.DaxApplicationMaster";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORMJ_AM_CLASS = "de.huberlin.wbi.hiway.am.cuneiform.CuneiformJApplicationMaster";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORME_AM_CLASS = "de.huberlin.wbi.hiway.am.cuneiform.CuneiformEApplicationMaster";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_DAX_AM_CLASS = "de.huberlin.wbi.hiway.am.dax.DaxApplicationMaster";
 
 	public static final Map<String, HIWAY_WORKFLOW_LANGUAGE_OPTS> HIWAY_WORKFLOW_LANGUAGE_EXTS;
-	public static final String HIWAY_WORKFLOW_LANGUAGE_GALAXY_CLASS = "de.huberlin.wbi.hiway.am.galaxy.GalaxyApplicationMaster";
-	public static final String HIWAY_WORKFLOW_LANGUAGE_LOG_CLASS = "de.huberlin.wbi.hiway.am.log.LogApplicationMaster";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_GALAXY_AM_CLASS = "de.huberlin.wbi.hiway.am.galaxy.GalaxyApplicationMaster";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_LOG_AM_CLASS = "de.huberlin.wbi.hiway.am.log.LogApplicationMaster";
 	static {
 		HIWAY_WORKFLOW_LANGUAGE_EXTS = new HashMap<>();
 		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("cf", HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiformE);
@@ -113,6 +112,15 @@ public class HiWayConfiguration extends YarnConfiguration {
 		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("ga", HIWAY_WORKFLOW_LANGUAGE_OPTS.galaxy);
 		HIWAY_WORKFLOW_LANGUAGE_EXTS.put("log", HIWAY_WORKFLOW_LANGUAGE_OPTS.log);
 	}
+	
+	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORMJ_WORKER_CLASS = "de.huberlin.wbi.hiway.common.Worker";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORME_WORKER_CLASS = "de.huberlin.wbi.hiway.am.cuneiform.CuneiformEWorker";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_DAX_WORKER_CLASS = "de.huberlin.wbi.hiway.common.Worker";
+
+	public static final String HIWAY_WORKFLOW_LANGUAGE_GALAXY_WORKER_CLASS = "de.huberlin.wbi.hiway.common.Worker";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_LOG_WORKER_CLASS = "de.huberlin.wbi.hiway.common.Worker";
+	
+	
 
 	static {
 		addDefaultResource(HIWAY_SITE_XML);
