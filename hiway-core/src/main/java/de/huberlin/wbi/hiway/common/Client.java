@@ -118,7 +118,7 @@ public class Client {
 			System.out.println("Application completed successfully");
 			System.exit(0);
 		}
-		System.err.println("Application failed to complete successfully");
+		System.err.println("Application failed");
 		System.exit(2);
 	}
 

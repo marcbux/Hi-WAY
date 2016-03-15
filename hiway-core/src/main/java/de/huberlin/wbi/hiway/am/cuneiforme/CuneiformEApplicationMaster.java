@@ -38,12 +38,11 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.json.JSONException;
 
 import de.huberlin.wbi.cfjava.cuneiform.Reply;
 import de.huberlin.wbi.cfjava.cuneiform.Request;
@@ -51,11 +50,11 @@ import de.huberlin.wbi.cfjava.cuneiform.Workflow;
 import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
-import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
 public class CuneiformEApplicationMaster extends HiWay {
 
 	Workflow workflow;
+	Set<Request> scheduledRequests;
 
 	public static void main(String[] args) {
 		HiWay.loop(new CuneiformEApplicationMaster(), args);
@@ -64,6 +63,7 @@ public class CuneiformEApplicationMaster extends HiWay {
 	public CuneiformEApplicationMaster() {
 		super();
 		setDetermineFileSizes();
+		scheduledRequests = new HashSet<>();
 	}
 
 	@Override
@@ -84,15 +84,18 @@ public class CuneiformEApplicationMaster extends HiWay {
 
 		return reduce();
 	}
-	
+
 	private Collection<TaskInstance> reduce() {
 		Collection<TaskInstance> tasks = new LinkedList<>();
 		done = workflow.reduce();
-		for (Request request : workflow.getRequestSet()) {
+		Set<Request> requestSet = workflow.getRequestSet();
+		requestSet.removeAll(scheduledRequests);
+		scheduledRequests.addAll(requestSet);
+		for (Request request : requestSet) {
 			String taskName = request.getLam().getLamName();
 			int taskId = Math.abs(taskName.hashCode() + 1);
-			TaskInstance task = new TaskInstance(getRunId(), taskName, taskId);
-			
+			TaskInstance task = new CuneiformETaskInstance(getRunId(), taskName, taskId);
+
 			for (String fileName : request.getStageInFilenameSet()) {
 				if (!files.containsKey(fileName)) {
 					Data file = new Data(fileName);
@@ -101,18 +104,15 @@ public class CuneiformEApplicationMaster extends HiWay {
 				}
 				task.addInputData(files.get(fileName));
 			}
-			
-			Data in = new Data("request_" + task.getId());
-			try (BufferedWriter writer = new BufferedWriter(new FileWriter("request_" + task.getId()))) {
+
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(task.getId() + "_request"))) {
 				writer.write(request.toString());
-				task.addInputData(in);
-				in.stageOut();
 			} catch (IOException e) {
 				e.printStackTrace();
 				System.exit(-1);
 			}
-			
-			task.setCommand("effi " + "request_" + task.getId() + " " + "reply_" + task.getId());
+
+			task.setCommand("effi " + task.getId() + "_request " + task.getId() + "_reply");
 			tasks.add(task);
 		}
 		return tasks;
@@ -120,9 +120,15 @@ public class CuneiformEApplicationMaster extends HiWay {
 
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
+		try {
+			(new Data(task.getId() + "_reply", containerId.toString())).stageIn();
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		
 		StringBuilder sb = new StringBuilder();
-		try (BufferedReader reader = new BufferedReader(new FileReader("reply_" + task.getId()))) {
-			(new Data("reply_" + task.getId())).stageIn();
+		try (BufferedReader reader = new BufferedReader(new FileReader(task.getId() + "_reply"))) {
 			String line;
 			while ((line = reader.readLine()) != null) {
 				sb.append(line).append("\n");
@@ -133,9 +139,9 @@ public class CuneiformEApplicationMaster extends HiWay {
 		}
 		Reply reply = Reply.createReply(sb.toString());
 		workflow.addReply(reply);
-		
+
 		getScheduler().addTasks(reduce());
-		
+
 		for (String fileNameString : reply.getStageOutFilenameList()) {
 			files.put(fileNameString, new Data(fileNameString, containerId.toString()));
 		}

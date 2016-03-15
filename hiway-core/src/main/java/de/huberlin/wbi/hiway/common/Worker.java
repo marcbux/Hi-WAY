@@ -56,9 +56,12 @@ import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 
 public class Worker {
-
+	
 	public static void main(String[] args) {
-		Worker worker = new Worker();
+		Worker.loop(new Worker(), args);
+	}
+
+	public static void loop(Worker worker, String[] args) {
 		try {
 			worker.init(args);
 			worker.run();
