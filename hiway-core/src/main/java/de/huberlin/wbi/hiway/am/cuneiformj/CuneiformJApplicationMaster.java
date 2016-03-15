@@ -104,13 +104,16 @@ public class CuneiformJApplicationMaster extends HiWay {
 	
 	@Override
 	protected Collection<String> getOutput() {
+		Collection<String> outputs = new LinkedList<>();
 		try {
-			return repl.getAns().normalize();
+			for (String output : repl.getAns().normalize()) {
+				outputs.add(files.containsKey(output) ? files.get(output).getHdfsPath().toString() : output);
+			}
 		} catch (NotDerivableException e) {
 			e.printStackTrace();
 			System.exit(-1);
 		}
-		return super.getOutput();
+		return outputs;
 	}
 
 	@Override

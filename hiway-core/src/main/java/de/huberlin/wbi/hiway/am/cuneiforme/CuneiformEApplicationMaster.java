@@ -38,6 +38,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
@@ -47,7 +48,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import de.huberlin.wbi.cfjava.cuneiform.Reply;
 import de.huberlin.wbi.cfjava.cuneiform.Request;
 import de.huberlin.wbi.cfjava.cuneiform.Workflow;
-import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
 import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
@@ -89,9 +89,6 @@ public class CuneiformEApplicationMaster extends HiWay {
 	private Collection<TaskInstance> reduce() {
 		Collection<TaskInstance> tasks = new LinkedList<>();
 		done = workflow.reduce();
-		if (done) {
-
-		}
 		Set<Request> requestSet = workflow.getRequestSet();
 		requestSet.removeAll(scheduledRequests);
 		scheduledRequests.addAll(requestSet);
@@ -102,7 +99,7 @@ public class CuneiformEApplicationMaster extends HiWay {
 
 			for (String fileName : request.getStageInFilenameSet()) {
 				System.out.println("Input file: " + fileName);
-				
+
 				if (!files.containsKey(fileName)) {
 					Data file = new Data(fileName);
 					file.setInput(true);
@@ -126,7 +123,11 @@ public class CuneiformEApplicationMaster extends HiWay {
 
 	@Override
 	protected Collection<String> getOutput() {
-		return workflow.getResult();
+		Collection<String> outputs = new LinkedList<>();
+		for (String output : workflow.getResult()) {
+			outputs.add(files.containsKey(output) ? files.get(output).getHdfsPath().toString() : output);
+		}
+		return outputs;
 	}
 
 	@Override
@@ -149,12 +150,12 @@ public class CuneiformEApplicationMaster extends HiWay {
 			System.exit(-1);
 		}
 		Reply reply = Reply.createReply(sb.toString());
-		
+
 		for (String fileNameString : reply.getStageOutFilenameList()) {
 			System.out.println("Output file: " + fileNameString);
 			files.put(fileNameString, new Data(fileNameString, containerId.toString()));
 		}
-		
+
 		workflow.addReply(reply);
 		getScheduler().addTasks(reduce());
 	}
