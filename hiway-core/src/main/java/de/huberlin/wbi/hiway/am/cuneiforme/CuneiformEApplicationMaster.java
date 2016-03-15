@@ -45,6 +45,7 @@ import java.util.Set;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.json.JSONException;
 
+import de.huberlin.wbi.cfjava.cuneiform.Reply;
 import de.huberlin.wbi.cfjava.cuneiform.Request;
 import de.huberlin.wbi.cfjava.cuneiform.Workflow;
 import de.huberlin.wbi.hiway.am.HiWay;
@@ -67,8 +68,6 @@ public class CuneiformEApplicationMaster extends HiWay {
 
 	@Override
 	public Collection<TaskInstance> parseWorkflow() {
-		Collection<TaskInstance> tasks = new LinkedList<>();
-
 		System.out.println("Parsing Cuneiform workflow " + getWorkflowFile());
 
 		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath().toString()))) {
@@ -77,14 +76,18 @@ public class CuneiformEApplicationMaster extends HiWay {
 			while ((line = reader.readLine()) != null) {
 				sb.append(line).append("\n");
 			}
-			workflow = new Workflow(sb.toString());
+			workflow = Workflow.createWorkflow(sb.toString());
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(-1);
 		}
 
+		return reduce();
+	}
+	
+	private Collection<TaskInstance> reduce() {
+		Collection<TaskInstance> tasks = new LinkedList<>();
 		done = workflow.reduce();
-
 		for (Request request : workflow.getRequestSet()) {
 			String taskName = request.getLam().getLamName();
 			int taskId = Math.abs(taskName.hashCode() + 1);
@@ -112,19 +115,34 @@ public class CuneiformEApplicationMaster extends HiWay {
 			task.setCommand("effi " + "request_" + task.getId() + " " + "reply_" + task.getId());
 			tasks.add(task);
 		}
-
 		return tasks;
 	}
 
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
-		// TODO Auto-generated method stub
-		super.taskSuccess(task, containerId);
+		StringBuilder sb = new StringBuilder();
+		try (BufferedReader reader = new BufferedReader(new FileReader("reply_" + task.getId()))) {
+			(new Data("reply_" + task.getId())).stageIn();
+			String line;
+			while ((line = reader.readLine()) != null) {
+				sb.append(line).append("\n");
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		Reply reply = Reply.createReply(sb.toString());
+		workflow.addReply(reply);
+		
+		getScheduler().addTasks(reduce());
+		
+		for (String fileNameString : reply.getStageOutFilenameList()) {
+			files.put(fileNameString, new Data(fileNameString, containerId.toString()));
+		}
 	}
 
 	@Override
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
-		// TODO Auto-generated method stub
 		super.taskFailure(task, containerId);
 	}
 

@@ -497,6 +497,9 @@ public class Client {
 		case galaxy:
 			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_GALAXY_AM_CLASS);
 			break;
+		case cuneiformE:
+			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORME_AM_CLASS);
+			break;
 		default:
 			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORMJ_AM_CLASS);
 		}

@@ -101,6 +101,17 @@ public class CuneiformJApplicationMaster extends HiWay {
 		
 		return outputFiles;
 	}
+	
+	@Override
+	protected Collection<String> getOutput() {
+		try {
+			return repl.getAns().normalize();
+		} catch (NotDerivableException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		return super.getOutput();
+	}
 
 	@Override
 	public UUID getRunId() {
