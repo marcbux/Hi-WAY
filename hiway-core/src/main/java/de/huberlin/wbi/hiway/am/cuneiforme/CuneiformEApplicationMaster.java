@@ -38,7 +38,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
@@ -48,23 +47,39 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import de.huberlin.wbi.cfjava.cuneiform.Reply;
 import de.huberlin.wbi.cfjava.cuneiform.Request;
 import de.huberlin.wbi.cfjava.cuneiform.Workflow;
+import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.am.HiWay;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 public class CuneiformEApplicationMaster extends HiWay {
 
-	Workflow workflow;
-	Set<Request> scheduledRequests;
-
 	public static void main(String[] args) {
 		HiWay.loop(new CuneiformEApplicationMaster(), args);
 	}
+
+	Set<Request> scheduledRequests;
+
+	Workflow workflow;
 
 	public CuneiformEApplicationMaster() {
 		super();
 		setDetermineFileSizes();
 		scheduledRequests = new HashSet<>();
+	}
+
+	@Override
+	protected Collection<String> getOutput() {
+		Collection<String> outputs = new LinkedList<>();
+		for (String output : workflow.getResult()) {
+			if (files.containsKey(output)) {
+				outputs.add(files.get(output).getHdfsPath().toString());
+				files.get(output).setOutput(true);
+			} else {
+				outputs.add(output);
+			}
+		}
+		return outputs;
 	}
 
 	@Override
@@ -115,19 +130,20 @@ public class CuneiformEApplicationMaster extends HiWay {
 				System.exit(-1);
 			}
 
-			task.setCommand("effi " + task.getId() + "_request " + task.getId() + "_reply");
+			task.setCommand("effi -r true " + task.getId() + "_request " + task.getId() + "_reply");
 			tasks.add(task);
+
+			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
+					Long.valueOf(task.getId()), null, JsonReportEntry.KEY_INVOC_SCRIPT, task.getCommand()));
+			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
+					Long.valueOf(task.getId()), null, JsonReportEntry.KEY_INVOC_EXEC, request.toString()));
 		}
 		return tasks;
 	}
 
 	@Override
-	protected Collection<String> getOutput() {
-		Collection<String> outputs = new LinkedList<>();
-		for (String output : workflow.getResult()) {
-			outputs.add(files.containsKey(output) ? files.get(output).getHdfsPath().toString() : output);
-		}
-		return outputs;
+	public void taskFailure(TaskInstance task, ContainerId containerId) {
+		super.taskFailure(task, containerId);
 	}
 
 	@Override
@@ -151,6 +167,9 @@ public class CuneiformEApplicationMaster extends HiWay {
 		}
 		Reply reply = Reply.createReply(sb.toString());
 
+		writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), Long.valueOf(task.getId()),
+				null, JsonReportEntry.KEY_INVOC_OUTPUT, sb.toString()));
+
 		for (String fileNameString : reply.getStageOutFilenameList()) {
 			System.out.println("Output file: " + fileNameString);
 			files.put(fileNameString, new Data(fileNameString, containerId.toString()));
@@ -158,11 +177,6 @@ public class CuneiformEApplicationMaster extends HiWay {
 
 		workflow.addReply(reply);
 		getScheduler().addTasks(reduce());
-	}
-
-	@Override
-	public void taskFailure(TaskInstance task, ContainerId containerId) {
-		super.taskFailure(task, containerId);
 	}
 
 }

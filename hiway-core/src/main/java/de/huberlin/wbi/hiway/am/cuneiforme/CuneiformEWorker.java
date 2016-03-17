@@ -11,11 +11,11 @@ import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.Worker;
 
 public class CuneiformEWorker extends Worker {
-	
+
 	public static void main(String[] args) {
 		Worker.loop(new CuneiformEWorker(), args);
 	}
-	
+
 	@Override
 	public void stageOut() throws IOException, JSONException {
 		StringBuilder sb = new StringBuilder();

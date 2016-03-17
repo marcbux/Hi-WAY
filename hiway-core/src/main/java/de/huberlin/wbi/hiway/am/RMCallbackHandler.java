@@ -225,8 +225,8 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 							e.printStackTrace();
 							System.exit(-1);
 						}
-						am.writeEntryToLog(new JsonReportEntry(System.currentTimeMillis(), finishedTask.getWorkflowId(), finishedTask.getTaskId(),
-								finishedTask.getTaskName(), finishedTask.getLanguageLabel(), finishedTask.getId(), null, JsonReportEntry.KEY_INVOC_TIME, obj));
+						am.writeEntryToLog(new JsonReportEntry(System.currentTimeMillis(), finishedTask.getWorkflowId(), finishedTask.getTaskId(), finishedTask
+								.getTaskName(), finishedTask.getLanguageLabel(), finishedTask.getId(), null, JsonReportEntry.KEY_INVOC_TIME, obj));
 
 						Collection<ContainerId> toBeReleasedContainers = am.getScheduler().taskCompleted(finishedTask, containerStatus, runtime);
 						for (ContainerId toBeReleasedContainer : toBeReleasedContainers) {

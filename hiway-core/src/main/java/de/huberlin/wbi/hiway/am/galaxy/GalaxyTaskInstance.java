@@ -291,7 +291,8 @@ public class GalaxyTaskInstance extends TaskInstance {
 	 * A method for preparing the Python script that is responsible for populating the tool state with metadata and making it accessible for Cheetah to compile
 	 * the template.
 	 * 
-	 * @throws JSONException JSONException
+	 * @throws JSONException
+	 *             JSONException
 	 */
 	public void prepareParamScript() throws JSONException {
 		// (1) populate the tool state by mapping parameters and adding additional parameters

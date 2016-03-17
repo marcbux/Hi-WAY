@@ -331,11 +331,7 @@ public abstract class HiWay {
 	private void finish() {
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_TIME, Long.toString(System.currentTimeMillis()
 				- amRMClient.getStartTime())));
-		Collection<Data> outputFiles = getOutputFiles();
-		if (outputFiles.size() > 0) {
-			String outputs = getOutputFiles().toString();
-			writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_OUTPUT, outputs.substring(1, outputs.length() - 1)));
-		}
+
 		// Join all launched threads needed for when we time out and we need to release containers
 		for (Thread launchThread : launchThreads) {
 			try {
@@ -374,6 +370,13 @@ public abstract class HiWay {
 			success = false;
 		}
 
+		Collection<String> output = getOutput();
+		Collection<Data> outputFiles = getOutputFiles();
+		if (outputFiles.size() > 0) {
+			String outputs = outputFiles.toString();
+			writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_OUTPUT, outputs.substring(1, outputs.length() - 1)));
+		}
+
 		try {
 			statLog.close();
 			federatedReport.stageOut();
@@ -385,7 +388,7 @@ public abstract class HiWay {
 				try (BufferedWriter writer = new BufferedWriter(new FileWriter(summaryPath.toString()))) {
 					JSONObject obj = new JSONObject();
 					try {
-						obj.put("output", getOutput());
+						obj.put("output", output);
 						obj.put("stdout", stdout);
 						obj.put("stderr", stderr);
 						obj.put("statlog", statlog);

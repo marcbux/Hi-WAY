@@ -56,10 +56,6 @@ import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 
 public class Worker {
-	
-	public static void main(String[] args) {
-		Worker.loop(new Worker(), args);
-	}
 
 	public static void loop(Worker worker, String[] args) {
 		try {
@@ -70,6 +66,10 @@ public class Worker {
 			System.exit(-1);
 		}
 		System.exit(0);
+	}
+
+	public static void main(String[] args) {
+		Worker.loop(new Worker(), args);
 	}
 
 	protected static void writeEntryToLog(JsonReportEntry entry) throws IOException {
@@ -160,7 +160,7 @@ public class Worker {
 		if (cliParser.hasOption("invocScript")) {
 			invocScript = cliParser.getOptionValue("invocScript");
 		}
-		
+
 		try (BufferedReader reader = new BufferedReader(new FileReader(id + "_data"))) {
 			int n = Integer.parseInt(reader.readLine());
 			for (int i = 0; i < n; i++) {
@@ -174,7 +174,7 @@ public class Worker {
 			for (int i = 0; i < n; i++) {
 				outputFiles.add(new Data(reader.readLine(), containerId));
 			}
-		}		
+		}
 	}
 
 	public void run() throws IOException, JSONException {
@@ -185,9 +185,9 @@ public class Worker {
 		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
 		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEIN, obj));
 
-//		tic = System.currentTimeMillis();
+		// tic = System.currentTimeMillis();
 		int exitValue = exec();
-//		toc = System.currentTimeMillis();
+		// toc = System.currentTimeMillis();
 
 		if (invocScript.length() > 0) {
 			try (BufferedReader reader = new BufferedReader(new FileReader(invocScript))) {
@@ -203,9 +203,9 @@ public class Worker {
 			}
 		}
 
-//		obj = new JSONObject();
-//		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-//		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, JsonReportEntry.KEY_INVOC_TIME, obj));
+		// obj = new JSONObject();
+		// obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
+		// writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, JsonReportEntry.KEY_INVOC_TIME, obj));
 
 		tic = System.currentTimeMillis();
 		new Data(id + "_" + Invocation.STDOUT_FILENAME, containerId).stageOut();

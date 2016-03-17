@@ -162,7 +162,7 @@ public class LaunchContainerRunnable implements Runnable {
 		} else if (am instanceof DaxApplicationMaster) {
 			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_DAX_WORKER_CLASS);
 		}
-		
+
 		vargs.add("--appId " + am.getAppId().toString());
 		vargs.add("--containerId " + container.getId().toString());
 		vargs.add("--workflowId " + task.getWorkflowId());

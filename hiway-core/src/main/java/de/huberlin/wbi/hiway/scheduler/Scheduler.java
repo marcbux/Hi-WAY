@@ -310,7 +310,7 @@ public abstract class Scheduler {
 
 		return new ArrayList<>();
 	}
-	
+
 	protected void updateRuntimeEstimate(InvocStat stat) {
 		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostName()).get(stat.getTaskId());
 		re.finishedTasks += 1;

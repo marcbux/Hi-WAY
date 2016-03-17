@@ -58,7 +58,7 @@ public class RoundRobin extends StaticScheduler {
 	public RoundRobin(String workflowName, FileSystem hdfs, HiWayConfiguration conf) {
 		super(workflowName, hdfs, conf);
 	}
-	
+
 	@Override
 	protected void addTask(TaskInstance task) {
 		numberOfRemainingTasks++;

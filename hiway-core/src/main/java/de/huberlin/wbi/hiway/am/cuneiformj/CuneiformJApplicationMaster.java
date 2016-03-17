@@ -82,9 +82,23 @@ public class CuneiformJApplicationMaster extends HiWay {
 	}
 
 	@Override
+	protected Collection<String> getOutput() {
+		Collection<String> outputs = new LinkedList<>();
+		try {
+			for (String output : repl.getAns().normalize()) {
+				outputs.add(files.containsKey(output) ? files.get(output).getHdfsPath().toString() : output);
+			}
+		} catch (NotDerivableException e) {
+			e.printStackTrace();
+			System.exit(-1);
+		}
+		return outputs;
+	}
+
+	@Override
 	public Collection<Data> getOutputFiles() {
 		Collection<Data> outputFiles = new ArrayList<>();
-		
+
 		try {
 			if (repl.hasAns()) {
 				Collection<String> output = repl.getAns().normalize();
@@ -98,22 +112,8 @@ public class CuneiformJApplicationMaster extends HiWay {
 			e.printStackTrace();
 			System.exit(-1);
 		}
-		
+
 		return outputFiles;
-	}
-	
-	@Override
-	protected Collection<String> getOutput() {
-		Collection<String> outputs = new LinkedList<>();
-		try {
-			for (String output : repl.getAns().normalize()) {
-				outputs.add(files.containsKey(output) ? files.get(output).getHdfsPath().toString() : output);
-			}
-		} catch (NotDerivableException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		}
-		return outputs;
 	}
 
 	@Override
@@ -138,7 +138,7 @@ public class CuneiformJApplicationMaster extends HiWay {
 			System.exit(-1);
 		}
 		repl.interpret(buf.toString());
-		
+
 		return new LinkedList<>();
 	}
 

@@ -142,7 +142,7 @@ public class Client {
 	private String scheduler;
 	private Data summary;
 	private Path summaryPath;
-	
+
 	// the workflow format and its path in the file system
 	private String workflowParam;
 
@@ -227,7 +227,7 @@ public class Client {
 		if (cliParser.hasOption("debug")) {
 			debugFlag = true;
 		}
-		
+
 		if (cliParser.hasOption("verbose")) {
 			HiWayConfiguration.verbose = true;
 		}
@@ -507,21 +507,21 @@ public class Client {
 		if (scheduler != null) {
 			vargs.add("--scheduler " + scheduler);
 		}
-		
+
 		if (memory != null) {
 			vargs.add("--memory " + memory);
 		}
-		
+
 		if (summary != null) {
 			vargs.add("--summary " + summary.getName());
 		}
-		
+
 		vargs.add("--appid " + appId.toString());
 
 		if (debugFlag) {
 			vargs.add("--debug");
 		}
-		
+
 		if (HiWayConfiguration.verbose) {
 			vargs.add("--verbose");
 		}
