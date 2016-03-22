@@ -268,6 +268,8 @@ public abstract class Scheduler {
 							try (BufferedReader reader = new BufferedReader(new FileReader(new File(dest.toString())))) {
 								String line;
 								while ((line = reader.readLine()) != null) {
+									if (line.length() == 0)
+										continue;
 									JsonReportEntry entry = new JsonReportEntry(line);
 									addEntryToDB(entry);
 								}
