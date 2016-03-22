@@ -97,10 +97,15 @@ public class HEFT extends StaticScheduler {
 		// this task's readytime was updated)
 		double readyTime = readyTimePerTask.get(task);
 
-		String bestNode = null;
-		int bestI = -1;
-		double bestNodeFreeTimeSlotActualStart = Double.MAX_VALUE;
+		List<String> bestNodes = new ArrayList<>();
+		List<Integer> bestIs = new ArrayList<>();
+		List<Double> bestNodeFreeTimeSlotActualStarts = new ArrayList<>();
 		double bestFinish = Double.MAX_VALUE;
+
+		// List<String> bestNode = null;
+		// List<Integer> bestI = -1;
+		// List<Double> bestNodeFreeTimeSlotActualStart = Double.MAX_VALUE;
+		// List<Double> bestFinish = Double.MAX_VALUE;
 
 		// compute the finish time of executing this task on each node; chose the earliest finish time
 		for (String node : nodes) {
@@ -134,14 +139,26 @@ public class HEFT extends StaticScheduler {
 					if (freeTimeSlotActualStart > freeTimeSlotStart)
 						freeTimeSlotLength -= freeTimeSlotActualStart - freeTimeSlotStart;
 					if (computationCost < freeTimeSlotLength) {
-						bestNode = node;
-						bestI = i;
-						bestNodeFreeTimeSlotActualStart = freeTimeSlotActualStart;
+						if (freeTimeSlotActualStart + computationCost < bestFinish) {
+							bestNodes = new ArrayList<>();
+							bestIs = new ArrayList<>();
+							bestNodeFreeTimeSlotActualStarts = new ArrayList<>();
+						}
+						bestNodes.add(node);
+						bestIs.add(i);
+						bestNodeFreeTimeSlotActualStarts.add(freeTimeSlotActualStart);
 						bestFinish = freeTimeSlotActualStart + computationCost;
 					}
 				}
 			}
 		}
+
+		// if there is more than one potential node, sample
+		int i = (int) (bestNodes.size() * Math.random());
+		
+		String bestNode = bestNodes.get(i);
+		int bestI = bestIs.get(i);
+		double bestNodeFreeTimeSlotActualStart = bestNodeFreeTimeSlotActualStarts.get(i);
 
 		// assign task to node
 		schedule.put(task, bestNode);
