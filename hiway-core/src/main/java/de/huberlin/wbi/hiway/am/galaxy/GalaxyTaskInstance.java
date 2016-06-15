@@ -88,7 +88,9 @@ public class GalaxyTaskInstance extends TaskInstance {
 		StringBuilder commandSb = new StringBuilder();
 		commandSb.append("PYTHONPATH=" + galaxyPath + "/lib:$PYTHONPATH; export PYTHONPATH\n");
 		commandSb.append("PYTHON_EGG_CACHE=.; export PYTHON_EGG_CACHE\n");
+		commandSb.append(". " + galaxyPath + "/.venv/bin/activate\n");
 		commandSb.append("python params_" + id + ".py\n");
+		commandSb.append("deactivate\n");
 		commandSb.append("cat pre_" + id + ".sh > script.sh\n");
 		commandSb.append("echo `cheetah fill template_" + id + ".tmpl --pickle params.p -p` >> script.sh\n");
 		commandSb.append("cat post_" + id + ".sh >> script.sh\n");
