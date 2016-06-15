@@ -55,7 +55,7 @@ import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.Estimate;
 import de.huberlin.wbi.hiway.scheduler.RuntimeEstimate;
-import de.huberlin.wbi.hiway.scheduler.Scheduler;
+import de.huberlin.wbi.hiway.scheduler.WorkflowScheduler;
 
 /**
  * A basic implementation of the <b>C</b>loning, <b>C</b>urious, <b>C</b>onservative, <b>P</b>lacement-aware, <b>O</b>utlooking (C3PO) workflow scheduler.
@@ -190,7 +190,7 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
  * resides on the machine. This <b>Placement</b> awareness ensures that unnecessary data transfer is minimized.
  * </p>
  */
-public class C3PO extends Scheduler {
+public class C3PO extends WorkflowScheduler {
 
 	private static void normalizeWeights(Collection<? extends Estimate> statistics) {
 		double sum = 0d;
@@ -334,7 +334,7 @@ public class C3PO extends Scheduler {
 	}
 
 	@Override
-	public TaskInstance getNextTask(Container container) {
+	public TaskInstance getTask(Container container) {
 		TaskInstance task = null;
 
 		numberOfRemainingTasks--;

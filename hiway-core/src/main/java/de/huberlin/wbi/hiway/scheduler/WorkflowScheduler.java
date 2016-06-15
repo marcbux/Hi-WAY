@@ -61,7 +61,7 @@ import de.huberlin.hiwaydb.useDB.HiwayDBNoSQL;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
-import de.huberlin.wbi.hiway.common.LogParser;
+import de.huberlin.wbi.hiway.common.ProvenanceManager;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 /**
@@ -70,7 +70,7 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * @author Marc Bux
  * 
  */
-public abstract class Scheduler {
+public abstract class WorkflowScheduler {
 
 	protected HiWayConfiguration conf;
 	protected HiwayDBI dbInterface;
@@ -88,7 +88,7 @@ public abstract class Scheduler {
 	protected Queue<String[]> unissuedNodeRequests;
 	protected String workflowName;
 
-	public Scheduler(String workflowName, HiWayConfiguration conf, FileSystem hdfs) {
+	public WorkflowScheduler(String workflowName, HiWayConfiguration conf, FileSystem hdfs) {
 		this.workflowName = workflowName;
 
 		this.conf = conf;
@@ -124,7 +124,7 @@ public abstract class Scheduler {
 		return unissuedNodeRequests.remove();
 	}
 
-	public abstract TaskInstance getNextTask(Container container);
+	public abstract TaskInstance getTask(Container container);
 
 	protected Set<String> getNodeIds() {
 		return new HashSet<>(runtimeEstimatesPerNode.keySet());
@@ -223,7 +223,7 @@ public abstract class Scheduler {
 
 			break;
 		default:
-			dbInterface = new LogParser();
+			dbInterface = new ProvenanceManager();
 			parseLogs();
 		}
 	}

@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.api.records.Container;
 
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
-import de.huberlin.wbi.hiway.scheduler.Scheduler;
+import de.huberlin.wbi.hiway.scheduler.WorkflowScheduler;
 
 /**
  * A basic implementation of a scheduler that stores ready-to-execute tasks in a queue. Whenever a container has been allocated, this container is greedily
@@ -49,7 +49,7 @@ import de.huberlin.wbi.hiway.scheduler.Scheduler;
  * @author Marc Bux
  * 
  */
-public class GreedyQueue extends Scheduler {
+public class GreedyQueue extends WorkflowScheduler {
 
 	private Queue<TaskInstance> queue;
 
@@ -73,7 +73,7 @@ public class GreedyQueue extends Scheduler {
 	}
 
 	@Override
-	public TaskInstance getNextTask(Container container) {
+	public TaskInstance getTask(Container container) {
 		numberOfRemainingTasks--;
 		numberOfRunningTasks++;
 		TaskInstance task = queue.remove();

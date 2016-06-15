@@ -76,15 +76,15 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.am.HiWay;
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
-public class GalaxyApplicationMaster extends HiWay {
+public class GalaxyApplicationMaster extends WorkflowDriver {
 
 	public static void main(String[] args) {
-		HiWay.loop(new GalaxyApplicationMaster(), args);
+		WorkflowDriver.loop(new GalaxyApplicationMaster(), args);
 	}
 
 	/**

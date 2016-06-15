@@ -37,10 +37,10 @@ import org.apache.hadoop.yarn.client.api.async.NMClientAsync;
 
 public class NMCallbackHandler implements NMClientAsync.CallbackHandler {
 
-	private final HiWay am;
+	private final WorkflowDriver am;
 	private ConcurrentMap<ContainerId, Container> containers = new ConcurrentHashMap<>();
 
-	public NMCallbackHandler(HiWay am) {
+	public NMCallbackHandler(WorkflowDriver am) {
 		this.am = am;
 	}
 

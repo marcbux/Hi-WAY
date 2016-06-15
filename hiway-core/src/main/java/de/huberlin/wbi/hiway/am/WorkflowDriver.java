@@ -94,7 +94,7 @@ import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WFAppMetrics;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
-import de.huberlin.wbi.hiway.scheduler.Scheduler;
+import de.huberlin.wbi.hiway.scheduler.WorkflowScheduler;
 import de.huberlin.wbi.hiway.scheduler.c3po.C3PO;
 import de.huberlin.wbi.hiway.scheduler.gq.GreedyQueue;
 import de.huberlin.wbi.hiway.scheduler.heft.HEFT;
@@ -125,7 +125,7 @@ import de.huberlin.wbi.hiway.scheduler.rr.RoundRobin;
  * The Hi-WAY ApplicationMaster is based on Hadoop's DistributedShell.
  * </p>
  */
-public abstract class HiWay {
+public abstract class WorkflowDriver {
 
 	/**
 	 * If the debug flag is set, dump out contents of current working directory and the environment to stdout for debugging.
@@ -164,7 +164,7 @@ public abstract class HiWay {
 	 * @param args
 	 *            Command line arguments passed to the ApplicationMaster.
 	 */
-	public static void loop(HiWay appMaster, String[] args) {
+	public static void loop(WorkflowDriver appMaster, String[] args) {
 		boolean result = false;
 		try {
 			System.out.println("Initializing ApplicationMaster");
@@ -249,7 +249,7 @@ public abstract class HiWay {
 	private int requestPriority;
 	private UUID runId;
 	// the workflow scheduler, as defined at workflow launch time
-	private Scheduler scheduler;
+	private WorkflowScheduler scheduler;
 	private HiWayConfiguration.HIWAY_SCHEDULER_OPTS schedulerName;
 	// environment variables to be passed to any launched containers
 	private Map<String, String> shellEnv = new HashMap<>();
@@ -262,7 +262,7 @@ public abstract class HiWay {
 
 	private Path workflowPath;
 
-	public HiWay() {
+	public WorkflowDriver() {
 		conf = new HiWayConfiguration();
 		try {
 			hdfs = FileSystem.get(conf);
@@ -504,7 +504,7 @@ public abstract class HiWay {
 		return runId;
 	}
 
-	public Scheduler getScheduler() {
+	public WorkflowScheduler getScheduler() {
 		return scheduler;
 	}
 

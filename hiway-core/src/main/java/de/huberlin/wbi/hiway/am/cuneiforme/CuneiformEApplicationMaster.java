@@ -48,14 +48,14 @@ import de.huberlin.wbi.cfjava.cuneiform.Reply;
 import de.huberlin.wbi.cfjava.cuneiform.Request;
 import de.huberlin.wbi.cfjava.cuneiform.Workflow;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.am.HiWay;
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
-public class CuneiformEApplicationMaster extends HiWay {
+public class CuneiformEApplicationMaster extends WorkflowDriver {
 
 	public static void main(String[] args) {
-		HiWay.loop(new CuneiformEApplicationMaster(), args);
+		WorkflowDriver.loop(new CuneiformEApplicationMaster(), args);
 	}
 
 	Set<Request> scheduledRequests;

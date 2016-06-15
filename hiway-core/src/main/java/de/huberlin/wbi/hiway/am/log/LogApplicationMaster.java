@@ -43,15 +43,15 @@ import org.json.JSONException;
 
 import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
-import de.huberlin.wbi.hiway.am.HiWay;
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
-public class LogApplicationMaster extends HiWay {
+public class LogApplicationMaster extends WorkflowDriver {
 
 	public static void main(String[] args) {
-		HiWay.loop(new LogApplicationMaster(), args);
+		WorkflowDriver.loop(new LogApplicationMaster(), args);
 	}
 
 	@Override

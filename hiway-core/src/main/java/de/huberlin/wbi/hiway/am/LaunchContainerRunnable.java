@@ -58,7 +58,7 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  */
 public class LaunchContainerRunnable implements Runnable {
 
-	private HiWay am;
+	private WorkflowDriver am;
 	private Container container;
 	private NMCallbackHandler containerListener;
 	private TaskInstance task;
@@ -73,7 +73,7 @@ public class LaunchContainerRunnable implements Runnable {
 	 * @param am
 	 *            The Application Master
 	 */
-	public LaunchContainerRunnable(Container lcontainer, NMCallbackHandler containerListener, TaskInstance task, HiWay am) {
+	public LaunchContainerRunnable(Container lcontainer, NMCallbackHandler containerListener, TaskInstance task, WorkflowDriver am) {
 		this.container = lcontainer;
 		this.containerListener = containerListener;
 		this.task = task;

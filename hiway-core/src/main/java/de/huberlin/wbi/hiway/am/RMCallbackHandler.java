@@ -52,14 +52,14 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 
 public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
-	private HiWay am;
+	private WorkflowDriver am;
 	// a data structure storing the invocation launched by each container
 	private Map<ContainerId, HiWayInvocation> containerIdToInvocation = new HashMap<>();
 
 	// a queue for allocated containers that have yet to be assigned a task
 	private Queue<Container> containerQueue = new LinkedList<>();
 
-	public RMCallbackHandler(HiWay am) {
+	public RMCallbackHandler(WorkflowDriver am) {
 		super();
 		this.am = am;
 	}
@@ -107,7 +107,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 			Container allocatedContainer = containerQueue.remove();
 
 			long tic = System.currentTimeMillis();
-			TaskInstance task = am.getScheduler().getNextTask(allocatedContainer);
+			TaskInstance task = am.getScheduler().getTask(allocatedContainer);
 			long toc = System.currentTimeMillis();
 
 			if (task.getTries() == 1) {

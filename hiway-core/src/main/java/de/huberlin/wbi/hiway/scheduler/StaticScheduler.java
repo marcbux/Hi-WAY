@@ -51,7 +51,7 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
  * @author Marc Bux
  * 
  */
-public abstract class StaticScheduler extends Scheduler {
+public abstract class StaticScheduler extends WorkflowScheduler {
 
 	// the tasks per compute node that are ready to execute
 	protected Map<String, Queue<TaskInstance>> queues;
@@ -87,7 +87,7 @@ public abstract class StaticScheduler extends Scheduler {
 	}
 
 	@Override
-	public TaskInstance getNextTask(Container container) {
+	public TaskInstance getTask(Container container) {
 		numberOfRemainingTasks--;
 		numberOfRunningTasks++;
 		String node = container.getNodeId().getHost();

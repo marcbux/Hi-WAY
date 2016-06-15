@@ -53,15 +53,15 @@ import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketFailedMsg;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketFinishedMsg;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketSrcActor;
-import de.huberlin.wbi.hiway.am.HiWay;
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
-public class CuneiformJApplicationMaster extends HiWay {
+public class CuneiformJApplicationMaster extends WorkflowDriver {
 
 	public static void main(String[] args) {
-		HiWay.loop(new CuneiformJApplicationMaster(), args);
+		WorkflowDriver.loop(new CuneiformJApplicationMaster(), args);
 	}
 
 	private BaseCreActor creActor;

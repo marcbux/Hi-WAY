@@ -47,7 +47,7 @@ import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 
-public class LogParser implements HiwayDBI {
+public class ProvenanceManager implements HiwayDBI {
 
 	private Set<String> hostNames;
 	private Map<UUID, Map<Long, InvocStat>> runToInvocStats;
@@ -56,7 +56,7 @@ public class LogParser implements HiwayDBI {
 
 	private Map<String, Set<Long>> workflowNameToTaskIds;
 
-	public LogParser() {
+	public ProvenanceManager() {
 		runToWorkflowName = new HashMap<>();
 		workflowNameToTaskIds = new HashMap<>();
 		taskIdToTaskName = new HashMap<>();
