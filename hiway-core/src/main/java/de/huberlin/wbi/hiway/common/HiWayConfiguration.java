@@ -45,7 +45,7 @@ public class HiWayConfiguration extends YarnConfiguration {
 	}
 
 	public static enum HIWAY_SCHEDULER_OPTS {
-		c3po, dataAware, greedy, heft, roundRobin
+		c3po, dataAware, greedy, heft, roundRobin, memoryAware
 	}
 
 	public static enum HIWAY_WORKFLOW_LANGUAGE_OPTS {

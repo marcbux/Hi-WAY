@@ -97,9 +97,6 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 		/* launch and start the container on a separate thread to keep the main thread unblocked as all containers may not be allocated at one go. */
 		am.getLaunchThreads().add(launchThread);
 		launchThread.start();
-		am.getMetrics().endWaitingTask();
-		am.getMetrics().runningTask();
-		am.getMetrics().launchedTask();
 	}
 
 	protected void launchTasks() {
@@ -236,8 +233,6 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 						}
 
 						am.getNumCompletedContainers().incrementAndGet();
-						am.getMetrics().completedTask();
-						am.getMetrics().endRunningTask();
 
 						am.taskSuccess(finishedTask, containerId);
 					}
@@ -248,7 +243,6 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 					am.taskFailure(finishedTask, containerId);
 					am.getNumFailedContainers().incrementAndGet();
-					am.getMetrics().failedTask();
 
 					if (exitStatus == ExitCode.TERMINATED.getExitCode()) {
 						System.out.println("Container was terminated." + ", containerID=" + containerStatus.getContainerId() + ", state="

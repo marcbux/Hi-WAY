@@ -35,10 +35,8 @@ package de.huberlin.wbi.hiway.scheduler.gq;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 
-import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.WorkflowScheduler;
 
@@ -53,8 +51,8 @@ public class GreedyQueue extends WorkflowScheduler {
 
 	private Queue<TaskInstance> queue;
 
-	public GreedyQueue(String workflowName, HiWayConfiguration conf, FileSystem hdfs) {
-		super(workflowName, conf, hdfs);
+	public GreedyQueue(String workflowName) {
+		super(workflowName);
 		queue = new LinkedList<>();
 	}
 
@@ -67,7 +65,7 @@ public class GreedyQueue extends WorkflowScheduler {
 
 	@Override
 	public void addTaskToQueue(TaskInstance task) {
-		unissuedNodeRequests.add(new String[0]);
+		unissuedContainerRequests.add(setupContainerAskForRM(new String[0], containerMemory));
 		queue.add(task);
 		System.out.println("Added task " + task + " to queue");
 	}

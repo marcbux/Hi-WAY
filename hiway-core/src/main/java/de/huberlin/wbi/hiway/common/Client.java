@@ -143,6 +143,7 @@ public class Client {
 	private String scheduler;
 	private Data summary;
 	private Path summaryPath;
+	private String customMemPath;
 
 	// the workflow format and its path in the file system
 	private String workflowParam;
@@ -159,6 +160,7 @@ public class Client {
 		opts.addOption("w", "workflow", false, "(Deprecated) The workflow file to be executed by the Application Master.");
 		opts.addOption("u", "summary", true, "The name of the json summary file. No file is created if this parameter is not specified.");
 		opts.addOption("m", "memory", true, "The amount of memory (in MB) to be allocated per worker container. Overrides settings in hiway-site.xml.");
+		opts.addOption("c", "custom", true, "The name of an (optional) JSON file, in which custom amounts of memory can be specified per task.");
 		String schedulers = "";
 		for (HiWayConfiguration.HIWAY_SCHEDULER_OPTS policy : HiWayConfiguration.HIWAY_SCHEDULER_OPTS.values()) {
 			schedulers += ", " + policy.toString();
@@ -261,6 +263,10 @@ public class Client {
 
 		if (cliParser.hasOption("scheduler")) {
 			scheduler = cliParser.getOptionValue("scheduler");
+		}
+		
+		if (cliParser.hasOption("custom")) {
+			customMemPath = cliParser.getOptionValue("custom");
 		}
 
 		workflowParam = cliParser.getArgs()[0];
@@ -467,6 +473,12 @@ public class Client {
 
 		if (summaryPath != null)
 			summary = new Data(summaryPath);
+		
+		if (customMemPath != null) {
+			Data customMem = new Data(summaryPath);
+			customMem.setInput(true);
+			customMem.stageOut();
+		}
 
 		// Set up the container launch context for the application master
 		ContainerLaunchContext amContainer = Records.newRecord(ContainerLaunchContext.class);
@@ -528,6 +540,10 @@ public class Client {
 
 		if (summary != null) {
 			vargs.add("--summary " + summary.getName());
+		}
+		
+		if (customMemPath != null) {
+			vargs.add("--custom " + customMemPath);
 		}
 
 		vargs.add("--appid " + appId.toString());

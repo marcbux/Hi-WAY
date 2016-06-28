@@ -38,7 +38,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
@@ -59,8 +58,8 @@ public abstract class StaticScheduler extends WorkflowScheduler {
 	// the static schedule
 	protected Map<TaskInstance, String> schedule;
 
-	public StaticScheduler(String workflowName, FileSystem hdfs, HiWayConfiguration conf) {
-		super(workflowName, conf, hdfs);
+	public StaticScheduler(String workflowName) {
+		super(workflowName);
 		schedule = new HashMap<>();
 		queues = new HashMap<>();
 		relaxLocality = false;
@@ -80,7 +79,7 @@ public abstract class StaticScheduler extends WorkflowScheduler {
 		String node = schedule.get(task);
 		String[] nodes = new String[1];
 		nodes[0] = node;
-		unissuedNodeRequests.add(nodes);
+		unissuedContainerRequests.add(setupContainerAskForRM(nodes, containerMemory));
 		queues.get(node).add(task);
 		if (HiWayConfiguration.verbose)
 			System.out.println("Added task " + task + " to queue " + node);

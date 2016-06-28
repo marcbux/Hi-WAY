@@ -45,7 +45,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
@@ -214,12 +213,12 @@ public class C3PO extends WorkflowScheduler {
 	protected Map<Long, String> taskIdToName;
 	protected Map<TaskInstance, List<Container>> taskToContainers;
 
-	public C3PO(String workflowName, FileSystem hdfs, HiWayConfiguration conf) {
-		this(workflowName, hdfs, System.currentTimeMillis(), conf);
+	public C3PO(String workflowName) {
+		this(workflowName, System.currentTimeMillis());
 	}
 
-	public C3PO(String workflowName, FileSystem hdfs, long seed, HiWayConfiguration conf) {
-		super(workflowName, conf, hdfs);
+	public C3PO(String workflowName, long seed) {
+		super(workflowName);
 		readyTasks = new HashMap<>();
 		runningTasks = new HashMap<>();
 		taskIdToName = new HashMap<>();
@@ -231,15 +230,6 @@ public class C3PO extends WorkflowScheduler {
 		df = (DecimalFormat) NumberFormat.getNumberInstance(loc);
 		df.applyPattern("###.##");
 		df.setMaximumIntegerDigits(7);
-	}
-
-	public C3PO(String workflowName, HiWayConfiguration conf) {
-		this(workflowName, System.currentTimeMillis(), conf);
-	}
-
-	public C3PO(String workflowName, long seed, HiWayConfiguration conf) {
-		this(workflowName, null, seed, conf);
-		this.placementAwarenessWeight = 0d;
 	}
 
 	@Override
@@ -262,7 +252,7 @@ public class C3PO extends WorkflowScheduler {
 
 	@Override
 	public void addTaskToQueue(TaskInstance task) {
-		unissuedNodeRequests.add(new String[0]);
+		unissuedContainerRequests.add(setupContainerAskForRM(new String[0], containerMemory));
 		readyTasks.get(task.getTaskId()).add(task);
 		System.out.println("Added task " + task + " to queue " + task.getTaskName());
 	}
@@ -535,11 +525,11 @@ public class C3PO extends WorkflowScheduler {
 	public void setnClones(int nClones) {
 		if (this.nClones < nClones) {
 			for (int i = 0; i < nClones - this.nClones; i++) {
-				unissuedNodeRequests.add(new String[0]);
+				unissuedContainerRequests.add(setupContainerAskForRM(new String[0], containerMemory));
 			}
 		} else {
 			for (int i = 0; i < this.nClones - nClones; i++) {
-				unissuedNodeRequests.remove();
+				unissuedContainerRequests.remove();
 			}
 		}
 
@@ -564,7 +554,7 @@ public class C3PO extends WorkflowScheduler {
 		for (Container container : taskToContainers.get(task)) {
 			if (!container.getId().equals(containerStatus.getContainerId())) {
 				toBeReleasedContainers.add(container.getId());
-				unissuedNodeRequests.add(new String[0]);
+				unissuedContainerRequests.add(setupContainerAskForRM(new String[0], containerMemory));
 			}
 		}
 		taskToContainers.remove(task);

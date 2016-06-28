@@ -43,7 +43,6 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.hadoop.fs.FileSystem;
 
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
@@ -74,8 +73,8 @@ public class HEFT extends StaticScheduler {
 
 	private Map<String, ArrayList<TreeMap<Double, TaskInstance>>> taskOnsetsPerNode;
 
-	public HEFT(String workflowName, FileSystem hdfs, HiWayConfiguration conf, int containers) {
-		super(workflowName, hdfs, conf);
+	public HEFT(String workflowName, int containers) {
+		super(workflowName);
 
 		this.containers = containers;
 		System.out.println("HEFT has detected " + containers + " containers per worker node.");

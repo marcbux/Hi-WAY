@@ -38,9 +38,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.apache.hadoop.fs.FileSystem;
-
-import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.DepthComparator;
 import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
@@ -55,8 +52,8 @@ public class RoundRobin extends StaticScheduler {
 
 	private Iterator<String> nodeIterator;
 
-	public RoundRobin(String workflowName, FileSystem hdfs, HiWayConfiguration conf) {
-		super(workflowName, hdfs, conf);
+	public RoundRobin(String workflowName) {
+		super(workflowName);
 	}
 
 	@Override

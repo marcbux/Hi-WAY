@@ -253,7 +253,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 	}
 
 	@Override
-	public boolean init(String[] args) throws ParseException {
+	public boolean init(String[] args) throws ParseException, IOException, JSONException {
 		super.init(args);
 
 		// (1) determine the config files that are to be parsed

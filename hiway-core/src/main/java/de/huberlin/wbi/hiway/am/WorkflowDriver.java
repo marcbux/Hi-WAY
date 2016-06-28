@@ -43,7 +43,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -92,12 +91,12 @@ import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
-import de.huberlin.wbi.hiway.common.WFAppMetrics;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 import de.huberlin.wbi.hiway.scheduler.WorkflowScheduler;
 import de.huberlin.wbi.hiway.scheduler.c3po.C3PO;
 import de.huberlin.wbi.hiway.scheduler.gq.GreedyQueue;
 import de.huberlin.wbi.hiway.scheduler.heft.HEFT;
+import de.huberlin.wbi.hiway.scheduler.ma.MemoryAware;
 import de.huberlin.wbi.hiway.scheduler.rr.RoundRobin;
 
 /**
@@ -231,8 +230,6 @@ public abstract class WorkflowDriver {
 	private Path hdfsApplicationDirectory;
 	// a list of threads, one for each container launch
 	private List<Thread> launchThreads = new ArrayList<>();
-	// a structure that stores various metrics during workflow execution
-	private final WFAppMetrics metrics = WFAppMetrics.create();
 	// a handle to communicate with the YARN NodeManagers
 	private NMClientAsync nmClientAsync;
 	// a counter for allocated containers
@@ -255,6 +252,7 @@ public abstract class WorkflowDriver {
 	private Map<String, String> shellEnv = new HashMap<>();
 	private BufferedWriter statLog;
 	private volatile boolean success;
+	private Map<String, Integer> customMemoryMap = new HashMap<>();
 
 	private Path summaryPath;
 	private Data workflowFile;
@@ -456,10 +454,6 @@ public abstract class WorkflowDriver {
 		return launchThreads;
 	}
 
-	public WFAppMetrics getMetrics() {
-		return metrics;
-	}
-
 	public NMClientAsync getNmClientAsync() {
 		return nmClientAsync;
 	}
@@ -529,7 +523,7 @@ public abstract class WorkflowDriver {
 	 * @throws ParseException
 	 *             ParseException
 	 */
-	public boolean init(String[] args) throws ParseException {
+	public boolean init(String[] args) throws ParseException, IOException, JSONException {
 
 		DefaultMetricsSystem.initialize("ApplicationMaster");
 
@@ -537,6 +531,7 @@ public abstract class WorkflowDriver {
 		opts.addOption("app_attempt_id", true, "App Attempt ID. Not to be used unless for testing purposes");
 		opts.addOption("u", "summary", true, "The name of the json summary file. No file is created if this parameter is not specified.");
 		opts.addOption("m", "memory", true, "The amount of memory (in MB) to be allocated per worker container. Overrides settings in hiway-site.xml.");
+		opts.addOption("c", "custom", true, "The name of an (optional) JSON file, in which custom amounts of memory can be specified per task.");
 		String schedulers = "";
 		for (HiWayConfiguration.HIWAY_SCHEDULER_OPTS policy : HiWayConfiguration.HIWAY_SCHEDULER_OPTS.values()) {
 			schedulers += ", " + policy.toString();
@@ -597,6 +592,25 @@ public abstract class WorkflowDriver {
 		hdfsApplicationDirectory = new Path(hdfsSandboxDirectory, appId);
 		Data.setHdfsApplicationDirectory(hdfsApplicationDirectory);
 		Data.setHdfs(hdfs);
+		
+		if (cliParser.hasOption("custom")) {
+			Data customMemPath = new Data(cliParser.getOptionValue("custom"));
+			customMemPath.setInput(true);
+			customMemPath.stageIn();
+			StringBuilder sb = new StringBuilder();
+			try (BufferedReader in = new BufferedReader(new FileReader(customMemPath.getLocalPath().toString()))) {
+				String line;
+				while ((line = in.readLine()) != null) {
+					sb.append(line);
+				}
+			}
+			JSONObject obj = new JSONObject(sb.toString());
+			Iterator<?> keys = obj.keys();
+			while (keys.hasNext()) {
+				String key = (String) keys.next();
+				customMemoryMap.put(key, obj.getInt(key));
+			}
+		}
 
 		Map<String, String> envs = System.getenv();
 
@@ -729,14 +743,17 @@ public abstract class WorkflowDriver {
 			case roundRobin:
 			case heft:
 				int workerMemory = conf.getInt(YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
-				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.roundRobin) ? new RoundRobin(getWorkflowName(), hdfs, conf)
-						: new HEFT(getWorkflowName(), hdfs, conf, workerMemory / containerMemory);
+				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.roundRobin) ? new RoundRobin(getWorkflowName())
+						: new HEFT(getWorkflowName(), workerMemory / containerMemory);
 				break;
 			case greedy:
-				scheduler = new GreedyQueue(getWorkflowName(), conf, hdfs);
+				scheduler = new GreedyQueue(getWorkflowName());
+				break;
+			case memoryAware:
+				scheduler = new MemoryAware(getWorkflowName());
 				break;
 			default:
-				C3PO c3po = new C3PO(getWorkflowName(), hdfs, conf);
+				C3PO c3po = new C3PO(getWorkflowName());
 				switch (schedulerName) {
 				// case conservative:
 				// c3po.setConservatismWeight(12d);
@@ -770,6 +787,7 @@ public abstract class WorkflowDriver {
 				}
 				scheduler = c3po;
 			}
+			scheduler.init(conf, hdfs, containerMemory, customMemoryMap, containerCores, requestPriority);
 
 			scheduler.initializeProvenanceManager();
 			writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_NAME, getWorkflowName()));
@@ -803,8 +821,25 @@ public abstract class WorkflowDriver {
 			while (!done) {
 				try {
 					while (scheduler.hasNextNodeRequest()) {
-						ContainerRequest containerAsk = setupContainerAskForRM(scheduler.getNextNodeRequest());
-						amRMClient.addContainerRequest(containerAsk);
+						ContainerRequest request = scheduler.getNextNodeRequest();
+
+						JSONObject value = new JSONObject();
+						try {
+							value.put("type", "container-requested");
+							value.put("memory", request.getCapability().getMemory());
+							value.put("vcores", request.getCapability().getVirtualCores());
+							value.put("nodes", request.getNodes());
+							value.put("priority", request.getPriority());
+						} catch (JSONException e) {
+							e.printStackTrace();
+							System.exit(-1);
+						}
+
+						if (HiWayConfiguration.verbose)
+							System.out.println("Requested container ask: " + request.toString() + " Nodes" + request.getNodes().toString());
+						writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
+
+						amRMClient.addContainerRequest(request);
 						numRequestedContainers.incrementAndGet();
 					}
 					Thread.sleep(1000);
@@ -870,45 +905,6 @@ public abstract class WorkflowDriver {
 
 	public void setDone() {
 		this.done = true;
-	}
-
-	/**
-	 * Setup the request that will be sent to the RM for the container ask.
-	 * 
-	 * @param nodes
-	 *            The worker nodes on which this container is to be allocated. If left empty, the container will be launched on any worker node fulfilling the
-	 *            resource requirements.
-	 * @return the setup ResourceRequest to be sent to RM
-	 */
-	private ContainerRequest setupContainerAskForRM(String[] nodes) {
-		metrics.waitingTask();
-
-		// set the priority for the request
-		Priority pri = Priority.newInstance(requestPriority);
-		// pri.setPriority(requestPriority);
-
-		// set up resource type requirements
-		Resource capability = Resource.newInstance(containerMemory, containerCores);
-		// capability.setMemory(containerMemory);
-		// capability.setVirtualCores(containerCores);
-
-		ContainerRequest request = new ContainerRequest(capability, nodes, null, pri, scheduler.relaxLocality());
-		JSONObject value = new JSONObject();
-		try {
-			value.put("type", "container-requested");
-			value.put("memory", capability.getMemory());
-			value.put("vcores", capability.getVirtualCores());
-			value.put("nodes", nodes);
-			value.put("priority", pri);
-		} catch (JSONException e) {
-			e.printStackTrace();
-			System.exit(-1);
-		}
-
-		if (HiWayConfiguration.verbose)
-			System.out.println("Requested container ask: " + request.toString() + " Nodes" + Arrays.toString(nodes));
-		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
-		return request;
 	}
 
 	@SuppressWarnings("static-method")

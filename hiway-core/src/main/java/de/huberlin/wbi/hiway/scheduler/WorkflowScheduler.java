@@ -53,6 +53,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 import org.json.JSONException;
 
 import de.huberlin.hiwaydb.useDB.HiwayDB;
@@ -74,7 +77,7 @@ public abstract class WorkflowScheduler {
 
 	protected HiWayConfiguration conf;
 	protected HiwayDBI dbInterface;
-	protected final FileSystem hdfs;
+	protected FileSystem hdfs;
 	protected int maxRetries = 0;
 	protected Map<String, Long> maxTimestampPerHost;
 	protected int numberOfFinishedTasks = 0;
@@ -85,19 +88,51 @@ public abstract class WorkflowScheduler {
 	protected Map<String, Map<Long, RuntimeEstimate>> runtimeEstimatesPerNode;
 	protected Set<Long> taskIds;
 	// a queue of nodes on which containers are to be requested
-	protected Queue<String[]> unissuedNodeRequests;
+	protected Queue<ContainerRequest> unissuedContainerRequests;
 	protected String workflowName;
+	protected int containerMemory;
+	protected Map<String, Integer> customMemoryMap;
+	protected int containerCores;
+	protected int requestPriority;
 
-	public WorkflowScheduler(String workflowName, HiWayConfiguration conf, FileSystem hdfs) {
+	public WorkflowScheduler(String workflowName) {
 		this.workflowName = workflowName;
-
-		this.conf = conf;
-		this.hdfs = hdfs;
-		unissuedNodeRequests = new LinkedList<>();
+		
+		unissuedContainerRequests = new LinkedList<>();
 
 		taskIds = new HashSet<>();
 		runtimeEstimatesPerNode = new HashMap<>();
 		maxTimestampPerHost = new HashMap<>();
+	}
+	
+	public void init(HiWayConfiguration conf_, FileSystem hdfs_, int containerMemory_, Map<String, Integer> customMemoryMap_, int containerCores_, int requestPriority_) {
+		this.conf = conf_;
+		this.hdfs = hdfs_;
+		this.containerMemory = containerMemory_;
+		this.customMemoryMap = customMemoryMap_;
+		this.containerCores = containerCores_;
+		this.requestPriority = requestPriority_;
+	}
+	
+	/**
+	 * Setup the request that will be sent to the RM for the container ask.
+	 * 
+	 * @param nodes
+	 *            The worker nodes on which this container is to be allocated. If left empty, the container will be launched on any worker node fulfilling the
+	 *            resource requirements.
+	 * @return the setup ResourceRequest to be sent to RM
+	 */
+	protected ContainerRequest setupContainerAskForRM(String[] nodes, int memory) {
+		// set the priority for the request
+		Priority pri = Priority.newInstance(requestPriority);
+		// pri.setPriority(requestPriority);
+
+		// set up resource type requirements
+		Resource capability = Resource.newInstance(memory, containerCores);
+		// capability.setMemory(containerMemory);
+		// capability.setVirtualCores(containerCores);
+
+		return new ContainerRequest(capability, nodes, null, pri, relaxLocality());
 	}
 
 	public void addEntryToDB(JsonReportEntry entry) {
@@ -120,8 +155,8 @@ public abstract class WorkflowScheduler {
 		return dbInterface;
 	}
 
-	public String[] getNextNodeRequest() {
-		return unissuedNodeRequests.remove();
+	public ContainerRequest getNextNodeRequest() {
+		return unissuedContainerRequests.remove();
 	}
 
 	public abstract TaskInstance getTask(Container container);
@@ -157,7 +192,7 @@ public abstract class WorkflowScheduler {
 	}
 
 	public boolean hasNextNodeRequest() {
-		return !unissuedNodeRequests.isEmpty();
+		return !unissuedContainerRequests.isEmpty();
 	}
 
 	public void initializeProvenanceManager() {
