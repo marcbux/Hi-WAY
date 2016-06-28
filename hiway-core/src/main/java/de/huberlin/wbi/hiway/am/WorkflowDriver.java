@@ -595,7 +595,6 @@ public abstract class WorkflowDriver {
 		
 		if (cliParser.hasOption("custom")) {
 			Data customMemPath = new Data(cliParser.getOptionValue("custom"));
-			customMemPath.setInput(true);
 			customMemPath.stageIn();
 			StringBuilder sb = new StringBuilder();
 			try (BufferedReader in = new BufferedReader(new FileReader(customMemPath.getLocalPath().toString()))) {
@@ -938,7 +937,6 @@ public abstract class WorkflowDriver {
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-			System.exit(-1);
 		}
 
 		System.err.println("[end]");

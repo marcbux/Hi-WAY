@@ -97,7 +97,6 @@ public class Client {
 		boolean result = false;
 		try {
 			Client client = new Client();
-			System.out.println("Initializing Client");
 			try {
 				boolean doRun = client.init(args);
 				if (!doRun) {
@@ -224,7 +223,7 @@ public class Client {
 
 		if (cliParser.hasOption("help")) {
 			printUsage();
-			return false;
+			System.exit(0);
 		}
 
 		if (cliParser.hasOption("debug")) {
@@ -474,11 +473,8 @@ public class Client {
 		if (summaryPath != null)
 			summary = new Data(summaryPath);
 		
-		if (customMemPath != null) {
-			Data customMem = new Data(summaryPath);
-			customMem.setInput(true);
-			customMem.stageOut();
-		}
+		if (customMemPath != null) 
+			(new Data(customMemPath)).stageOut();
 
 		// Set up the container launch context for the application master
 		ContainerLaunchContext amContainer = Records.newRecord(ContainerLaunchContext.class);

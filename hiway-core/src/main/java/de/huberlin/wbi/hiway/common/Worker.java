@@ -59,12 +59,8 @@ public class Worker {
 
 	public static void loop(Worker worker, String[] args) {
 		int exitValue = 0;
-		try {
-			worker.init(args);
-			exitValue = worker.run();
-		} catch (ParseException | IOException | JSONException e) {
-			e.printStackTrace(System.out);
-		}
+		worker.init(args);
+		exitValue = worker.run();
 		System.exit(exitValue);
 	}
 
@@ -116,7 +112,7 @@ public class Worker {
 		return exitValue;
 	}
 
-	public void init(String[] args) throws ParseException, IOException {
+	public void init(String[] args) {
 		conf = new HiWayConfiguration();
 		try {
 			hdfs = FileSystem.get(conf);
@@ -135,28 +131,33 @@ public class Worker {
 		opts.addOption("size", false, "");
 		opts.addOption("invocScript", true, "if set, this parameter provides the Worker with the path to the script that is to be stored in invoc-script");
 
-		CommandLine cliParser = new GnuParser().parse(opts, args);
-		containerId = cliParser.getOptionValue("containerId");
-		appId = cliParser.getOptionValue("appId");
-		String hdfsBaseDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE, HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE_DEFAULT);
-		String hdfsSandboxDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE, HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE_DEFAULT);
-		Path hdfsBaseDirectory = new Path(new Path(hdfs.getUri()), hdfsBaseDirectoryName);
-		Data.setHdfsBaseDirectory(hdfsBaseDirectory);
-		Path hdfsSandboxDirectory = new Path(hdfsBaseDirectory, hdfsSandboxDirectoryName);
-		Path hdfsApplicationDirectory = new Path(hdfsSandboxDirectory, appId);
-		Data.setHdfsApplicationDirectory(hdfsApplicationDirectory);
-		Data.setHdfs(hdfs);
+		CommandLine cliParser;
+		try {
+			cliParser = new GnuParser().parse(opts, args);
+			containerId = cliParser.getOptionValue("containerId");
+			appId = cliParser.getOptionValue("appId");
+			String hdfsBaseDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE, HiWayConfiguration.HIWAY_AM_DIRECTORY_BASE_DEFAULT);
+			String hdfsSandboxDirectoryName = conf.get(HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE, HiWayConfiguration.HIWAY_AM_DIRECTORY_CACHE_DEFAULT);
+			Path hdfsBaseDirectory = new Path(new Path(hdfs.getUri()), hdfsBaseDirectoryName);
+			Data.setHdfsBaseDirectory(hdfsBaseDirectory);
+			Path hdfsSandboxDirectory = new Path(hdfsBaseDirectory, hdfsSandboxDirectoryName);
+			Path hdfsApplicationDirectory = new Path(hdfsSandboxDirectory, appId);
+			Data.setHdfsApplicationDirectory(hdfsApplicationDirectory);
+			Data.setHdfs(hdfs);
 
-		workflowId = UUID.fromString(cliParser.getOptionValue("workflowId"));
-		taskId = Long.parseLong(cliParser.getOptionValue("taskId"));
-		taskName = cliParser.getOptionValue("taskName");
-		langLabel = cliParser.getOptionValue("langLabel");
-		id = Long.parseLong(cliParser.getOptionValue("id"));
-		if (cliParser.hasOption("size")) {
-			determineFileSizes = true;
-		}
-		if (cliParser.hasOption("invocScript")) {
-			invocScript = cliParser.getOptionValue("invocScript");
+			workflowId = UUID.fromString(cliParser.getOptionValue("workflowId"));
+			taskId = Long.parseLong(cliParser.getOptionValue("taskId"));
+			taskName = cliParser.getOptionValue("taskName");
+			langLabel = cliParser.getOptionValue("langLabel");
+			id = Long.parseLong(cliParser.getOptionValue("id"));
+			if (cliParser.hasOption("size")) {
+				determineFileSizes = true;
+			}
+			if (cliParser.hasOption("invocScript")) {
+				invocScript = cliParser.getOptionValue("invocScript");
+			}
+		} catch (ParseException e) {
+			e.printStackTrace(System.out);
 		}
 
 		try (BufferedReader reader = new BufferedReader(new FileReader(id + "_data"))) {
@@ -172,16 +173,26 @@ public class Worker {
 			for (int i = 0; i < n; i++) {
 				outputFiles.add(new Data(reader.readLine(), containerId));
 			}
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
 		}
 	}
 
-	public int run() throws IOException, JSONException {
+	public int run() {
 		long tic = System.currentTimeMillis();
 		stageIn();
 		long toc = System.currentTimeMillis();
 		JSONObject obj = new JSONObject();
-		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEIN, obj));
+		try {
+			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
+		} catch (JSONException e) {
+			e.printStackTrace(System.out);
+		}
+		try {
+			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEIN, obj));
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
+		}
 
 		// tic = System.currentTimeMillis();
 		int exitValue = exec();
@@ -195,6 +206,8 @@ public class Worker {
 					sb.append(line).append("\n");
 				}
 				writeEntryToLog(new JsonReportEntry(workflowId, taskId, taskName, langLabel, id, JsonReportEntry.KEY_INVOC_SCRIPT, sb.toString()));
+			} catch (IOException e) {
+				e.printStackTrace(System.out);
 			}
 		}
 
@@ -203,39 +216,75 @@ public class Worker {
 		// writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, JsonReportEntry.KEY_INVOC_TIME, obj));
 
 		tic = System.currentTimeMillis();
-		new Data(id + "_" + Invocation.STDOUT_FILENAME, containerId).stageOut();
-		new Data(id + "_" + Invocation.STDERR_FILENAME, containerId).stageOut();
+		try {
+			new Data(id + "_" + Invocation.STDOUT_FILENAME, containerId).stageOut();
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
+		}
+		try {
+			new Data(id + "_" + Invocation.STDERR_FILENAME, containerId).stageOut();
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
+		}
 
 		stageOut();
 		toc = System.currentTimeMillis();
 		obj = new JSONObject();
-		obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-		writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT, obj));
+		try {
+			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
+		} catch (JSONException e) {
+			e.printStackTrace(System.out);
+		}
+		try {
+			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, null, HiwayDBI.KEY_INVOC_TIME_STAGEOUT, obj));
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
+		}
 
 		(new File(Invocation.REPORT_FILENAME)).renameTo(new File(id + "_" + Invocation.REPORT_FILENAME));
-		new Data(id + "_" + Invocation.REPORT_FILENAME, containerId).stageOut();
-		
+		try {
+			new Data(id + "_" + Invocation.REPORT_FILENAME, containerId).stageOut();
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
+		}
+
 		return exitValue;
 	}
 
-	public void stageIn() throws IOException, JSONException {
+	public void stageIn() {
 		for (Data input : inputFiles) {
 			long tic = System.currentTimeMillis();
-			input.stageIn();
+			try {
+				input.stageIn();
+			} catch (IOException e) {
+				e.printStackTrace(System.out);
+			}
 			long toc = System.currentTimeMillis();
 			JSONObject obj = new JSONObject();
-			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, input.getLocalPath().toString(),
-					HiwayDBI.KEY_FILE_TIME_STAGEIN, obj));
-			if (determineFileSizes) {
+			try {
+				obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
+			} catch (JSONException e) {
+				e.printStackTrace(System.out);
+			}
+			try {
 				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, input.getLocalPath().toString(),
-						JsonReportEntry.KEY_FILE_SIZE_STAGEIN, Long.toString((new File(input.getLocalPath().toString())).length())));
+						HiwayDBI.KEY_FILE_TIME_STAGEIN, obj));
+			} catch (IOException e) {
+				e.printStackTrace(System.out);
+			}
+			if (determineFileSizes) {
+				try {
+					writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, input.getLocalPath().toString(),
+							JsonReportEntry.KEY_FILE_SIZE_STAGEIN, Long.toString((new File(input.getLocalPath().toString())).length())));
+				} catch (IOException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 
 		}
 	}
 
-	public void stageOut() throws IOException, JSONException {
+	public void stageOut() {
 		try (BufferedReader logReader = new BufferedReader(new FileReader(new File(Invocation.REPORT_FILENAME)))) {
 			String line;
 			while ((line = logReader.readLine()) != null) {
@@ -244,20 +293,36 @@ public class Worker {
 					outputFiles.add(new Data(entry.getFile(), containerId));
 				}
 			}
-		} catch (JSONException e) {
+		} catch (IOException | JSONException e) {
 			e.printStackTrace(System.out);
 		}
 		for (Data output : outputFiles) {
 			long tic = System.currentTimeMillis();
-			output.stageOut();
+			try {
+				output.stageOut();
+			} catch (IOException e) {
+				e.printStackTrace(System.out);
+			}
 			long toc = System.currentTimeMillis();
 			JSONObject obj = new JSONObject();
-			obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
-			writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, output.getLocalPath().toString(),
-					HiwayDBI.KEY_FILE_TIME_STAGEOUT, obj));
-			if (determineFileSizes) {
+			try {
+				obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(toc - tic));
+			} catch (JSONException e) {
+				e.printStackTrace(System.out);
+			}
+			try {
 				writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, output.getLocalPath().toString(),
-						JsonReportEntry.KEY_FILE_SIZE_STAGEOUT, Long.toString((new File(output.getLocalPath().toString())).length())));
+						HiwayDBI.KEY_FILE_TIME_STAGEOUT, obj));
+			} catch (IOException e) {
+				e.printStackTrace(System.out);
+			}
+			if (determineFileSizes) {
+				try {
+					writeEntryToLog(new JsonReportEntry(tic, workflowId, taskId, taskName, langLabel, id, output.getLocalPath().toString(),
+							JsonReportEntry.KEY_FILE_SIZE_STAGEOUT, Long.toString((new File(output.getLocalPath().toString())).length())));
+				} catch (IOException e) {
+					e.printStackTrace(System.out);
+				}
 			}
 		}
 	}
