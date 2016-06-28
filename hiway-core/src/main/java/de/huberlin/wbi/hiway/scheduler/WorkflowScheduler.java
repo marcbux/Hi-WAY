@@ -327,7 +327,8 @@ public abstract class WorkflowScheduler {
 	}
 
 	public void updateRuntimeEstimates(String runId) {
-		System.out.println("Updating Runtime Estimates.");
+		if (HiWayConfiguration.verbose)
+			System.out.println("Updating Runtime Estimates.");
 
 		// System.out.println("HiwayDB: Querying Host Names from database.");
 		Collection<String> newHostIds = dbInterface.getHostNames();

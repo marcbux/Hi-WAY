@@ -177,7 +177,6 @@ public class CuneiformJApplicationMaster extends WorkflowDriver {
 			Invocation invocation = ((CuneiformJTaskInstance) task).getInvocation();
 			invocation.evalReport(task.getReport());
 			ticketSrc.sendMsg(new TicketFinishedMsg(creActor, invocation.getTicket(), task.getReport()));
-			System.out.println("Message sent.");
 
 			// set output files
 			for (String outputName : invocation.getStageOutList()) {

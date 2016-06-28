@@ -58,14 +58,14 @@ import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 public class Worker {
 
 	public static void loop(Worker worker, String[] args) {
+		int exitValue = 0;
 		try {
 			worker.init(args);
-			worker.run();
+			exitValue = worker.run();
 		} catch (ParseException | IOException | JSONException e) {
-			e.printStackTrace();
-			System.exit(-1);
+			e.printStackTrace(System.out);
 		}
-		System.exit(0);
+		System.exit(exitValue);
 	}
 
 	public static void main(String[] args) {
@@ -110,8 +110,7 @@ public class Worker {
 			process = processBuilder.start();
 			exitValue = process.waitFor();
 		} catch (IOException | InterruptedException e) {
-			e.printStackTrace();
-			System.exit(-1);
+			e.printStackTrace(System.out);
 		}
 
 		return exitValue;
@@ -122,8 +121,7 @@ public class Worker {
 		try {
 			hdfs = FileSystem.get(conf);
 		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
+			e.printStackTrace(System.out);
 		}
 
 		Options opts = new Options();
@@ -177,7 +175,7 @@ public class Worker {
 		}
 	}
 
-	public void run() throws IOException, JSONException {
+	public int run() throws IOException, JSONException {
 		long tic = System.currentTimeMillis();
 		stageIn();
 		long toc = System.currentTimeMillis();
@@ -197,9 +195,6 @@ public class Worker {
 					sb.append(line).append("\n");
 				}
 				writeEntryToLog(new JsonReportEntry(workflowId, taskId, taskName, langLabel, id, JsonReportEntry.KEY_INVOC_SCRIPT, sb.toString()));
-			} catch (IOException e) {
-				e.printStackTrace();
-				System.exit(-1);
 			}
 		}
 
@@ -210,9 +205,7 @@ public class Worker {
 		tic = System.currentTimeMillis();
 		new Data(id + "_" + Invocation.STDOUT_FILENAME, containerId).stageOut();
 		new Data(id + "_" + Invocation.STDERR_FILENAME, containerId).stageOut();
-		if (exitValue != 0) {
-			System.exit(exitValue);
-		}
+
 		stageOut();
 		toc = System.currentTimeMillis();
 		obj = new JSONObject();
@@ -221,6 +214,8 @@ public class Worker {
 
 		(new File(Invocation.REPORT_FILENAME)).renameTo(new File(id + "_" + Invocation.REPORT_FILENAME));
 		new Data(id + "_" + Invocation.REPORT_FILENAME, containerId).stageOut();
+		
+		return exitValue;
 	}
 
 	public void stageIn() throws IOException, JSONException {
@@ -250,8 +245,7 @@ public class Worker {
 				}
 			}
 		} catch (JSONException e) {
-			e.printStackTrace();
-			System.exit(-1);
+			e.printStackTrace(System.out);
 		}
 		for (Data output : outputFiles) {
 			long tic = System.currentTimeMillis();
