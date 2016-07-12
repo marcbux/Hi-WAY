@@ -128,7 +128,7 @@ public class LaunchContainerRunnable implements Runnable {
 				writer.newLine();
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -138,7 +138,7 @@ public class LaunchContainerRunnable implements Runnable {
 			dataTable.stageOut();
 			dataTable.addToLocalResourceMap(localResources);
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 

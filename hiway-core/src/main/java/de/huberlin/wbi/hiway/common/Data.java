@@ -32,7 +32,6 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.common;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Map;
 
@@ -204,8 +203,6 @@ public class Data implements Comparable<Data> {
 		if (dir == null || hdfs.isDirectory(dir))
 			return;
 		mkHdfsDir(dir.getParent());
-		if (HiWayConfiguration.verbose)
-			System.out.println("Creating directory: " + dir);
 		hdfs.mkdirs(dir);
 		hdfs.setPermission(dir, new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
 	}
@@ -225,19 +222,10 @@ public class Data implements Comparable<Data> {
 	public void stageIn() throws IOException {
 		Path hdfsPath = getHdfsPath();
 		Path localPath = getLocalPath();
-		if (HiWayConfiguration.verbose)
-			System.out.print("Attempting to stage in: " + hdfsPath + " -> " + localPath);
 		if (localDirectory.depth() > 0) {
 			localFs.mkdirs(localDirectory);
 		}
-		try {
-			hdfs.copyToLocalFile(false, hdfsPath, localPath);
-			if (HiWayConfiguration.verbose)
-				System.out.println(" (succeeded)");
-		} catch (FileNotFoundException e) {
-			if (HiWayConfiguration.verbose)
-				System.out.println(" (failed)");
-		}
+		hdfs.copyToLocalFile(false, hdfsPath, localPath);
 	}
 
 	public void stageOut() throws IOException {
@@ -247,16 +235,7 @@ public class Data implements Comparable<Data> {
 		if (hdfsDirectory.depth() > 0) {
 			mkHdfsDir(hdfsDirectory);
 		}
-		if (HiWayConfiguration.verbose)
-			System.out.print("Attempting to stage out: " + localPath + " -> " + hdfsPath);
-		try {
-			hdfs.copyFromLocalFile(false, true, localPath, hdfsPath);
-			if (HiWayConfiguration.verbose)
-				System.out.println(" (succeeded)");
-		} catch (FileNotFoundException e) {
-			if (HiWayConfiguration.verbose)
-				System.out.println(" (failed)");
-		}
+		hdfs.copyFromLocalFile(false, true, localPath, hdfsPath);
 	}
 
 	@Override

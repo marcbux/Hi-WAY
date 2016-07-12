@@ -196,7 +196,7 @@ public class DaxApplicationMaster extends WorkflowDriver {
 			}
 
 		} catch (WorkflowStructureUnknownException | IOException | JSONException | ParserConfigurationException | SAXException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 

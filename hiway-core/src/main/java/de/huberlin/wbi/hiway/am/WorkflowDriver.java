@@ -150,7 +150,7 @@ public abstract class WorkflowDriver {
 				}
 			}
 		} catch (IOException | InterruptedException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}
@@ -173,7 +173,7 @@ public abstract class WorkflowDriver {
 			}
 			result = appMaster.run();
 		} catch (Throwable t) {
-			System.err.println("Error running ApplicationMaster");
+			System.out.println("Error running ApplicationMaster");
 			t.printStackTrace();
 			System.exit(-1);
 		}
@@ -265,7 +265,7 @@ public abstract class WorkflowDriver {
 		try {
 			hdfs = FileSystem.get(conf);
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		runId = UUID.randomUUID();
@@ -321,7 +321,7 @@ public abstract class WorkflowDriver {
 
 		} catch (Exception e) {
 			System.out.println("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}
@@ -335,8 +335,8 @@ public abstract class WorkflowDriver {
 			try {
 				launchThread.join(10000);
 			} catch (InterruptedException e) {
-				System.err.println("Exception thrown in thread join: " + e.getMessage());
-				e.printStackTrace();
+				System.out.println("Exception thrown in thread join: " + e.getMessage());
+				e.printStackTrace(System.out);
 				System.exit(-1);
 			}
 		}
@@ -391,7 +391,7 @@ public abstract class WorkflowDriver {
 						obj.put("stderr", stderr);
 						obj.put("statlog", statlog);
 					} catch (JSONException e) {
-						e.printStackTrace();
+						e.printStackTrace(System.out);
 						System.exit(-1);
 					}
 					writer.write(obj.toString());
@@ -401,16 +401,16 @@ public abstract class WorkflowDriver {
 				new Data(summaryPath).stageOut();
 			}
 		} catch (IOException e) {
-			System.err.println("Error when attempting to stage out federated output log.");
-			e.printStackTrace();
+			System.out.println("Error when attempting to stage out federated output log.");
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
 		try {
 			amRMClient.unregisterApplicationMaster(appStatus, appMessage, null);
 		} catch (YarnException | IOException e) {
-			System.err.println("Failed to unregister application");
-			e.printStackTrace();
+			System.out.println("Failed to unregister application");
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -514,15 +514,6 @@ public abstract class WorkflowDriver {
 		return workflowFile.getName();
 	}
 
-	/**
-	 * Parse command line options.
-	 * 
-	 * @param args
-	 *            Command line arguments.
-	 * @return Whether init successful and run should be invoked.
-	 * @throws ParseException
-	 *             ParseException
-	 */
 	public boolean init(String[] args) throws ParseException, IOException, JSONException {
 
 		DefaultMetricsSystem.initialize("ApplicationMaster");
@@ -538,11 +529,11 @@ public abstract class WorkflowDriver {
 		}
 		opts.addOption("s", "scheduler", true, "The scheduling policy that is to be employed. Valid arguments: " + schedulers.substring(2) + "."
 				+ " Overrides settings in hiway-site.xml.");
-		opts.addOption("debug", false, "Dump out debug information");
+		opts.addOption("d", "debug", false, "Dump out debug information");
 		opts.addOption("v", "verbose", false, "Increase verbosity of output / reporting.");
 		opts.addOption("appid", true, "Id of this Application Master.");
 
-		opts.addOption("help", false, "Print usage");
+		opts.addOption("h", "help", false, "Print usage");
 		CommandLine cliParser = new GnuParser().parse(opts, args);
 
 		if (args.length == 0) {
@@ -567,7 +558,7 @@ public abstract class WorkflowDriver {
 		try {
 			statLog = new BufferedWriter(new FileWriter(appId + ".log"));
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -830,7 +821,7 @@ public abstract class WorkflowDriver {
 							value.put("nodes", request.getNodes());
 							value.put("priority", request.getPriority());
 						} catch (JSONException e) {
-							e.printStackTrace();
+							e.printStackTrace(System.out);
 							System.exit(-1);
 						}
 
@@ -886,13 +877,13 @@ public abstract class WorkflowDriver {
 					}
 
 				} catch (InterruptedException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 					System.exit(-1);
 				}
 			}
 			finish();
 		} catch (Exception e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		return success;
@@ -911,35 +902,35 @@ public abstract class WorkflowDriver {
 		String line;
 
 		try {
-			System.err.println("[script]");
+			System.out.println("[script]");
 			try (BufferedReader reader = new BufferedReader(new StringReader(task.getCommand()))) {
 				int i = 0;
 				while ((line = reader.readLine()) != null)
-					System.err.println(String.format("%02d  %s", Integer.valueOf(++i), line));
+					System.out.println(String.format("%02d  %s", Integer.valueOf(++i), line));
 			}
 
 			Data stdoutFile = new Data(task.getId() + "_" + Invocation.STDOUT_FILENAME, containerId.toString());
 			stdoutFile.stageIn();
 
-			System.err.println("[out]");
+			System.out.println("[out]");
 			try (BufferedReader reader = new BufferedReader(new FileReader(stdoutFile.getLocalPath().toString()))) {
 				while ((line = reader.readLine()) != null)
-					System.err.println(line);
+					System.out.println(line);
 			}
 
 			Data stderrFile = new Data(task.getId() + "_" + Invocation.STDERR_FILENAME, containerId.toString());
 			stderrFile.stageIn();
 
-			System.err.println("[err]");
+			System.out.println("[err]");
 			try (BufferedReader reader = new BufferedReader(new FileReader(stderrFile.getLocalPath().toString()))) {
 				while ((line = reader.readLine()) != null)
-					System.err.println(line);
+					System.out.println(line);
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 		}
 
-		System.err.println("[end]");
+		System.out.println("[end]");
 	}
 
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
@@ -949,7 +940,7 @@ public abstract class WorkflowDriver {
 					scheduler.addTaskToQueue(childTask);
 			}
 		} catch (WorkflowStructureUnknownException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		for (Data data : task.getOutputData()) {
@@ -966,7 +957,7 @@ public abstract class WorkflowDriver {
 			statLog.newLine();
 			statLog.flush();
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		scheduler.addEntryToDB(entry);

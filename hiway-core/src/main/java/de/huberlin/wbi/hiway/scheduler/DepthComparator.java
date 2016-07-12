@@ -43,7 +43,7 @@ public class DepthComparator implements Comparator<TaskInstance> {
 		try {
 			return Integer.compare(task1.getDepth(), task2.getDepth());
 		} catch (WorkflowStructureUnknownException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(1);
 			throw new RuntimeException(e);
 		}

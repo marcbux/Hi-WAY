@@ -59,7 +59,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 				try {
 					return Integer.compare(task1.getDepth(), task2.getDepth());
 				} catch (WorkflowStructureUnknownException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 					System.exit(1);
 					throw new RuntimeException(e);
 				}
@@ -72,7 +72,7 @@ public class TaskInstance implements Comparable<TaskInstance> {
 				try {
 					return -Double.compare(task1.getUpwardRank(), task2.getUpwardRank());
 				} catch (WorkflowStructureUnknownException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 					System.exit(1);
 					throw new RuntimeException(e);
 				}
@@ -158,19 +158,19 @@ public class TaskInstance implements Comparable<TaskInstance> {
 			try (BufferedWriter scriptWriter = new BufferedWriter(new FileWriter(script))) {
 				scriptWriter.write(getCommand());
 			} catch (IOException e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 				System.exit(-1);
 			}
 			Data scriptData = new Data(script.getPath(), containerId);
 			try {
 				scriptData.stageOut();
 			} catch (IOException e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 				System.exit(-1);
 			}
 			scriptData.addToLocalResourceMap(localResources);
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		return localResources;

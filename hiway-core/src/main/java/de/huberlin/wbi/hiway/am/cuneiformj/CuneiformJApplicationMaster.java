@@ -89,7 +89,7 @@ public class CuneiformJApplicationMaster extends WorkflowDriver {
 				outputs.add(files.containsKey(output) ? files.get(output).getHdfsPath().toString() : output);
 			}
 		} catch (NotDerivableException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		return outputs;
@@ -109,7 +109,7 @@ public class CuneiformJApplicationMaster extends WorkflowDriver {
 				}
 			}
 		} catch (NotDerivableException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -134,7 +134,7 @@ public class CuneiformJApplicationMaster extends WorkflowDriver {
 				buf.append(line).append('\n');
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		repl.interpret(buf.toString());
@@ -146,28 +146,28 @@ public class CuneiformJApplicationMaster extends WorkflowDriver {
 	public void taskFailure(TaskInstance task, ContainerId containerId) {
 		super.taskFailure(task, containerId);
 
-		String line;
+		String line, stdOut = "", stdErr = "";
 		try {
 			StringBuffer buf = new StringBuffer();
 			try (BufferedReader reader = new BufferedReader(new FileReader(new File(task.getId() + "_" + Invocation.STDOUT_FILENAME)))) {
 				while ((line = reader.readLine()) != null)
 					buf.append(line).append('\n');
 			}
-			String stdOut = buf.toString();
+			stdOut = buf.toString();
 
 			buf = new StringBuffer();
 			try (BufferedReader reader = new BufferedReader(new FileReader(new File(task.getId() + "_" + Invocation.STDERR_FILENAME)))) {
 				while ((line = reader.readLine()) != null)
 					buf.append(line).append('\n');
 			}
-			String stdErr = buf.toString();
-			Invocation invocation = ((CuneiformJTaskInstance) task).getInvocation();
-			if (!task.retry(getConf().getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
-				ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, task.getCommand(), stdOut, stdErr));
-			}
+			stdErr = buf.toString();
 		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(-1);
+			e.printStackTrace(System.out);
+		}
+
+		Invocation invocation = ((CuneiformJTaskInstance) task).getInvocation();
+		if (!task.retry(getConf().getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT))) {
+			ticketSrc.sendMsg(new TicketFailedMsg(creActor, invocation.getTicket(), null, task.getCommand(), stdOut, stdErr));
 		}
 	}
 
@@ -192,7 +192,7 @@ public class CuneiformJApplicationMaster extends WorkflowDriver {
 
 		} catch (JSONException | NotDerivableException e) {
 			System.out.println("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}

@@ -176,7 +176,7 @@ public class HEFT extends StaticScheduler {
 				}
 			}
 		} catch (WorkflowStructureUnknownException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -229,7 +229,7 @@ public class HEFT extends StaticScheduler {
 					}
 				}
 			} catch (WorkflowStructureUnknownException e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 				System.exit(-1);
 			}
 
@@ -245,7 +245,7 @@ public class HEFT extends StaticScheduler {
 			try {
 				task.setUpwardRank(averageComputationCost + maxSuccessorRank);
 			} catch (WorkflowStructureUnknownException e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 				System.exit(-1);
 			}
 		}

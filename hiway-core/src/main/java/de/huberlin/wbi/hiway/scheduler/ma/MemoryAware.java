@@ -67,24 +67,28 @@ public class MemoryAware extends WorkflowScheduler {
 	@Override
 	public void addTaskToQueue(TaskInstance task) {
 		int memory = customMemoryMap.containsKey(task.getTaskName()) ? customMemoryMap.get(task.getTaskName()) : containerMemory;
+		System.out.println("Adding task " + task + " to queue " + memory);
 		unissuedContainerRequests.add(setupContainerAskForRM(new String[0], memory));
 
 		if (!queuePerMem.containsKey(memory)) {
 			queuePerMem.put(memory, new LinkedList<TaskInstance>());
 		}
 		queuePerMem.get(memory).add(task);
-		
-		System.out.println("Added task " + task + " to queue " + memory);
 	}
 
 	@Override
 	public TaskInstance getTask(Container container) {
+		System.out.println("Looking for task to place in container " + container.getId() + "@" + container.getNodeId().getHost() + " ("
+				+ container.getResource().getVirtualCores() + ", " + container.getResource().getMemory() + ").");
 		numberOfRemainingTasks--;
 		numberOfRunningTasks++;
-		
-		TaskInstance task = queuePerMem.get(container.getResource().getMemory()).remove();
 
-		System.out.println("Assigned task " + task + " to container " + container.getId() + "@" + container.getNodeId().getHost());
+		int memory = container.getResource().getMemory();
+		Queue<TaskInstance> queue = queuePerMem.get(memory);
+		TaskInstance task = queue.remove();
+
+		System.out.println("Found task " + task + ".");
+
 		task.incTries();
 		return task;
 	}

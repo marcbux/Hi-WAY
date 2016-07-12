@@ -294,8 +294,8 @@ public class C3PO extends WorkflowScheduler {
 					dataLocalityStatistic.totalData = task.countAvailableTotalData() + 1;
 					dataLocalityStatistic.weight = ((double) (dataLocalityStatistic.localData)) / ((double) dataLocalityStatistic.totalData);
 				} catch (IOException e) {
-					System.err.println("Error during hdfs block location determination.");
-					e.printStackTrace();
+					System.out.println("Error during hdfs block location determination.");
+					e.printStackTrace(System.out);
 					dataLocalityStatistic.weight = 0d;
 				}
 			}

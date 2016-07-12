@@ -117,12 +117,12 @@ public class LogApplicationMaster extends WorkflowDriver {
 					default:
 					}
 				} catch (JSONException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 					System.exit(-1);
 				}
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -135,7 +135,7 @@ public class LogApplicationMaster extends WorkflowDriver {
 					task.addParentTask(parentTask);
 					parentTask.addChildTask(task);
 				} catch (WorkflowStructureUnknownException e) {
-					e.printStackTrace();
+					e.printStackTrace(System.out);
 					System.exit(-1);
 				}
 			}

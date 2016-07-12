@@ -109,7 +109,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 				galaxyDataTable.addContent(content);
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}
@@ -130,7 +130,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 		super();
 		galaxyPath = getConf().get(HiWayConfiguration.HIWAY_GALAXY_PATH);
 		if (galaxyPath == null) {
-			System.err.println(HiWayConfiguration.HIWAY_GALAXY_PATH + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+			System.out.println(HiWayConfiguration.HIWAY_GALAXY_PATH + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 			throw new RuntimeException();
 		}
 		galaxyDataTables = new HashMap<>();
@@ -280,7 +280,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 					datatypes_config_file = line.split("=")[1].trim();
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		String[] tool_config_files = tool_config_file.split(",");
@@ -294,7 +294,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 				processToolLibraries(new File(galaxyPath + "/" + config_file.trim()), tool_path, tool_dependency_dir);
 			}
 		} catch (FactoryConfigurationError e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -414,7 +414,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 
 			return tool;
 		} catch (SAXException | IOException | TransformerException | XPathExpressionException | ParserConfigurationException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 			return null;
 		}
@@ -469,12 +469,12 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 						toolId = splitId[splitId.length - 2];
 					Map<String, GalaxyTool> tools = galaxyTools.get(toolId);
 					if (tools == null) {
-						System.err.println("Tool " + toolId + " could not be located in local Galaxy installation.");
+						System.out.println("Tool " + toolId + " could not be located in local Galaxy installation.");
 						throw new RuntimeException();
 					}
 					GalaxyTool tool = tools.get(toolVersion);
 					if (tool == null) {
-						System.err.println("Tool version " + toolVersion + " of tool " + toolId + " could not be located in local Galaxy installation.");
+						System.out.println("Tool version " + toolVersion + " of tool " + toolId + " could not be located in local Galaxy installation.");
 						throw new RuntimeException();
 					}
 					GalaxyTaskInstance task = new GalaxyTaskInstance(id, getRunId(), tool.getId(), tool, galaxyPath);
@@ -602,7 +602,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 			}
 
 		} catch (IOException | JSONException | WorkflowStructureUnknownException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -639,7 +639,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 			}
 
 		} catch (SAXException | IOException | ParserConfigurationException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}
@@ -665,7 +665,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 				galaxyDataTypes.put(extension, new GalaxyDataType(splitType[0], splitType[1], extension));
 			}
 		} catch (SAXException | IOException | ParserConfigurationException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}
@@ -711,7 +711,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 				macrosByName.put(name, macro);
 			}
 		} catch (SAXException | IOException | TransformerException | ParserConfigurationException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		return macrosByName;
@@ -771,7 +771,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 
 			}
 		} catch (SAXException | IOException | ParserConfigurationException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}

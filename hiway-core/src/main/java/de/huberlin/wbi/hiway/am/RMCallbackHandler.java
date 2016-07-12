@@ -219,7 +219,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 						try {
 							obj.put(JsonReportEntry.LABEL_REALTIME, Long.toString(runtime));
 						} catch (JSONException e) {
-							e.printStackTrace();
+							e.printStackTrace(System.out);
 							System.exit(-1);
 						}
 						am.writeEntryToLog(new JsonReportEntry(System.currentTimeMillis(), finishedTask.getWorkflowId(), finishedTask.getTaskId(), finishedTask
@@ -276,7 +276,7 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 	@Override
 	public void onError(Throwable e) {
-		e.printStackTrace();
+		e.printStackTrace(System.out);
 		System.exit(-1);
 	}
 

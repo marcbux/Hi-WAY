@@ -94,7 +94,7 @@ public class CuneiformEApplicationMaster extends WorkflowDriver {
 			}
 			workflow = Workflow.createWorkflow(sb.toString());
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -126,7 +126,7 @@ public class CuneiformEApplicationMaster extends WorkflowDriver {
 			try (BufferedWriter writer = new BufferedWriter(new FileWriter(task.getId() + "_request"))) {
 				writer.write(request.toString());
 			} catch (IOException e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 				System.exit(-1);
 			}
 
@@ -151,7 +151,7 @@ public class CuneiformEApplicationMaster extends WorkflowDriver {
 		try {
 			(new Data(task.getId() + "_reply", containerId.toString())).stageIn();
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -162,7 +162,7 @@ public class CuneiformEApplicationMaster extends WorkflowDriver {
 				sb.append(line).append("\n");
 			}
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		Reply reply = Reply.createReply(sb.toString());

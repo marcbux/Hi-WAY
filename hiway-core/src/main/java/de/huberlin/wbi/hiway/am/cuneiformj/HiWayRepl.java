@@ -66,7 +66,7 @@ public class HiWayRepl extends BaseRepl {
 				}
 			}
 		} catch (NotDerivableException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}

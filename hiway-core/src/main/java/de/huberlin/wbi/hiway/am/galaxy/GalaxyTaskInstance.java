@@ -187,7 +187,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 				}
 			}
 		} catch (JSONException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}
@@ -220,8 +220,8 @@ public class GalaxyTaskInstance extends TaskInstance {
 		try {
 			this.toolState = new JSONObject(tool_state_json);
 		} catch (JSONException e) {
-			System.err.println(tool_state_json);
-			e.printStackTrace();
+			System.out.println(tool_state_json);
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}
@@ -259,7 +259,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 			templateWriter.write(galaxyTool.getTemplate());
 			postScriptWriter.write(getPostScript());
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -274,7 +274,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 			templateData.addToLocalResourceMap(localResources);
 			postSriptData.addToLocalResourceMap(localResources);
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 

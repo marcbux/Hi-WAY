@@ -114,14 +114,6 @@ public abstract class WorkflowScheduler {
 		this.requestPriority = requestPriority_;
 	}
 	
-	/**
-	 * Setup the request that will be sent to the RM for the container ask.
-	 * 
-	 * @param nodes
-	 *            The worker nodes on which this container is to be allocated. If left empty, the container will be launched on any worker node fulfilling the
-	 *            resource requirements.
-	 * @return the setup ResourceRequest to be sent to RM
-	 */
 	protected ContainerRequest setupContainerAskForRM(String[] nodes, int memory) {
 		// set the priority for the request
 		Priority pri = Priority.newInstance(requestPriority);
@@ -204,17 +196,17 @@ public abstract class WorkflowScheduler {
 		case SQL:
 			String sqlUser = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
 			if (sqlUser == null) {
-				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			String sqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
 			if (sqlPassword == null) {
-				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			String sqlURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
 			if (sqlURL == null) {
-				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			dbInterface = new HiwayDB(sqlUser, sqlPassword, sqlURL);
@@ -222,32 +214,32 @@ public abstract class WorkflowScheduler {
 		case NoSQL:
 			sqlUser = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
 			if (sqlUser == null) {
-				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			sqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
 			if (sqlPassword == null) {
-				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			sqlURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
 			if (sqlURL == null) {
-				System.err.println(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			String noSqlBucket = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
 			if (noSqlBucket == null) {
-				System.err.println(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.out.println(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			String noSqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
 			if (noSqlPassword == null) {
-				System.err.println(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.out.println(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			String noSqlURIs = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
 			if (noSqlURIs == null) {
-				System.err.println(HiWayConfiguration.HIWAY_DB_NOSQL_URLS + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				System.out.println(HiWayConfiguration.HIWAY_DB_NOSQL_URLS + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			List<URI> noSqlURIList = new ArrayList<>();
@@ -314,7 +306,7 @@ public abstract class WorkflowScheduler {
 				}
 			}
 		} catch (IOException | JSONException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}
@@ -342,7 +334,7 @@ public abstract class WorkflowScheduler {
 			addTask(task);
 		} else {
 			System.out.println("Task " + task + " has exceeded maximum number of allowed retries. Aborting workflow.");
-			throw new RuntimeException();
+			System.exit(-1);
 		}
 
 		return new ArrayList<>();

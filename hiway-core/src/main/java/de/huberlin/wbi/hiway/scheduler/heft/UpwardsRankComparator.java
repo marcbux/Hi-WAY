@@ -43,7 +43,7 @@ public class UpwardsRankComparator implements Comparator<TaskInstance> {
 		try {
 			return -Double.compare(task1.getUpwardRank(), task2.getUpwardRank());
 		} catch (WorkflowStructureUnknownException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(1);
 			throw new RuntimeException(e);
 		}

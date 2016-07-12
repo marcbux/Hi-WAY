@@ -104,12 +104,12 @@ public class Client {
 				}
 			} catch (IllegalArgumentException e) {
 				client.printUsage();
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 				System.exit(-1);
 			}
 			result = client.run();
 		} catch (Throwable t) {
-			System.err.println("Error running Client");
+			System.out.println("Error running Client");
 			t.printStackTrace();
 			System.exit(-1);
 		}
@@ -117,7 +117,7 @@ public class Client {
 			System.out.println("Application completed successfully");
 			System.exit(0);
 		}
-		System.err.println("Application failed");
+		System.out.println("Application failed");
 		System.exit(2);
 	}
 
@@ -139,7 +139,7 @@ public class Client {
 	private String memory;
 	// command line options
 	private Options opts;
-	private String scheduler;
+	private HiWayConfiguration.HIWAY_SCHEDULER_OPTS schedulerName;
 	private Data summary;
 	private Path summaryPath;
 	private String customMemPath;
@@ -173,8 +173,8 @@ public class Client {
 		opts.addOption("l", "language", true, "The input file format. Will be automatically detected if not specified explicitly. Valid arguments: "
 				+ workflowFormats.substring(2) + ".");
 		opts.addOption("v", "verbose", false, "Increase verbosity of output / reporting.");
-		opts.addOption("debug", false, "Dump out debug information");
-		opts.addOption("help", false, "Print usage");
+		opts.addOption("d", "debug", false, "Dump out debug information");
+		opts.addOption("h", "help", false, "Print usage");
 	}
 
 	/**
@@ -205,25 +205,23 @@ public class Client {
 		try {
 			hdfs = FileSystem.get(conf);
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
 		CommandLine cliParser = new GnuParser().parse(opts, args);
 
 		if (args.length == 0) {
-			printUsage();
 			throw new IllegalArgumentException("No args specified for client to initialize.");
-		}
-
-		if (cliParser.getArgs().length == 0) {
-			printUsage();
-			throw new IllegalArgumentException("No workflow file specified.");
 		}
 
 		if (cliParser.hasOption("help")) {
 			printUsage();
 			System.exit(0);
+		}
+		
+		if (cliParser.getArgs().length == 0) {
+			throw new IllegalArgumentException("No workflow file specified.");
 		}
 
 		if (cliParser.hasOption("debug")) {
@@ -251,7 +249,7 @@ public class Client {
 			try {
 				summaryPath = new Path(new File(cliParser.getOptionValue("summary")).getCanonicalPath());
 			} catch (IOException e) {
-				e.printStackTrace();
+				e.printStackTrace(System.out);
 				System.exit(-1);
 			}
 		}
@@ -260,12 +258,24 @@ public class Client {
 			memory = cliParser.getOptionValue("memory");
 		}
 
+		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(conf.get(HiWayConfiguration.HIWAY_SCHEDULER,
+				HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
 		if (cliParser.hasOption("scheduler")) {
-			scheduler = cliParser.getOptionValue("scheduler");
+			schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(cliParser.getOptionValue("scheduler"));
 		}
 		
 		if (cliParser.hasOption("custom")) {
+			if (!schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.memoryAware)) {
+				System.out.println("The memory-aware scheduler has to be selected if a custom memory file is to be used. Aborting.");
+				System.exit(-1);
+			}
 			customMemPath = cliParser.getOptionValue("custom");
+		}
+		
+		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(conf.get(HiWayConfiguration.HIWAY_SCHEDULER,
+				HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
+		if (cliParser.hasOption("scheduler")) {
+			schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(cliParser.getOptionValue("scheduler"));
 		}
 
 		workflowParam = cliParser.getArgs()[0];
@@ -526,9 +536,7 @@ public class Client {
 			vargs.add(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORMJ_AM_CLASS);
 		}
 
-		if (scheduler != null) {
-			vargs.add("--scheduler " + scheduler);
-		}
+		vargs.add("--scheduler " + schedulerName.toString());
 
 		if (memory != null) {
 			vargs.add("--memory " + memory);

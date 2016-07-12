@@ -90,7 +90,7 @@ public class HiWayCreActor extends BaseCreActor {
 				task.addInputData(data);
 			}
 		} catch (NotDerivableException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
@@ -99,7 +99,7 @@ public class HiWayCreActor extends BaseCreActor {
 			am.writeEntryToLog(invoc.getExecutableLogEntry());
 			am.writeEntryToLog(invoc.getScriptLogEntry());
 		} catch (NotBoundException | NotDerivableException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 

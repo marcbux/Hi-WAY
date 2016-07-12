@@ -113,6 +113,7 @@ public class Worker {
 	}
 
 	public void init(String[] args) {
+
 		conf = new HiWayConfiguration();
 		try {
 			hdfs = FileSystem.get(conf);
@@ -172,6 +173,14 @@ public class Worker {
 			n = Integer.parseInt(reader.readLine());
 			for (int i = 0; i < n; i++) {
 				outputFiles.add(new Data(reader.readLine(), containerId));
+			}
+			File stdout = new File(id + "_" + Invocation.STDOUT_FILENAME);
+			if (!stdout.exists()) {
+				stdout.createNewFile();
+			}
+			File stderr = new File(id + "_" + Invocation.STDOUT_FILENAME);
+			if (!stderr.exists()) {
+				stderr.createNewFile();
 			}
 		} catch (IOException e) {
 			e.printStackTrace(System.out);

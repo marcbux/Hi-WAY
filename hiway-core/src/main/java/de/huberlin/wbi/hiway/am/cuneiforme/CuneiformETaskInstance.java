@@ -25,7 +25,7 @@ public class CuneiformETaskInstance extends TaskInstance {
 			preSriptData.stageOut();
 			preSriptData.addToLocalResourceMap(localResources);
 		} catch (IOException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		return localResources;

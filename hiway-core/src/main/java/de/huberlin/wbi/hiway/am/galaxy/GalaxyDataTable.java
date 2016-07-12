@@ -88,7 +88,7 @@ public class GalaxyDataTable {
 		try {
 			outer.put("fields", inner);
 		} catch (JSONException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 		return outer;

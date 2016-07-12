@@ -181,7 +181,7 @@ public class ProvenanceManager implements HiwayDBI {
 			default:
 			}
 		} catch (JSONException e) {
-			e.printStackTrace();
+			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 	}
