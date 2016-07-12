@@ -162,11 +162,11 @@ public class Data implements Comparable<Data> {
 	public Path getHdfsPath() {
 		// if a container id has been created, this file is intermediate and will be found in the container's folder
 		if (containerId != null) {
-			return new Path (new Path(hdfsApplicationDirectory, containerId), fileName);
+			return completeHdfsPath(new Path(hdfsApplicationDirectory, containerId));
 		}
-		
-		// else, we should check if the file is an input file; if so, it can be found directly in the hdfs base directory 
-		Path basePath = new Path (hdfsBaseDirectory, fileName);
+
+		// else, we should check if the file is an input file; if so, it can be found directly in the hdfs base directory
+		Path basePath = completeHdfsPath(hdfsBaseDirectory);
 		try {
 			if (hdfs.exists(basePath)) {
 				return basePath;
@@ -174,9 +174,16 @@ public class Data implements Comparable<Data> {
 		} catch (IOException e) {
 			e.printStackTrace(System.out);
 		}
-		
+
 		// otherwise, it is fair to assume that the file will be found in the application's folder
-		return new Path (hdfsApplicationDirectory, fileName);
+		return completeHdfsPath(hdfsApplicationDirectory);
+	}
+	
+	private Path completeHdfsPath(Path pathPrefix) {
+		Path directory = pathPrefix;
+		if (!localDirectory.isUriPathAbsolute())
+			directory = new Path(directory, localDirectory);
+		return new Path(directory, fileName);
 	}
 
 	public Path getLocalPath() {
