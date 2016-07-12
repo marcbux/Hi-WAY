@@ -597,7 +597,9 @@ public abstract class WorkflowDriver {
 			Iterator<?> keys = obj.keys();
 			while (keys.hasNext()) {
 				String key = (String) keys.next();
-				customMemoryMap.put(key, obj.getInt(key));
+				int minMem = conf.getInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, YarnConfiguration.DEFAULT_RM_SCHEDULER_MINIMUM_ALLOCATION_MB);
+				int desiredMem = obj.getInt(key);
+				customMemoryMap.put(key, (desiredMem % minMem) == 0 ? desiredMem : (desiredMem / minMem + 1) * minMem);
 			}
 		}
 
