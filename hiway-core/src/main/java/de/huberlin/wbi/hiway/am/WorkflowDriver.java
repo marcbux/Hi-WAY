@@ -256,7 +256,6 @@ public abstract class WorkflowDriver {
 
 	private Path summaryPath;
 	private Data workflowFile;
-	private boolean workflowIsInput;
 
 	private Path workflowPath;
 
@@ -583,7 +582,7 @@ public abstract class WorkflowDriver {
 		hdfsApplicationDirectory = new Path(hdfsSandboxDirectory, appId);
 		Data.setHdfsApplicationDirectory(hdfsApplicationDirectory);
 		Data.setHdfs(hdfs);
-		
+
 		if (cliParser.hasOption("custom")) {
 			Data customMemPath = new Data(cliParser.getOptionValue("custom"));
 			customMemPath.stageIn();
@@ -721,7 +720,6 @@ public abstract class WorkflowDriver {
 				workflowFile.stageOut();
 			} else {
 				workflowFile = new Data(workflowPath);
-				workflowFile.setInput(workflowIsInput);
 				workflowFile.stageIn();
 			}
 
@@ -733,8 +731,8 @@ public abstract class WorkflowDriver {
 			case roundRobin:
 			case heft:
 				int workerMemory = conf.getInt(YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
-				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.roundRobin) ? new RoundRobin(getWorkflowName())
-						: new HEFT(getWorkflowName(), workerMemory / containerMemory);
+				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.roundRobin) ? new RoundRobin(getWorkflowName()) : new HEFT(
+						getWorkflowName(), workerMemory / containerMemory);
 				break;
 			case greedy:
 				scheduler = new GreedyQueue(getWorkflowName());

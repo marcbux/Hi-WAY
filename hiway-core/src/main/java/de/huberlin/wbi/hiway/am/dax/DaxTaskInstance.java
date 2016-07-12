@@ -78,7 +78,7 @@ public class DaxTaskInstance extends TaskInstance {
 		if (runtime > 0) {
 			Set<Data> intermediateData = new HashSet<>();
 			for (Data input : super.getInputData()) {
-				if (!input.isInput()) {
+				if (input.getContainerId() != null) {
 					intermediateData.add(input);
 				}
 			}

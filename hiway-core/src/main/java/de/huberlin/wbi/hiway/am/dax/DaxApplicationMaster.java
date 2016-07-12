@@ -137,7 +137,6 @@ public class DaxApplicationMaster extends WorkflowDriver {
 					case "input":
 						if (!getFiles().containsKey(fileName)) {
 							Data data = new Data(fileName);
-							data.setInput(true);
 							getFiles().put(fileName, data);
 						}
 						Data data = getFiles().get(fileName);
@@ -149,7 +148,6 @@ public class DaxApplicationMaster extends WorkflowDriver {
 						data = getFiles().get(fileName);
 						if (!task.getInputData().contains(data)) {
 							task.addOutputData(data, size);
-							data.setInput(false);
 						}
 						outputs.add(fileName);
 						break;

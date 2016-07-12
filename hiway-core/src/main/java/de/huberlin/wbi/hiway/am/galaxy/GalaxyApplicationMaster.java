@@ -455,7 +455,6 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 						}
 
 						String idName = id + "_output";
-						data.setInput(true);
 						getFiles().put(idName, data);
 					}
 

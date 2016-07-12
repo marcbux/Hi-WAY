@@ -88,7 +88,6 @@ public class LogApplicationMaster extends WorkflowDriver {
 						String inputName = entry.getFile();
 						if (!getFiles().containsKey(inputName)) {
 							Data data = new Data(inputName);
-							data.setInput(true);
 							getFiles().put(inputName, data);
 						}
 						Data data = getFiles().get(inputName);
@@ -102,7 +101,6 @@ public class LogApplicationMaster extends WorkflowDriver {
 						}
 						data = getFiles().get(outputName);
 						task.addOutputData(data);
-						data.setInput(false);
 						taskProcucingThisFile.put(data, task);
 						break;
 					case JsonReportEntry.KEY_INVOC_SCRIPT:
@@ -128,7 +126,7 @@ public class LogApplicationMaster extends WorkflowDriver {
 
 		for (TaskInstance task : tasks.values()) {
 			for (Data data : task.getInputData()) {
-				if (data.isInput())
+				if (!taskProcucingThisFile.containsKey(data))
 					continue;
 				TaskInstance parentTask = taskProcucingThisFile.get(data);
 				try {

@@ -117,7 +117,6 @@ public class CuneiformEApplicationMaster extends WorkflowDriver {
 
 				if (!files.containsKey(fileName)) {
 					Data file = new Data(fileName);
-					file.setInput(true);
 					files.put(fileName, file);
 				}
 				task.addInputData(files.get(fileName));

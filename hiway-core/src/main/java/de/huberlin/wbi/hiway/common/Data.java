@@ -78,9 +78,6 @@ public class Data implements Comparable<Data> {
 
 	private String fileName;
 
-	// is the file input of the workflow
-	private boolean input;
-
 	private Path localDirectory;
 
 	// is the file output of the workflow
@@ -91,7 +88,6 @@ public class Data implements Comparable<Data> {
 	}
 
 	public Data(Path localPath, String containerId) {
-		this.input = false;
 		this.output = false;
 
 		this.localDirectory = localPath.getParent();
@@ -163,19 +159,24 @@ public class Data implements Comparable<Data> {
 		return containerId;
 	}
 
-	public Path getHdfsDirectory() {
-		Path hdfsDirectory = isInput() ? hdfsBaseDirectory : hdfsApplicationDirectory;
-		if (containerId != null)
-			hdfsDirectory = new Path(hdfsDirectory, containerId);
-		return localDirectory.isUriPathAbsolute() ? hdfsDirectory : new Path(hdfsDirectory, localDirectory);
-	}
-
 	public Path getHdfsPath() {
-		return new Path(getHdfsDirectory(), fileName);
-	}
-
-	public Path getLocalDirectory() {
-		return localDirectory;
+		// if a container id has been created, this file is intermediate and will be found in the container's folder
+		if (containerId != null) {
+			return new Path (new Path(hdfsApplicationDirectory, containerId), fileName);
+		}
+		
+		// else, we should check if the file is an input file; if so, it can be found directly in the hdfs base directory 
+		Path basePath = new Path (hdfsBaseDirectory, fileName);
+		try {
+			if (hdfs.exists(basePath)) {
+				return basePath;
+			}
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
+		}
+		
+		// otherwise, it is fair to assume that the file will be found in the application's folder
+		return new Path (hdfsApplicationDirectory, fileName);
 	}
 
 	public Path getLocalPath() {
@@ -189,10 +190,6 @@ public class Data implements Comparable<Data> {
 	@Override
 	public int hashCode() {
 		return this.getLocalPath().hashCode();
-	}
-
-	public boolean isInput() {
-		return input;
 	}
 
 	public boolean isOutput() {
@@ -211,10 +208,6 @@ public class Data implements Comparable<Data> {
 		this.containerId = containerId;
 	}
 
-	public void setInput(boolean input) {
-		this.input = input;
-	}
-
 	public void setOutput(boolean output) {
 		this.output = output;
 	}
@@ -230,7 +223,7 @@ public class Data implements Comparable<Data> {
 
 	public void stageOut() throws IOException {
 		Path localPath = getLocalPath();
-		Path hdfsDirectory = getHdfsDirectory();
+		Path hdfsDirectory = getHdfsPath().getParent();
 		Path hdfsPath = getHdfsPath();
 		if (hdfsDirectory.depth() > 0) {
 			mkHdfsDir(hdfsDirectory);

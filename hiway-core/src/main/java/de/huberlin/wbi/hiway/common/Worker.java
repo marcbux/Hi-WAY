@@ -165,9 +165,8 @@ public class Worker {
 			int n = Integer.parseInt(reader.readLine());
 			for (int i = 0; i < n; i++) {
 				String[] inputElements = reader.readLine().split(",");
-				String otherContainerId = inputElements.length > 2 ? inputElements[2] : null;
+				String otherContainerId = inputElements.length > 1 ? inputElements[1] : null;
 				Data input = new Data(inputElements[0], otherContainerId);
-				input.setInput(Boolean.parseBoolean(inputElements[1]));
 				inputFiles.add(input);
 			}
 			n = Integer.parseInt(reader.readLine());

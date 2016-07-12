@@ -157,7 +157,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 				JSONObject fileJo = new JSONObject();
 				fileJo.putOpt("path", fileName);
 				fileJo.putOpt("name", fileName.split("\\.(?=[^\\.]+$)")[0]);
-				Path dir = data.getLocalDirectory();
+				Path dir = data.getLocalPath().getParent();
 				String dirString = (dir == null) ? "" : dir.toString();
 				if (dirString.length() == 0) {
 					dirString = ".";

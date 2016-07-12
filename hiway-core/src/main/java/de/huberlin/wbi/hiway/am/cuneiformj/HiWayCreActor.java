@@ -35,14 +35,12 @@ package de.huberlin.wbi.hiway.am.cuneiformj;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import de.huberlin.wbi.cuneiform.core.actormodel.Message;
 import de.huberlin.wbi.cuneiform.core.cre.BaseCreActor;
 import de.huberlin.wbi.cuneiform.core.cre.TicketReadyMsg;
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotBoundException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.Ticket;
-import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketFinishedMsg;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
@@ -50,24 +48,10 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 public class HiWayCreActor extends BaseCreActor {
 
 	private CuneiformJApplicationMaster am;
-	private boolean init;
 
 	public HiWayCreActor(CuneiformJApplicationMaster am) {
 		super();
 		this.am = am;
-		this.init = true;
-	}
-
-	public boolean isInit() {
-		return init;
-	}
-
-	@Override
-	protected synchronized void processMsg(Message msg) {
-		super.processMsg(msg);
-		if (msg instanceof TicketFinishedMsg) {
-			this.init = false;
-		}
 	}
 
 	@Override
@@ -83,7 +67,6 @@ public class HiWayCreActor extends BaseCreActor {
 
 				if (!am.getFiles().containsKey(inputName)) {
 					Data data = new Data(inputName);
-					data.setInput(isInit());
 					am.getFiles().put(inputName, data);
 				}
 				Data data = am.getFiles().get(inputName);

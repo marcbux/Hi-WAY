@@ -113,8 +113,6 @@ public class LaunchContainerRunnable implements Runnable {
 			writer.newLine();
 			for (Data inputData : task.getInputData()) {
 				writer.write(inputData.getLocalPath().toString());
-				writer.write(",");
-				writer.write(Boolean.toString(inputData.isInput()));
 				if (inputData.getContainerId() != null) {
 					writer.write(",");
 					writer.write(inputData.getContainerId());
