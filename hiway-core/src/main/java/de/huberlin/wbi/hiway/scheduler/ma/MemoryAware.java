@@ -32,13 +32,23 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.scheduler.ma;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.yarn.api.records.Container;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 
+import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.WorkflowScheduler;
 
@@ -52,9 +62,24 @@ public class MemoryAware extends WorkflowScheduler {
 
 	private Map<Integer, Queue<TaskInstance>> queuePerMem;
 
-	public MemoryAware(String workflowName) {
+	@SuppressWarnings("rawtypes")
+	private AMRMClientAsync amRMClient;
+	private int maxMem;
+	private int maxCores;
+
+	@SuppressWarnings("rawtypes")
+	public MemoryAware(String workflowName, AMRMClientAsync amRMClient) {
 		super(workflowName);
 		queuePerMem = new HashMap<>();
+		this.amRMClient = amRMClient;
+	}
+
+	@Override
+	public void init(HiWayConfiguration conf_, FileSystem hdfs_, int containerMemory_, Map<String, Integer> customMemoryMap_, int containerCores_,
+			int requestPriority_) {
+		super.init(conf_, hdfs_, containerMemory_, customMemoryMap_, containerCores_, requestPriority_);
+		maxMem = conf.getInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_MB, YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_MB);
+		maxCores = conf.getInt(YarnConfiguration.RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES, YarnConfiguration.DEFAULT_RM_SCHEDULER_MAXIMUM_ALLOCATION_VCORES);
 	}
 
 	@Override
@@ -78,8 +103,6 @@ public class MemoryAware extends WorkflowScheduler {
 
 	@Override
 	public TaskInstance getTask(Container container) {
-		System.out.println("Looking for task to place in container " + container.getId() + "@" + container.getNodeId().getHost() + " ("
-				+ container.getResource().getVirtualCores() + ", " + container.getResource().getMemory() + ").");
 		numberOfRemainingTasks--;
 		numberOfRunningTasks++;
 
@@ -87,7 +110,8 @@ public class MemoryAware extends WorkflowScheduler {
 		Queue<TaskInstance> queue = queuePerMem.get(memory);
 		TaskInstance task = queue.remove();
 
-		System.out.println("Found task " + task + ".");
+		System.out.println("Assigned task " + task + " to container " + container.getId() + "@" + container.getNodeId().getHost() + ":"
+				+ container.getResource().getVirtualCores() + ":" + container.getResource().getMemory());
 
 		task.incTries();
 		return task;
@@ -99,6 +123,24 @@ public class MemoryAware extends WorkflowScheduler {
 		for (Queue<TaskInstance> queue : queuePerMem.values())
 			nReadyTasks += queue.size();
 		return nReadyTasks;
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public boolean hasNextNodeRequest() {
+		boolean hasNextNodeRequest = super.hasNextNodeRequest();
+		// Hadoop has a weird bug where open container requests are sometimes "forgotten" (i.e., not fulfilled despite available resources).
+		// Running into this bug can be prevented by occasionally re-issuing ContainerRequests.
+		if (!hasNextNodeRequest) {
+			List<? extends Collection<ContainerRequest>> requestCollections = amRMClient.getMatchingRequests(Priority.newInstance(requestPriority),
+					ResourceRequest.ANY, Resource.newInstance(maxMem, maxCores));
+			for (Collection<ContainerRequest> requestCollection : requestCollections) {
+				ContainerRequest first = requestCollection.iterator().next();
+				amRMClient.removeContainerRequest(first);
+				amRMClient.addContainerRequest(first);
+			}
+		}
+		return hasNextNodeRequest;
 	}
 
 }

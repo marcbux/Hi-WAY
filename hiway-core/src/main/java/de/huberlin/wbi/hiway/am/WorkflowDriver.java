@@ -45,6 +45,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -740,7 +741,7 @@ public abstract class WorkflowDriver {
 				scheduler = new GreedyQueue(getWorkflowName());
 				break;
 			case memoryAware:
-				scheduler = new MemoryAware(getWorkflowName());
+				scheduler = new MemoryAware(getWorkflowName(), amRMClient);
 				break;
 			default:
 				C3PO c3po = new C3PO(getWorkflowName());
@@ -826,54 +827,40 @@ public abstract class WorkflowDriver {
 						}
 
 						if (HiWayConfiguration.verbose)
-							System.out.println("Requested container ask: " + request.toString() + " Nodes" + request.getNodes().toString());
+							System.out.println("Requested container " + request.getNodes() + ":" + request.getCapability().getVirtualCores() + ":"
+									+ request.getCapability().getMemory());
 						writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 
 						amRMClient.addContainerRequest(request);
 						numRequestedContainers.incrementAndGet();
 					}
-					Thread.sleep(1000);
+					Thread.sleep(1000);	
 
 					System.out.println("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
 							+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
 					if (HiWayConfiguration.verbose) {
 						// information on outstanding container request
-						StringBuilder sb = new StringBuilder("Open Container Requests:");
-						if (scheduler.relaxLocality()) {
+						StringBuilder sb = new StringBuilder("Open Container Requests: ");
+						Set<String> names = new HashSet<>();
+						names.add(ResourceRequest.ANY);
+						if (!scheduler.relaxLocality())
+							names = scheduler.getDbInterface().getHostNames();
+						for (String node : names) {
 							List<? extends Collection<ContainerRequest>> requestCollections = amRMClient.getMatchingRequests(
-									Priority.newInstance(requestPriority), ResourceRequest.ANY, Resource.newInstance(containerMemory, containerCores));
-							int i = 0;
+									Priority.newInstance(requestPriority), node, Resource.newInstance(maxMem, maxCores));
 							for (Collection<ContainerRequest> requestCollection : requestCollections) {
-								i += requestCollection.size();
-							}
-							if (i > 0) {
-								sb.append(" ");
-								sb.append(ResourceRequest.ANY);
+								ContainerRequest first = requestCollection.iterator().next();
+								sb.append(node);
 								sb.append(":");
-								sb.append(i);
-							}
-						} else {
-							for (String node : scheduler.getDbInterface().getHostNames()) {
-								List<? extends Collection<ContainerRequest>> requestCollections = amRMClient.getMatchingRequests(
-										Priority.newInstance(requestPriority), node, Resource.newInstance(containerMemory, containerCores));
-								int i = 0;
-								for (Collection<ContainerRequest> requestCollection : requestCollections) {
-									i += requestCollection.size();
-								}
-								if (i > 0) {
-									sb.append(" ");
-									sb.append(node);
-									sb.append(":");
-									sb.append(i);
-								}
+								sb.append(first.getCapability().getVirtualCores());
+								sb.append(":");
+								sb.append(first.getCapability().getMemory());
+								sb.append(":");
+								sb.append(requestCollection.size());
+								sb.append(" ");
 							}
 						}
 						System.out.println(sb.toString());
-						// nice to have would be:
-						// completed containers by task name
-						// running containers by task name and node
-						// ready containers by task name
-						// future containers by task name
 					}
 
 				} catch (InterruptedException e) {

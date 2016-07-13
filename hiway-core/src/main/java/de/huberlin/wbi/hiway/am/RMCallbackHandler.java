@@ -71,9 +71,9 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 				container.getNodeId().getHost(), container.getResource());
 
 		for (Collection<ContainerRequest> requestCollection : requestCollections) {
-			for (ContainerRequest request : requestCollection) {
+			ContainerRequest request = requestCollection.iterator().next();
+			if (request.getCapability().equals(container.getResource()))
 				return request;
-			}
 		}
 		return null;
 	}
@@ -130,7 +130,8 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 	public void onContainersAllocated(List<Container> allocatedContainers) {
 		if (HiWayConfiguration.verbose) {
 			for (Container container : allocatedContainers) {
-				System.out.println("Allocated container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
+				System.out.println("Allocated container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost()
+						+ " with capability " + container.getResource().getVirtualCores() + ":" + container.getResource().getMemory());
 			}
 		}
 
@@ -153,13 +154,15 @@ public class RMCallbackHandler implements AMRMClientAsync.CallbackHandler {
 
 			if (request != null) {
 				if (HiWayConfiguration.verbose)
-					System.out.println("Removing container request " + request.getNodes() + "," + request.getRelaxLocality());
+					System.out.println("Removing container request " + request.getNodes() + ":" + request.getCapability().getVirtualCores() + ":"
+							+ request.getCapability().getMemory());
 				am.getAmRMClient().removeContainerRequest(request);
 				am.getNumAllocatedContainers().incrementAndGet();
 				containerQueue.add(container);
 			} else {
 				if (HiWayConfiguration.verbose)
-					System.out.println("Releasing container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost());
+					System.out.println("Releasing container " + container.getId().getContainerId() + " on node " + container.getNodeId().getHost()
+							+ " with capability " + container.getResource().getVirtualCores() + ":" + container.getResource().getMemory());
 				am.getAmRMClient().releaseAssignedContainer(container.getId());
 			}
 		}
