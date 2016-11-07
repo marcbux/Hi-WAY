@@ -49,6 +49,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -812,7 +813,13 @@ public abstract class WorkflowDriver {
 			while (!done) {
 				try {
 					while (scheduler.hasNextNodeRequest()) {
-						ContainerRequest request = scheduler.getNextNodeRequest();
+						ContainerRequest request;
+						try {
+							request = scheduler.getNextNodeRequest();
+						} catch (NoSuchElementException e) {
+							e.printStackTrace(System.out);
+							break;
+						}
 
 						JSONObject value = new JSONObject();
 						try {
@@ -834,7 +841,7 @@ public abstract class WorkflowDriver {
 						amRMClient.addContainerRequest(request);
 						numRequestedContainers.incrementAndGet();
 					}
-					Thread.sleep(1000);	
+					Thread.sleep(1000);
 
 					System.out.println("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
 							+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);

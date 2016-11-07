@@ -113,7 +113,6 @@ public class CuneiformEApplicationMaster extends WorkflowDriver {
 			TaskInstance task = new CuneiformETaskInstance(getRunId(), taskName, taskId);
 
 			for (String fileName : request.getStageInFilenameSet()) {
-				System.out.println("Input file: " + fileName);
 
 				if (!files.containsKey(fileName)) {
 					Data file = new Data(fileName);
@@ -170,7 +169,6 @@ public class CuneiformEApplicationMaster extends WorkflowDriver {
 				null, JsonReportEntry.KEY_INVOC_OUTPUT, sb.toString()));
 
 		for (String fileNameString : reply.getStageOutFilenameList()) {
-			System.out.println("Output file: " + fileNameString);
 			files.put(fileNameString, new Data(fileNameString, containerId.toString()));
 		}
 
