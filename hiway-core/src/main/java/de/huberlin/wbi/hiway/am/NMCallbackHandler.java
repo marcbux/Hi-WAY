@@ -67,14 +67,14 @@ public class NMCallbackHandler implements NMClientAsync.CallbackHandler {
 
 	@Override
 	public void onGetContainerStatusError(ContainerId containerId, Throwable t) {
-		System.out.println("Failed to query the status of Container " + containerId);
+		WorkflowDriver.writeToStdout("Failed to query the status of Container " + containerId);
 		t.printStackTrace();
 		System.exit(-1);
 	}
 
 	@Override
 	public void onStartContainerError(ContainerId containerId, Throwable t) {
-		System.out.println("Failed to start Container " + containerId);
+		WorkflowDriver.writeToStdout("Failed to start Container " + containerId);
 		t.printStackTrace();
 		containers.remove(containerId);
 		am.getNumCompletedContainers().incrementAndGet();
@@ -83,7 +83,7 @@ public class NMCallbackHandler implements NMClientAsync.CallbackHandler {
 
 	@Override
 	public void onStopContainerError(ContainerId containerId, Throwable t) {
-		System.out.println("Failed to stop Container " + containerId);
+		WorkflowDriver.writeToStdout("Failed to stop Container " + containerId);
 		t.printStackTrace();
 		containers.remove(containerId);
 	}

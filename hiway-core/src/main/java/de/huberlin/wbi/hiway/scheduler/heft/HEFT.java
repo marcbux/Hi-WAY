@@ -43,7 +43,7 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
@@ -77,7 +77,7 @@ public class HEFT extends StaticScheduler {
 		super(workflowName);
 
 		this.containers = containers;
-		System.out.println("HEFT has detected " + containers + " containers per worker node.");
+		WorkflowDriver.writeToStdout("HEFT has detected " + containers + " containers per worker node.");
 
 		readyTimePerTask = new HashMap<>();
 		freeTimeSlotStartsPerNode = new HashMap<>();
@@ -163,7 +163,7 @@ public class HEFT extends StaticScheduler {
 		schedule.put(task, bestNode);
 		taskOnsetsPerNode.get(bestNode).get(bestI).put(bestNodeFreeTimeSlotActualStart, task);
 		if (HiWayConfiguration.verbose)
-			System.out.println("Task " + task + " scheduled on node " + bestNode);
+			WorkflowDriver.writeToStdout("Task " + task + " scheduled on node " + bestNode);
 		if (task.readyToExecute()) {
 			addTaskToQueue(task);
 		}
@@ -205,7 +205,7 @@ public class HEFT extends StaticScheduler {
 	@Override
 	public void addTasks(Collection<TaskInstance> tasks) {
 		if (queues.size() == 0) {
-			System.out.println("No provenance data available for static scheduling. Aborting.");
+			WorkflowDriver.writeToStdout("No provenance data available for static scheduling. Aborting.");
 			System.exit(-1);
 		}
 

@@ -42,8 +42,10 @@ import java.io.StringReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -132,10 +134,10 @@ public abstract class WorkflowDriver {
 	 * If the debug flag is set, dump out contents of current working directory and the environment to stdout for debugging.
 	 */
 	private static void dumpOutDebugInfo() {
-		System.out.println("Dump debug output");
+		WorkflowDriver.writeToStdout("Dump debug output");
 		Map<String, String> envs = System.getenv();
 		for (Map.Entry<String, String> env : envs.entrySet()) {
-			System.out.println("System env: key=" + env.getKey() + ", val=" + env.getValue());
+			WorkflowDriver.writeToStdout("System env: key=" + env.getKey() + ", val=" + env.getValue());
 		}
 
 		String cmd = "ls -al";
@@ -148,7 +150,7 @@ public abstract class WorkflowDriver {
 			try (BufferedReader buf = new BufferedReader(new InputStreamReader(pr.getInputStream()))) {
 				String line = "";
 				while ((line = buf.readLine()) != null) {
-					System.out.println("System CWD content: " + line);
+					WorkflowDriver.writeToStdout("System CWD content: " + line);
 				}
 			}
 		} catch (IOException | InterruptedException e) {
@@ -168,22 +170,22 @@ public abstract class WorkflowDriver {
 	public static void loop(WorkflowDriver appMaster, String[] args) {
 		boolean result = false;
 		try {
-			System.out.println("Initializing ApplicationMaster");
+			WorkflowDriver.writeToStdout("Initializing ApplicationMaster");
 			boolean doRun = appMaster.init(args);
 			if (!doRun) {
 				System.exit(0);
 			}
 			result = appMaster.run();
 		} catch (Throwable t) {
-			System.out.println("Error running ApplicationMaster");
+			WorkflowDriver.writeToStdout("Error running ApplicationMaster");
 			t.printStackTrace();
 			System.exit(-1);
 		}
 		if (result) {
-			System.out.println("Application Master completed successfully. exiting");
+			WorkflowDriver.writeToStdout("Application Master completed successfully. exiting");
 			System.exit(0);
 		} else {
-			System.out.println("Application Master failed. exiting");
+			WorkflowDriver.writeToStdout("Application Master failed. exiting");
 			System.exit(2);
 		}
 	}
@@ -321,7 +323,7 @@ public abstract class WorkflowDriver {
 			}
 
 		} catch (Exception e) {
-			System.out.println("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
+			WorkflowDriver.writeToStdout("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
 			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
@@ -336,29 +338,29 @@ public abstract class WorkflowDriver {
 			try {
 				launchThread.join(10000);
 			} catch (InterruptedException e) {
-				System.out.println("Exception thrown in thread join: " + e.getMessage());
+				WorkflowDriver.writeToStdout("Exception thrown in thread join: " + e.getMessage());
 				e.printStackTrace(System.out);
 				System.exit(-1);
 			}
 		}
 
 		// When the application completes, it should stop all running containers
-		System.out.println("Application completed. Stopping running containers");
+		WorkflowDriver.writeToStdout("Application completed. Stopping running containers");
 		nmClientAsync.stop();
 
 		// When the application completes, it should send a finish application signal to the RM
-		System.out.println("Application completed. Signalling finish to RM");
+		WorkflowDriver.writeToStdout("Application completed. Signalling finish to RM");
 
 		FinalApplicationStatus appStatus;
 		String appMessage = null;
 		success = true;
 
-		// System.out.println("Failed Containers: " + numFailedContainers.get());
-		// System.out.println("Completed Containers: " + numCompletedContainers.get());
+		// WorkflowDriver.writeToStdout("Failed Containers: " + numFailedContainers.get());
+		// WorkflowDriver.writeToStdout("Completed Containers: " + numCompletedContainers.get());
 
 		int numTotalContainers = scheduler.getNumberOfTotalTasks();
 
-		// System.out.println("Total Scheduled Containers: " + numTotalContainers);
+		// WorkflowDriver.writeToStdout("Total Scheduled Containers: " + numTotalContainers);
 
 		if (numFailedContainers.get() == 0 && numCompletedContainers.get() == numTotalContainers) {
 			appStatus = FinalApplicationStatus.SUCCEEDED;
@@ -402,7 +404,7 @@ public abstract class WorkflowDriver {
 				new Data(summaryPath).stageOut();
 			}
 		} catch (IOException e) {
-			System.out.println("Error when attempting to stage out federated output log.");
+			WorkflowDriver.writeToStdout("Error when attempting to stage out federated output log.");
 			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
@@ -410,7 +412,7 @@ public abstract class WorkflowDriver {
 		try {
 			amRMClient.unregisterApplicationMaster(appStatus, appMessage, null);
 		} catch (YarnException | IOException e) {
-			System.out.println("Failed to unregister application");
+			WorkflowDriver.writeToStdout("Failed to unregister application");
 			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
@@ -632,7 +634,7 @@ public abstract class WorkflowDriver {
 			throw new RuntimeException(Environment.NM_PORT.name() + " not set in the environment");
 		}
 
-		System.out.println("Application master for app" + ", appId=" + appAttemptID.getApplicationId().getId() + ", clustertimestamp="
+		WorkflowDriver.writeToStdout("Application master for app" + ", appId=" + appAttemptID.getApplicationId().getId() + ", clustertimestamp="
 				+ appAttemptID.getApplicationId().getClusterTimestamp() + ", attemptId=" + appAttemptID.getAttemptId());
 
 		String shellEnvs[] = conf.getStrings(HiWayConfiguration.HIWAY_WORKER_SHELL_ENV, HiWayConfiguration.HIWAY_WORKER_SHELL_ENV_DEFAULT);
@@ -691,7 +693,7 @@ public abstract class WorkflowDriver {
 	 */
 	@SuppressWarnings("unchecked")
 	public boolean run() throws YarnException, IOException {
-		System.out.println("Starting ApplicationMaster");
+		WorkflowDriver.writeToStdout("Starting ApplicationMaster");
 
 		Credentials credentials = UserGroupInformation.getCurrentUser().getCredentials();
 		try (DataOutputBuffer dob = new DataOutputBuffer()) {
@@ -796,16 +798,16 @@ public abstract class WorkflowDriver {
 			// Dump out information about cluster capability as seen by the resource manager
 			int maxMem = response.getMaximumResourceCapability().getMemory();
 			int maxCores = response.getMaximumResourceCapability().getVirtualCores();
-			System.out.println("Max mem capabililty of resources in this cluster " + maxMem);
+			WorkflowDriver.writeToStdout("Max mem capabililty of resources in this cluster " + maxMem);
 
 			// A resource ask cannot exceed the max.
 			if (containerMemory > maxMem) {
-				System.out.println("Container memory specified above max threshold of cluster." + " Using max value." + ", specified=" + containerMemory
+				WorkflowDriver.writeToStdout("Container memory specified above max threshold of cluster." + " Using max value." + ", specified=" + containerMemory
 						+ ", max=" + maxMem);
 				containerMemory = maxMem;
 			}
 			if (containerCores > maxCores) {
-				System.out.println("Container vcores specified above max threshold of cluster." + " Using max value." + ", specified=" + containerCores
+				WorkflowDriver.writeToStdout("Container vcores specified above max threshold of cluster." + " Using max value." + ", specified=" + containerCores
 						+ ", max=" + maxCores);
 				containerCores = maxCores;
 			}
@@ -834,7 +836,7 @@ public abstract class WorkflowDriver {
 						}
 
 						if (HiWayConfiguration.verbose)
-							System.out.println("Requested container " + request.getNodes() + ":" + request.getCapability().getVirtualCores() + ":"
+							WorkflowDriver.writeToStdout("Requested container " + request.getNodes() + ":" + request.getCapability().getVirtualCores() + ":"
 									+ request.getCapability().getMemory());
 						writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 
@@ -843,7 +845,7 @@ public abstract class WorkflowDriver {
 					}
 					Thread.sleep(1000);
 
-					System.out.println("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
+					WorkflowDriver.writeToStdout("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
 							+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
 					if (HiWayConfiguration.verbose) {
 						// information on outstanding container request
@@ -867,7 +869,7 @@ public abstract class WorkflowDriver {
 								sb.append(" ");
 							}
 						}
-						System.out.println(sb.toString());
+						WorkflowDriver.writeToStdout(sb.toString());
 					}
 
 				} catch (InterruptedException e) {
@@ -896,35 +898,35 @@ public abstract class WorkflowDriver {
 		String line;
 
 		try {
-			System.out.println("[script]");
+			WorkflowDriver.writeToStdout("[script]");
 			try (BufferedReader reader = new BufferedReader(new StringReader(task.getCommand()))) {
 				int i = 0;
 				while ((line = reader.readLine()) != null)
-					System.out.println(String.format("%02d  %s", Integer.valueOf(++i), line));
+					WorkflowDriver.writeToStdout(String.format("%02d  %s", Integer.valueOf(++i), line));
 			}
 
 			Data stdoutFile = new Data(task.getId() + "_" + Invocation.STDOUT_FILENAME, containerId.toString());
 			stdoutFile.stageIn();
 
-			System.out.println("[out]");
+			WorkflowDriver.writeToStdout("[out]");
 			try (BufferedReader reader = new BufferedReader(new FileReader(stdoutFile.getLocalPath().toString()))) {
 				while ((line = reader.readLine()) != null)
-					System.out.println(line);
+					WorkflowDriver.writeToStdout(line);
 			}
 
 			Data stderrFile = new Data(task.getId() + "_" + Invocation.STDERR_FILENAME, containerId.toString());
 			stderrFile.stageIn();
 
-			System.out.println("[err]");
+			WorkflowDriver.writeToStdout("[err]");
 			try (BufferedReader reader = new BufferedReader(new FileReader(stderrFile.getLocalPath().toString()))) {
 				while ((line = reader.readLine()) != null)
-					System.out.println(line);
+					WorkflowDriver.writeToStdout(line);
 			}
 		} catch (IOException e) {
 			e.printStackTrace(System.out);
 		}
 
-		System.out.println("[end]");
+		WorkflowDriver.writeToStdout("[end]");
 	}
 
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
@@ -955,6 +957,11 @@ public abstract class WorkflowDriver {
 			System.exit(-1);
 		}
 		scheduler.addEntryToDB(entry);
+	}
+	
+	public static void writeToStdout(String s) {
+	  SimpleDateFormat dateFormat = new SimpleDateFormat("yy/MM/dd HH:mm:ss");
+    System.out.println(dateFormat.format(new Date()) + " " + s);
 	}
 
 }

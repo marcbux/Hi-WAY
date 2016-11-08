@@ -73,7 +73,7 @@ public class DaxApplicationMaster extends WorkflowDriver {
 	@Override
 	public Collection<TaskInstance> parseWorkflow() {
 		Map<Object, TaskInstance> tasks = new HashMap<>();
-		System.out.println("Parsing Pegasus DAX " + getWorkflowFile());
+		WorkflowDriver.writeToStdout("Parsing Pegasus DAX " + getWorkflowFile());
 
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
@@ -161,7 +161,7 @@ public class DaxApplicationMaster extends WorkflowDriver {
 
 				task.setCommand(taskName + arguments.toString());
 				if (HiWayConfiguration.verbose)
-					System.out.println("Adding task " + task + ": " + task.getInputData() + " -> " + task.getOutputData());
+					WorkflowDriver.writeToStdout("Adding task " + task + ": " + task.getInputData() + " -> " + task.getOutputData());
 			}
 
 			NodeList childNds = doc.getElementsByTagName("child");

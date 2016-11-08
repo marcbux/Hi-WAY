@@ -56,7 +56,7 @@ public class LogApplicationMaster extends WorkflowDriver {
 
 	@Override
 	public Collection<TaskInstance> parseWorkflow() {
-		System.out.println("Parsing Hi-WAY log " + getWorkflowFile());
+		WorkflowDriver.writeToStdout("Parsing Hi-WAY log " + getWorkflowFile());
 		Map<Long, TaskInstance> tasks = new HashMap<>();
 		Map<Data, TaskInstance> taskProcucingThisFile = new HashMap<>();
 

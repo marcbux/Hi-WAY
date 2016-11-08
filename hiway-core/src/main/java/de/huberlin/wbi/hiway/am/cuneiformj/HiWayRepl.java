@@ -38,6 +38,7 @@ import de.huberlin.wbi.cuneiform.core.repl.BaseRepl;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.CompoundExpr;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.NotDerivableException;
 import de.huberlin.wbi.cuneiform.core.ticketsrc.TicketSrcActor;
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 
 //Repl - Read evaluation print loop
 public class HiWayRepl extends BaseRepl {
@@ -51,13 +52,13 @@ public class HiWayRepl extends BaseRepl {
 
 	@Override
 	public void queryFailedPost(UUID queryId, Long ticketId, Exception e, String script, String stdOut, String stdErr) {
-		System.out.println("Query failed.");
+		WorkflowDriver.writeToStdout("Query failed.");
 		am.setDone();
 	}
 
 	@Override
 	public void queryFinishedPost(UUID queryId, CompoundExpr result) {
-		System.out.println("Query finished.");
+		WorkflowDriver.writeToStdout("Query finished.");
 		am.setDone();
 		try {
 			for (String output : result.normalize()) {

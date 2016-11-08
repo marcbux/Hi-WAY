@@ -63,6 +63,7 @@ import de.huberlin.hiwaydb.useDB.HiwayDBI;
 import de.huberlin.hiwaydb.useDB.HiwayDBNoSQL;
 import de.huberlin.hiwaydb.useDB.InvocStat;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.ProvenanceManager;
 import de.huberlin.wbi.hiway.common.TaskInstance;
@@ -128,9 +129,9 @@ public abstract class WorkflowScheduler {
 	}
 
 	public void addEntryToDB(JsonReportEntry entry) {
-		// System.out.println("HiwayDB: Adding entry " + entry + " to database.");
+		// WorkflowDriver.writeToStdout("HiwayDB: Adding entry " + entry + " to database.");
 		dbInterface.logToDB(entry);
-		// System.out.println("HiwayDB: Added entry to database.");
+		// WorkflowDriver.writeToStdout("HiwayDB: Added entry to database.");
 	}
 
 	protected abstract void addTask(TaskInstance task);
@@ -172,9 +173,9 @@ public abstract class WorkflowScheduler {
 		int run = getNumberOfRunningTasks();
 		int rem = numberOfRemainingTasks;
 
-		// System.out.println("Scheduled Containers Finished: " + fin);
-		// System.out.println("Scheduled Containers Running: " + run);
-		// System.out.println("Scheduled Containers Remaining: " + rem);
+		// WorkflowDriver.writeToStdout("Scheduled Containers Finished: " + fin);
+		// WorkflowDriver.writeToStdout("Scheduled Containers Running: " + run);
+		// WorkflowDriver.writeToStdout("Scheduled Containers Remaining: " + rem);
 
 		return fin + run + rem;
 	}
@@ -196,17 +197,17 @@ public abstract class WorkflowScheduler {
 		case SQL:
 			String sqlUser = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
 			if (sqlUser == null) {
-				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				WorkflowDriver.writeToStdout(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			String sqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
 			if (sqlPassword == null) {
-				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				WorkflowDriver.writeToStdout(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			String sqlURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
 			if (sqlURL == null) {
-				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				WorkflowDriver.writeToStdout(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			dbInterface = new HiwayDB(sqlUser, sqlPassword, sqlURL);
@@ -214,32 +215,32 @@ public abstract class WorkflowScheduler {
 		case NoSQL:
 			sqlUser = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
 			if (sqlUser == null) {
-				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				WorkflowDriver.writeToStdout(HiWayConfiguration.HIWAY_DB_SQL_USER + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			sqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD);
 			if (sqlPassword == null) {
-				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				WorkflowDriver.writeToStdout(HiWayConfiguration.HIWAY_DB_SQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			sqlURL = conf.get(HiWayConfiguration.HIWAY_DB_SQL_URL);
 			if (sqlURL == null) {
-				System.out.println(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				WorkflowDriver.writeToStdout(HiWayConfiguration.HIWAY_DB_SQL_URL + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			String noSqlBucket = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET);
 			if (noSqlBucket == null) {
-				System.out.println(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				WorkflowDriver.writeToStdout(HiWayConfiguration.HIWAY_DB_NOSQL_BUCKET + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			String noSqlPassword = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD);
 			if (noSqlPassword == null) {
-				System.out.println(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				WorkflowDriver.writeToStdout(HiWayConfiguration.HIWAY_DB_NOSQL_PASSWORD + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			String noSqlURIs = conf.get(HiWayConfiguration.HIWAY_DB_NOSQL_URLS);
 			if (noSqlURIs == null) {
-				System.out.println(HiWayConfiguration.HIWAY_DB_NOSQL_URLS + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+				WorkflowDriver.writeToStdout(HiWayConfiguration.HIWAY_DB_NOSQL_URLS + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 				throw new RuntimeException();
 			}
 			List<URI> noSqlURIList = new ArrayList<>();
@@ -289,7 +290,7 @@ public abstract class WorkflowScheduler {
 						String srcName = src.getName();
 						if (srcName.endsWith(".log")) {
 							Path dest = new Path(appDir.getName());
-							System.out.println("Parsing log " + dest.toString());
+							WorkflowDriver.writeToStdout("Parsing log " + dest.toString());
 							hdfs.copyToLocalFile(false, src, dest);
 
 							try (BufferedReader reader = new BufferedReader(new FileReader(new File(dest.toString())))) {
@@ -320,7 +321,7 @@ public abstract class WorkflowScheduler {
 		numberOfRunningTasks--;
 		numberOfFinishedTasks++;
 
-		System.out.println("Task " + task + " on container " + containerStatus.getContainerId() + " completed successfully after " + runtimeInMs + " ms");
+		WorkflowDriver.writeToStdout("Task " + task + " on container " + containerStatus.getContainerId() + " completed successfully after " + runtimeInMs + " ms");
 
 		return new ArrayList<>();
 	}
@@ -328,12 +329,12 @@ public abstract class WorkflowScheduler {
 	public Collection<ContainerId> taskFailed(TaskInstance task, ContainerStatus containerStatus) {
 		numberOfRunningTasks--;
 
-		System.out.println("Task " + task + " on container " + containerStatus.getContainerId() + " failed");
+		WorkflowDriver.writeToStdout("Task " + task + " on container " + containerStatus.getContainerId() + " failed");
 		if (task.retry(maxRetries)) {
-			System.out.println("Retrying task " + task + ".");
+			WorkflowDriver.writeToStdout("Retrying task " + task + ".");
 			addTask(task);
 		} else {
-			System.out.println("Task " + task + " has exceeded maximum number of allowed retries. Aborting workflow.");
+			WorkflowDriver.writeToStdout("Task " + task + " has exceeded maximum number of allowed retries. Aborting workflow.");
 			System.exit(-1);
 		}
 
@@ -355,18 +356,18 @@ public abstract class WorkflowScheduler {
 
 	public void updateRuntimeEstimates(String runId) {
 		if (HiWayConfiguration.verbose)
-			System.out.println("Updating Runtime Estimates.");
+			WorkflowDriver.writeToStdout("Updating Runtime Estimates.");
 
-		// System.out.println("HiwayDB: Querying Host Names from database.");
+		// WorkflowDriver.writeToStdout("HiwayDB: Querying Host Names from database.");
 		Collection<String> newHostIds = dbInterface.getHostNames();
-		// System.out.println("HiwayDB: Retrieved Host Names " + newHostIds.toString() + " from database.");
+		// WorkflowDriver.writeToStdout("HiwayDB: Retrieved Host Names " + newHostIds.toString() + " from database.");
 		newHostIds.removeAll(getNodeIds());
 		for (String newHostId : newHostIds) {
 			newHost(newHostId);
 		}
-		// System.out.println("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
+		// WorkflowDriver.writeToStdout("HiwayDB: Querying Task Ids for workflow " + workflowName + " from database.");
 		Collection<Long> newTaskIds = dbInterface.getTaskIdsForWorkflow(workflowName);
-		// System.out.println("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
+		// WorkflowDriver.writeToStdout("HiwayDB: Retrieved Task Ids " + newTaskIds.toString() + " from database.");
 
 		newTaskIds.removeAll(getTaskIds());
 		for (long newTaskId : newTaskIds) {
@@ -377,10 +378,10 @@ public abstract class WorkflowScheduler {
 			long oldMaxTimestamp = maxTimestampPerHost.get(hostName);
 			long newMaxTimestamp = oldMaxTimestamp;
 			for (long taskId : getTaskIds()) {
-				// System.out.println("HiwayDB: Querying InvocStats for task id " + taskId + " on host " + hostName + " since timestamp " + oldMaxTimestamp
+				// WorkflowDriver.writeToStdout("HiwayDB: Querying InvocStats for task id " + taskId + " on host " + hostName + " since timestamp " + oldMaxTimestamp
 				// + " from database.");
 				Collection<InvocStat> invocStats = dbInterface.getLogEntriesForTaskOnHostSince(taskId, hostName, oldMaxTimestamp);
-				// System.out.println("HiwayDB: Retrieved InvocStats " + invocStats.toString() + " from database.");
+				// WorkflowDriver.writeToStdout("HiwayDB: Retrieved InvocStats " + invocStats.toString() + " from database.");
 				for (InvocStat stat : invocStats) {
 					newMaxTimestamp = Math.max(newMaxTimestamp, stat.getTimestamp());
 					updateRuntimeEstimate(stat);

@@ -48,6 +48,7 @@ import org.apache.hadoop.yarn.client.api.async.AMRMClientAsync;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.client.api.AMRMClient.ContainerRequest;
 
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.WorkflowScheduler;
@@ -92,7 +93,7 @@ public class MemoryAware extends WorkflowScheduler {
 	@Override
 	public void addTaskToQueue(TaskInstance task) {
 		int memory = customMemoryMap.containsKey(task.getTaskName()) ? customMemoryMap.get(task.getTaskName()) : containerMemory;
-		System.out.println("Adding task " + task + " to queue " + memory);
+		WorkflowDriver.writeToStdout("Adding task " + task + " to queue " + memory);
 		unissuedContainerRequests.add(setupContainerAskForRM(new String[0], memory));
 
 		if (!queuePerMem.containsKey(memory)) {
@@ -110,7 +111,7 @@ public class MemoryAware extends WorkflowScheduler {
 		Queue<TaskInstance> queue = queuePerMem.get(memory);
 		TaskInstance task = queue.remove();
 
-		System.out.println("Assigned task " + task + " to container " + container.getId() + "@" + container.getNodeId().getHost() + ":"
+		WorkflowDriver.writeToStdout("Assigned task " + task + " to container " + container.getId() + "@" + container.getNodeId().getHost() + ":"
 				+ container.getResource().getVirtualCores() + ":" + container.getResource().getMemory());
 
 		task.incTries();

@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.DepthComparator;
 import de.huberlin.wbi.hiway.scheduler.StaticScheduler;
@@ -64,7 +65,7 @@ public class RoundRobin extends StaticScheduler {
 		}
 		String node = nodeIterator.next();
 		schedule.put(task, node);
-		System.out.println("Task " + task + " scheduled on node " + node);
+		WorkflowDriver.writeToStdout("Task " + task + " scheduled on node " + node);
 		if (task.readyToExecute()) {
 			addTaskToQueue(task);
 		}

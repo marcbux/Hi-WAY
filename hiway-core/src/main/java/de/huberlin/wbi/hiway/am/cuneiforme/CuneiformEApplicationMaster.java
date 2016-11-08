@@ -84,7 +84,7 @@ public class CuneiformEApplicationMaster extends WorkflowDriver {
 
 	@Override
 	public Collection<TaskInstance> parseWorkflow() {
-		System.out.println("Parsing Cuneiform workflow " + getWorkflowFile());
+		WorkflowDriver.writeToStdout("Parsing Cuneiform workflow " + getWorkflowFile());
 
 		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath().toString()))) {
 			StringBuilder sb = new StringBuilder();

@@ -40,6 +40,7 @@ import java.util.Queue;
 
 import org.apache.hadoop.yarn.api.records.Container;
 
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
@@ -68,7 +69,7 @@ public abstract class StaticScheduler extends WorkflowScheduler {
 	@Override
 	public void addTasks(Collection<TaskInstance> tasks) {
 		if (queues.size() == 0) {
-			System.out.println("No provenance data available for static scheduling. Aborting.");
+			WorkflowDriver.writeToStdout("No provenance data available for static scheduling. Aborting.");
 			System.exit(-1);
 		}
 		super.addTasks(tasks);
@@ -82,7 +83,7 @@ public abstract class StaticScheduler extends WorkflowScheduler {
 		unissuedContainerRequests.add(setupContainerAskForRM(nodes, containerMemory));
 		queues.get(node).add(task);
 		if (HiWayConfiguration.verbose)
-			System.out.println("Added task " + task + " to queue " + node);
+			WorkflowDriver.writeToStdout("Added task " + task + " to queue " + node);
 	}
 
 	@Override
@@ -92,11 +93,11 @@ public abstract class StaticScheduler extends WorkflowScheduler {
 		String node = container.getNodeId().getHost();
 
 		if (HiWayConfiguration.verbose)
-			System.out.println("Looking for task on container " + container.getId() + " on node " + node + "; Queue:" + queues.get(node).toString());
+			WorkflowDriver.writeToStdout("Looking for task on container " + container.getId() + " on node " + node + "; Queue:" + queues.get(node).toString());
 
 		TaskInstance task = queues.get(node).remove();
 
-		System.out.println("Assigned task " + task + " to container " + container.getId() + "@" + node);
+		WorkflowDriver.writeToStdout("Assigned task " + task + " to container " + container.getId() + "@" + node);
 		task.incTries();
 
 		return task;

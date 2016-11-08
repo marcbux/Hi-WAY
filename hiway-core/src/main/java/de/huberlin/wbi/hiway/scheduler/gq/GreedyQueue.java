@@ -37,6 +37,7 @@ import java.util.Queue;
 
 import org.apache.hadoop.yarn.api.records.Container;
 
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.WorkflowScheduler;
 
@@ -67,7 +68,7 @@ public class GreedyQueue extends WorkflowScheduler {
 	public void addTaskToQueue(TaskInstance task) {
 		unissuedContainerRequests.add(setupContainerAskForRM(new String[0], containerMemory));
 		queue.add(task);
-		System.out.println("Added task " + task + " to queue");
+		WorkflowDriver.writeToStdout("Added task " + task + " to queue");
 	}
 
 	@Override
@@ -76,7 +77,7 @@ public class GreedyQueue extends WorkflowScheduler {
 		numberOfRunningTasks++;
 		TaskInstance task = queue.remove();
 
-		System.out.println("Assigned task " + task + " to container " + container.getId() + "@" + container.getNodeId().getHost());
+		WorkflowDriver.writeToStdout("Assigned task " + task + " to container " + container.getId() + "@" + container.getNodeId().getHost());
 		task.incTries();
 		return task;
 	}

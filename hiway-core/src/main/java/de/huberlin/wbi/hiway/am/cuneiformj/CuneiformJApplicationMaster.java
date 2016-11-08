@@ -123,7 +123,7 @@ public class CuneiformJApplicationMaster extends WorkflowDriver {
 
 	@Override
 	public Collection<TaskInstance> parseWorkflow() {
-		System.out.println("Parsing Cuneiform workflow " + getWorkflowFile());
+		WorkflowDriver.writeToStdout("Parsing Cuneiform workflow " + getWorkflowFile());
 		repl = new HiWayRepl(ticketSrc, this);
 
 		StringBuffer buf = new StringBuffer();
@@ -191,7 +191,7 @@ public class CuneiformJApplicationMaster extends WorkflowDriver {
 			}
 
 		} catch (JSONException | NotDerivableException e) {
-			System.out.println("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
+			WorkflowDriver.writeToStdout("Error when attempting to evaluate report of invocation " + task.toString() + ". exiting");
 			e.printStackTrace(System.out);
 			System.exit(-1);
 		}

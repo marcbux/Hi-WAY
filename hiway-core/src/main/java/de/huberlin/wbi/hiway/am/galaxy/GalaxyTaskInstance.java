@@ -50,6 +50,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import de.huberlin.wbi.cuneiform.core.semanticmodel.ForeignLambdaExpr;
+import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.Data;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
@@ -220,7 +221,7 @@ public class GalaxyTaskInstance extends TaskInstance {
 		try {
 			this.toolState = new JSONObject(tool_state_json);
 		} catch (JSONException e) {
-			System.out.println(tool_state_json);
+			WorkflowDriver.writeToStdout(tool_state_json);
 			e.printStackTrace(System.out);
 			System.exit(-1);
 		}

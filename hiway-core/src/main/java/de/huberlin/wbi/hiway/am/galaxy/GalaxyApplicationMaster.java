@@ -100,7 +100,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 		if (!file.exists())
 			return;
 		try (BufferedReader locBr = new BufferedReader(new FileReader(file))) {
-			System.out.println("Processing Galaxy data table loc file " + file.getCanonicalPath());
+			WorkflowDriver.writeToStdout("Processing Galaxy data table loc file " + file.getCanonicalPath());
 			String line;
 			while ((line = locBr.readLine()) != null) {
 				if (line.startsWith(galaxyDataTable.getComment_char()))
@@ -130,7 +130,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 		super();
 		galaxyPath = getConf().get(HiWayConfiguration.HIWAY_GALAXY_PATH);
 		if (galaxyPath == null) {
-			System.out.println(HiWayConfiguration.HIWAY_GALAXY_PATH + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
+			WorkflowDriver.writeToStdout(HiWayConfiguration.HIWAY_GALAXY_PATH + " not set in  " + HiWayConfiguration.HIWAY_SITE_XML);
 			throw new RuntimeException();
 		}
 		galaxyDataTables = new HashMap<>();
@@ -309,7 +309,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 	 * @return the Galaxy tools described in the XML file
 	 */
 	private GalaxyTool parseToolFile(File file) {
-		System.out.println("Parsing Galaxy tool file " + file);
+		WorkflowDriver.writeToStdout("Parsing Galaxy tool file " + file);
 		try {
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			String path = file.getCanonicalPath();
@@ -422,7 +422,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 
 	@Override
 	public Collection<TaskInstance> parseWorkflow() {
-		System.out.println("Parsing Galaxy workflow " + getWorkflowFile());
+		WorkflowDriver.writeToStdout("Parsing Galaxy workflow " + getWorkflowFile());
 		Map<Long, TaskInstance> tasks = new HashMap<>();
 		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath().toString()))) {
 			StringBuilder sb = new StringBuilder();
@@ -468,12 +468,12 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 						toolId = splitId[splitId.length - 2];
 					Map<String, GalaxyTool> tools = galaxyTools.get(toolId);
 					if (tools == null) {
-						System.out.println("Tool " + toolId + " could not be located in local Galaxy installation.");
+						WorkflowDriver.writeToStdout("Tool " + toolId + " could not be located in local Galaxy installation.");
 						throw new RuntimeException();
 					}
 					GalaxyTool tool = tools.get(toolVersion);
 					if (tool == null) {
-						System.out.println("Tool version " + toolVersion + " of tool " + toolId + " could not be located in local Galaxy installation.");
+						WorkflowDriver.writeToStdout("Tool version " + toolVersion + " of tool " + toolId + " could not be located in local Galaxy installation.");
 						throw new RuntimeException();
 					}
 					GalaxyTaskInstance task = new GalaxyTaskInstance(id, getRunId(), tool.getId(), tool, galaxyPath);
@@ -616,7 +616,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 	 */
 	private void processDataTables(File file) {
 		try {
-			System.out.println("Processing Galaxy data table config file " + file.getCanonicalPath());
+			WorkflowDriver.writeToStdout("Processing Galaxy data table config file " + file.getCanonicalPath());
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			Document doc = builder.parse(file);
 			NodeList tables = doc.getElementsByTagName("table");
@@ -651,7 +651,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 	 */
 	private void processDataTypes(File file) {
 		try {
-			System.out.println("Processing Galaxy data type config file " + file.getCanonicalPath());
+			WorkflowDriver.writeToStdout("Processing Galaxy data type config file " + file.getCanonicalPath());
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			Document doc = builder.parse(file);
 			NodeList datatypeNds = doc.getElementsByTagName("datatype");
@@ -728,7 +728,7 @@ public class GalaxyApplicationMaster extends WorkflowDriver {
 	 */
 	private void processToolLibraries(File file, String defaultPath, String dependencyDir) {
 		try {
-			System.out.println("Processing Galaxy tool library config file " + file.getCanonicalPath());
+			WorkflowDriver.writeToStdout("Processing Galaxy tool library config file " + file.getCanonicalPath());
 			File galaxyPathFile = new File(galaxyPath);
 			File dir = new File(galaxyPathFile, defaultPath);
 			DocumentBuilder builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
