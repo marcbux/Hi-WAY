@@ -111,6 +111,8 @@ public class HiWayConfiguration extends YarnConfiguration {
 	public static final String HIWAY_WORKFLOW_LANGUAGE_LOG_AM_CLASS = "de.huberlin.wbi.hiway.am.log.LogApplicationMaster";
 	public static final String HIWAY_WORKFLOW_LANGUAGE_LOG_WORKER_CLASS = "de.huberlin.wbi.hiway.common.Worker";
 
+	public static boolean debug = false;
+	
 	public static boolean verbose = false;
 	static {
 		HIWAY_WORKFLOW_LANGUAGE_EXTS = new HashMap<>();

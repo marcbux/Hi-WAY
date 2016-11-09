@@ -329,7 +329,7 @@ public abstract class WorkflowDriver {
 		}
 	}
 
-	private void finish() {
+	protected void finish() {
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_TIME, Long.toString(System.currentTimeMillis()
 				- amRMClient.getStartTime())));
 
@@ -532,7 +532,7 @@ public abstract class WorkflowDriver {
 		}
 		opts.addOption("s", "scheduler", true, "The scheduling policy that is to be employed. Valid arguments: " + schedulers.substring(2) + "."
 				+ " Overrides settings in hiway-site.xml.");
-		opts.addOption("d", "debug", false, "Dump out debug information");
+		opts.addOption("d", "debug", false, "Provide additional logs and information for debugging");
 		opts.addOption("v", "verbose", false, "Increase verbosity of output / reporting.");
 		opts.addOption("appid", true, "Id of this Application Master.");
 
@@ -572,6 +572,7 @@ public abstract class WorkflowDriver {
 
 		if (cliParser.hasOption("debug")) {
 			dumpOutDebugInfo();
+			HiWayConfiguration.debug = true;
 		}
 
 		if (cliParser.hasOption("summary")) {

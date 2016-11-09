@@ -133,8 +133,6 @@ public class Client {
 	// timeout threshold for client. Kill app after time interval expires.
 	private long clientTimeout;
 	private HiWayConfiguration conf;
-	// debug flag
-	boolean debugFlag = false;
 	private FileSystem hdfs;
 	private String memory;
 	// command line options
@@ -173,7 +171,7 @@ public class Client {
 		opts.addOption("l", "language", true, "The input file format. Will be automatically detected if not specified explicitly. Valid arguments: "
 				+ workflowFormats.substring(2) + ".");
 		opts.addOption("v", "verbose", false, "Increase verbosity of output / reporting.");
-		opts.addOption("d", "debug", false, "Dump out debug information");
+		opts.addOption("d", "debug", false, "Provide additional logs and information for debugging");
 		opts.addOption("h", "help", false, "Print usage");
 	}
 
@@ -225,7 +223,7 @@ public class Client {
 		}
 
 		if (cliParser.hasOption("debug")) {
-			debugFlag = true;
+		  HiWayConfiguration.debug = true;
 		}
 
 		if (cliParser.hasOption("verbose")) {
@@ -515,6 +513,8 @@ public class Client {
 		// Set java executable command
 		System.out.println("Setting up app master command");
 		vargs.add(Environment.JAVA_HOME.$() + "/bin/java");
+		if (HiWayConfiguration.debug)
+      vargs.add("-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9010 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false");
 		// Set Xmx based on am memory size
 		vargs.add("-Xmx" + amMemory + "m");
 		// Set class name
@@ -552,7 +552,7 @@ public class Client {
 
 		vargs.add("--appid " + appId.toString());
 
-		if (debugFlag) {
+		if (HiWayConfiguration.debug) {
 			vargs.add("--debug");
 		}
 
