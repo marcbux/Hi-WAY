@@ -63,7 +63,7 @@
 		<jdk.version>1.7</jdk.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<cuneiformJ.version>2.0.4-RELEASE</cuneiformJ.version>
-		<cuneiformE.version>0.0.2-SNAPSHOT</cuneiformE.version>
+		<cuneiformE.version>0.0.2-RELEASE</cuneiformE.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
