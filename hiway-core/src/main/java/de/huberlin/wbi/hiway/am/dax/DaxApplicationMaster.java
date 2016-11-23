@@ -62,7 +62,7 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 public class DaxApplicationMaster extends WorkflowDriver {
 
 	public static void main(String[] args) {
-		WorkflowDriver.loop(new DaxApplicationMaster(), args);
+		WorkflowDriver.launch(new DaxApplicationMaster(), args);
 	}
 
 	public DaxApplicationMaster() {

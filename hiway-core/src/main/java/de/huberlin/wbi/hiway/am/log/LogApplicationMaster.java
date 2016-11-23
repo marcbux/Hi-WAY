@@ -51,7 +51,7 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 public class LogApplicationMaster extends WorkflowDriver {
 
 	public static void main(String[] args) {
-		WorkflowDriver.loop(new LogApplicationMaster(), args);
+		WorkflowDriver.launch(new LogApplicationMaster(), args);
 	}
 
 	@Override

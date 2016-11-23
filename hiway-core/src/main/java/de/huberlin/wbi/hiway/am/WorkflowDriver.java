@@ -167,7 +167,7 @@ public abstract class WorkflowDriver {
 	 * @param args
 	 *            Command line arguments passed to the ApplicationMaster.
 	 */
-	public static void loop(WorkflowDriver appMaster, String[] args) {
+	public static void launch(WorkflowDriver appMaster, String[] args) {
 		boolean result = false;
 		try {
 			WorkflowDriver.writeToStdout("Initializing ApplicationMaster");
@@ -222,9 +222,11 @@ public abstract class WorkflowDriver {
 	private NMCallbackHandler containerListener;
 	// the memory and number of virtual cores to request for the container on which the workflow tasks are launched
 	private int containerMemory = 4096;
+	private int maxMem;
+	private int maxCores;
 	private boolean determineFileSizes = false;
 	// flags denoting workflow execution has finished and been successful
-	protected volatile boolean done;
+	private volatile boolean done;
 	// the report, in which provenance information is stored
 	private Data federatedReport;
 	// private BufferedWriter federatedReportWriter;
@@ -272,6 +274,73 @@ public abstract class WorkflowDriver {
 			System.exit(-1);
 		}
 		runId = UUID.randomUUID();
+	}
+	
+	@SuppressWarnings("unchecked")
+	protected void loop() {
+		try {
+			while (scheduler.hasNextNodeRequest()) {
+				ContainerRequest request;
+				try {
+					request = scheduler.getNextNodeRequest();
+				} catch (NoSuchElementException e) {
+					e.printStackTrace(System.out);
+					break;
+				}
+
+				JSONObject value = new JSONObject();
+				try {
+					value.put("type", "container-requested");
+					value.put("memory", request.getCapability().getMemory());
+					value.put("vcores", request.getCapability().getVirtualCores());
+					value.put("nodes", request.getNodes());
+					value.put("priority", request.getPriority());
+				} catch (JSONException e) {
+					e.printStackTrace(System.out);
+					System.exit(-1);
+				}
+
+				if (HiWayConfiguration.verbose)
+					WorkflowDriver.writeToStdout("Requested container " + request.getNodes() + ":" + request.getCapability().getVirtualCores() + ":"
+							+ request.getCapability().getMemory());
+				writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
+
+				amRMClient.addContainerRequest(request);
+				numRequestedContainers.incrementAndGet();
+			}
+			Thread.sleep(1000);
+
+			WorkflowDriver.writeToStdout("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
+					+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
+			if (HiWayConfiguration.verbose) {
+				// information on outstanding container request
+				StringBuilder sb = new StringBuilder("Open Container Requests: ");
+				Set<String> names = new HashSet<>();
+				names.add(ResourceRequest.ANY);
+				if (!scheduler.relaxLocality())
+					names = scheduler.getDbInterface().getHostNames();
+				for (String node : names) {
+					List<? extends Collection<ContainerRequest>> requestCollections = amRMClient.getMatchingRequests(
+							Priority.newInstance(requestPriority), node, Resource.newInstance(maxMem, maxCores));
+					for (Collection<ContainerRequest> requestCollection : requestCollections) {
+						ContainerRequest first = requestCollection.iterator().next();
+						sb.append(node);
+						sb.append(":");
+						sb.append(first.getCapability().getVirtualCores());
+						sb.append(":");
+						sb.append(first.getCapability().getMemory());
+						sb.append(":");
+						sb.append(requestCollection.size());
+						sb.append(" ");
+					}
+				}
+				WorkflowDriver.writeToStdout(sb.toString());
+			}
+
+		} catch (InterruptedException e) {
+			e.printStackTrace(System.out);
+			System.exit(-1);
+		}
 	}
 
 	@SuppressWarnings("static-method")
@@ -692,7 +761,6 @@ public abstract class WorkflowDriver {
 	 * @throws IOException
 	 *             IOException
 	 */
-	@SuppressWarnings("unchecked")
 	public boolean run() throws YarnException, IOException {
 		WorkflowDriver.writeToStdout("Starting ApplicationMaster");
 
@@ -797,8 +865,8 @@ public abstract class WorkflowDriver {
 			scheduler.addTasks(readyTasks);
 
 			// Dump out information about cluster capability as seen by the resource manager
-			int maxMem = response.getMaximumResourceCapability().getMemory();
-			int maxCores = response.getMaximumResourceCapability().getVirtualCores();
+			maxMem = response.getMaximumResourceCapability().getMemory();
+			maxCores = response.getMaximumResourceCapability().getVirtualCores();
 			WorkflowDriver.writeToStdout("Max mem capabililty of resources in this cluster " + maxMem);
 
 			// A resource ask cannot exceed the max.
@@ -813,70 +881,8 @@ public abstract class WorkflowDriver {
 				containerCores = maxCores;
 			}
 
-			while (!done) {
-				try {
-					while (scheduler.hasNextNodeRequest()) {
-						ContainerRequest request;
-						try {
-							request = scheduler.getNextNodeRequest();
-						} catch (NoSuchElementException e) {
-							e.printStackTrace(System.out);
-							break;
-						}
-
-						JSONObject value = new JSONObject();
-						try {
-							value.put("type", "container-requested");
-							value.put("memory", request.getCapability().getMemory());
-							value.put("vcores", request.getCapability().getVirtualCores());
-							value.put("nodes", request.getNodes());
-							value.put("priority", request.getPriority());
-						} catch (JSONException e) {
-							e.printStackTrace(System.out);
-							System.exit(-1);
-						}
-
-						if (HiWayConfiguration.verbose)
-							WorkflowDriver.writeToStdout("Requested container " + request.getNodes() + ":" + request.getCapability().getVirtualCores() + ":"
-									+ request.getCapability().getMemory());
-						writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
-
-						amRMClient.addContainerRequest(request);
-						numRequestedContainers.incrementAndGet();
-					}
-					Thread.sleep(1000);
-
-					WorkflowDriver.writeToStdout("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
-							+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
-					if (HiWayConfiguration.verbose) {
-						// information on outstanding container request
-						StringBuilder sb = new StringBuilder("Open Container Requests: ");
-						Set<String> names = new HashSet<>();
-						names.add(ResourceRequest.ANY);
-						if (!scheduler.relaxLocality())
-							names = scheduler.getDbInterface().getHostNames();
-						for (String node : names) {
-							List<? extends Collection<ContainerRequest>> requestCollections = amRMClient.getMatchingRequests(
-									Priority.newInstance(requestPriority), node, Resource.newInstance(maxMem, maxCores));
-							for (Collection<ContainerRequest> requestCollection : requestCollections) {
-								ContainerRequest first = requestCollection.iterator().next();
-								sb.append(node);
-								sb.append(":");
-								sb.append(first.getCapability().getVirtualCores());
-								sb.append(":");
-								sb.append(first.getCapability().getMemory());
-								sb.append(":");
-								sb.append(requestCollection.size());
-								sb.append(" ");
-							}
-						}
-						WorkflowDriver.writeToStdout(sb.toString());
-					}
-
-				} catch (InterruptedException e) {
-					e.printStackTrace(System.out);
-					System.exit(-1);
-				}
+			while (!isDone()) {
+				loop();
 			}
 			finish();
 		} catch (Exception e) {
@@ -944,9 +950,13 @@ public abstract class WorkflowDriver {
 			data.setContainerId(containerId.toString());
 		}
 		if (scheduler.getNumberOfReadyTasks() == 0 && scheduler.getNumberOfRunningTasks() == 0) {
-			done = true;
+			setDone();
 		}
 	}
+	
+	public boolean isDone() {
+	  return done;
+  }
 
 	public void writeEntryToLog(JsonReportEntry entry) {
 		try {

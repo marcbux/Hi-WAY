@@ -12,8 +12,8 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 
 public class CuneiformETaskInstance extends TaskInstance {
 
-	public CuneiformETaskInstance(UUID workflowId, String taskName, long taskId) {
-		super(workflowId, taskName, taskId);
+	public CuneiformETaskInstance(UUID workflowId, String taskName) {
+		super(workflowId, taskName, Math.abs(taskName.hashCode() + 1));
 	}
 
 	@Override

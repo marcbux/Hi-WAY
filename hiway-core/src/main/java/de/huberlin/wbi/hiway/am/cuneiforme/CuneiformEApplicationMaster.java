@@ -38,87 +38,126 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Set;
+import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-import de.huberlin.wbi.cfjava.cuneiform.Reply;
-import de.huberlin.wbi.cfjava.cuneiform.Request;
-import de.huberlin.wbi.cfjava.cuneiform.Workflow;
+import de.huberlin.wbi.cfjava.cuneiform.HaltMsg;
+import de.huberlin.wbi.cfjava.cuneiform.RemoteWorkflow;
 import de.huberlin.wbi.cuneiform.core.semanticmodel.JsonReportEntry;
 import de.huberlin.wbi.hiway.am.WorkflowDriver;
 import de.huberlin.wbi.hiway.common.Data;
+import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 
 public class CuneiformEApplicationMaster extends WorkflowDriver {
 
 	public static void main(String[] args) {
-		WorkflowDriver.loop(new CuneiformEApplicationMaster(), args);
+		WorkflowDriver.launch(new CuneiformEApplicationMaster(), args);
 	}
 
-	Set<Request> scheduledRequests;
-
-	Workflow workflow;
+	private RemoteWorkflow workflow;
+	private Map<CuneiformETaskInstance, JSONObject> requests;
 
 	public CuneiformEApplicationMaster() {
 		super();
+		requests = new HashMap<>();
 		setDetermineFileSizes();
-		scheduledRequests = new HashSet<>();
-	}
-
-	@Override
-	protected Collection<String> getOutput() {
-		Collection<String> outputs = new LinkedList<>();
-		for (String output : workflow.getResult()) {
-			if (files.containsKey(output)) {
-				outputs.add(files.get(output).getHdfsPath().toString());
-				files.get(output).setOutput(true);
-			} else {
-				outputs.add(output);
-			}
-		}
-		return outputs;
 	}
 
 	@Override
 	public Collection<TaskInstance> parseWorkflow() {
-		WorkflowDriver.writeToStdout("Parsing Cuneiform workflow " + getWorkflowFile());
-
 		try (BufferedReader reader = new BufferedReader(new FileReader(getWorkflowFile().getLocalPath().toString()))) {
+			WorkflowDriver.writeToStdout("Parsing Cuneiform workflow " + getWorkflowFile());
 			StringBuilder sb = new StringBuilder();
 			String line;
 			while ((line = reader.readLine()) != null) {
 				sb.append(line).append("\n");
 			}
-			workflow = Workflow.createWorkflow(sb.toString());
+
+			String ip = getConf().get(HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_CUNEIFORME_SERVER_IP);
+			WorkflowDriver.writeToStdout("Connecting to Cuneiform server at " + ip);
+			workflow = new RemoteWorkflow(sb.toString(), ip);
 		} catch (IOException e) {
 			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
 
-		return reduce();
+		return getNextTasks();
 	}
 
-	private Collection<TaskInstance> reduce() {
+	@Override
+	public boolean isDone() {
+		return !workflow.isRunning();
+	}
+
+	@Override
+	protected void loop() {
+		try {
+			workflow.update();
+		} catch (IOException e) {
+			e.printStackTrace(System.out);
+		}
+		getScheduler().addTasks(getNextTasks());
+		super.loop();
+	}
+
+	@Override
+	protected void finish() {
+		HaltMsg haltMsg = workflow.getHaltMsg();
+		if (haltMsg.isOk()) {
+		} else if (haltMsg.isErrorTask()) {
+			WorkflowDriver.writeToStdout("Workflow execution halted due to task failure.");
+			WorkflowDriver.writeToStdout("app line: " + haltMsg.getAppLine());
+			WorkflowDriver.writeToStdout("lam name: " + haltMsg.getLamName());
+			WorkflowDriver.writeToStdout("output:   " + haltMsg.getOutput());
+			WorkflowDriver.writeToStdout("script:   " + haltMsg.getScript());
+		} else if (haltMsg.isErrorWorkflow()) {
+			WorkflowDriver.writeToStdout("Workflow execution halted due to workflow failure.");
+			WorkflowDriver.writeToStdout("line:   " + haltMsg.getLine());
+			WorkflowDriver.writeToStdout("module: " + haltMsg.getModule());
+			WorkflowDriver.writeToStdout("reason: " + haltMsg.getReason());
+		} else {
+			throw new UnsupportedOperationException();
+		}
+
+		super.finish();
+	}
+
+	@Override
+	protected Collection<String> getOutput() {
+		Collection<String> outputs = new LinkedList<>();
+		HaltMsg haltMsg = workflow.getHaltMsg();
+		if (haltMsg.isOk()) {
+			for (String output : haltMsg.getResult()) {
+				outputs.add(files.containsKey(output) ? files.get(output).getHdfsPath().toString() : output);
+			}
+		}
+		return outputs;
+	}
+
+	private Collection<TaskInstance> getNextTasks() {
 		Collection<TaskInstance> tasks = new LinkedList<>();
-		done = workflow.reduce();
-		Set<Request> requestSet = workflow.getRequestSet();
-		requestSet.removeAll(scheduledRequests);
-		scheduledRequests.addAll(requestSet);
-		for (Request request : requestSet) {
-			String taskName = request.getLam().getLamName();
-			int taskId = Math.abs(taskName.hashCode() + 1);
-			TaskInstance task = new CuneiformETaskInstance(getRunId(), taskName, taskId);
 
-			for (String fileName : request.getStageInFilenameSet()) {
+		while (workflow.hasNextRequest()) {
+			JSONObject request = workflow.nextRequest();
 
-				if (!files.containsKey(fileName)) {
-					Data file = new Data(fileName);
+			// TODO: parse request
+			String taskName = RemoteWorkflow.getLamName(request);
+
+			CuneiformETaskInstance task = new CuneiformETaskInstance(getRunId(), taskName);
+			requests.put(task, request);
+			for (String fileName : RemoteWorkflow.getInputSet(request)) {
+				Data file = files.get(fileName);
+				if (file == null) {
+					file = new Data(fileName);
 					files.put(fileName, file);
 				}
-				task.addInputData(files.get(fileName));
+				task.addInputData(file);
 			}
 
 			try (BufferedWriter writer = new BufferedWriter(new FileWriter(task.getId() + "_request"))) {
@@ -131,30 +170,36 @@ public class CuneiformEApplicationMaster extends WorkflowDriver {
 			task.setCommand("effi -r true " + task.getId() + "_request " + task.getId() + "_reply");
 			tasks.add(task);
 
-			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
-					Long.valueOf(task.getId()), null, JsonReportEntry.KEY_INVOC_SCRIPT, task.getCommand()));
-			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(),
-					Long.valueOf(task.getId()), null, JsonReportEntry.KEY_INVOC_EXEC, request.toString()));
+			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), Long.valueOf(task.getId()),
+			    null, JsonReportEntry.KEY_INVOC_SCRIPT, task.getCommand()));
+			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), Long.valueOf(task.getId()),
+			    null, JsonReportEntry.KEY_INVOC_EXEC, request.toString()));
 		}
-		return tasks;
-	}
 
-	@Override
-	public void taskFailure(TaskInstance task, ContainerId containerId) {
-		super.taskFailure(task, containerId);
+		return tasks;
 	}
 
 	@Override
 	public void taskSuccess(TaskInstance task, ContainerId containerId) {
 		try {
 			(new Data(task.getId() + "_reply", containerId.toString())).stageIn();
-		} catch (IOException e) {
+			JSONObject reply = parseEffiFile(task.getId() + "_reply");
+			workflow.addReply(reply);
+
+			writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), Long.valueOf(task.getId()),
+			    null, JsonReportEntry.KEY_INVOC_OUTPUT, reply.toString()));
+			for (String fileName : RemoteWorkflow.getOutputSet(requests.get(task), reply)) {
+				files.put(fileName, new Data(fileName, containerId.toString()));
+			}
+		} catch (IOException | JSONException e) {
 			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
+	}
 
+	public static JSONObject parseEffiFile(String fileName) throws JSONException {
 		StringBuilder sb = new StringBuilder();
-		try (BufferedReader reader = new BufferedReader(new FileReader(task.getId() + "_reply"))) {
+		try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
 			String line;
 			while ((line = reader.readLine()) != null) {
 				sb.append(line).append("\n");
@@ -163,17 +208,7 @@ public class CuneiformEApplicationMaster extends WorkflowDriver {
 			e.printStackTrace(System.out);
 			System.exit(-1);
 		}
-		Reply reply = Reply.createReply(sb.toString());
-
-		writeEntryToLog(new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), Long.valueOf(task.getId()),
-				null, JsonReportEntry.KEY_INVOC_OUTPUT, sb.toString()));
-
-		for (String fileNameString : reply.getStageOutFilenameList()) {
-			files.put(fileNameString, new Data(fileNameString, containerId.toString()));
-		}
-
-		workflow.addReply(reply);
-		getScheduler().addTasks(reduce());
+		return new JSONObject(sb.toString());
 	}
 
 }

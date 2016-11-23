@@ -84,7 +84,7 @@ import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 public class GalaxyApplicationMaster extends WorkflowDriver {
 
 	public static void main(String[] args) {
-		WorkflowDriver.loop(new GalaxyApplicationMaster(), args);
+		WorkflowDriver.launch(new GalaxyApplicationMaster(), args);
 	}
 
 	/**

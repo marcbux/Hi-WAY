@@ -99,6 +99,7 @@ public class HiWayConfiguration extends YarnConfiguration {
 	public static final int HIWAY_WORKER_VCORES_DEFAULT = 1;
 	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORME_AM_CLASS = "de.huberlin.wbi.hiway.am.cuneiforme.CuneiformEApplicationMaster";
 	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORME_WORKER_CLASS = "de.huberlin.wbi.hiway.am.cuneiforme.CuneiformEWorker";
+	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORME_SERVER_IP = "hiway.cuneiform.server.ip";
 	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORMJ_AM_CLASS = "de.huberlin.wbi.hiway.am.cuneiformj.CuneiformJApplicationMaster";
 	public static final String HIWAY_WORKFLOW_LANGUAGE_CUNEIFORMJ_WORKER_CLASS = "de.huberlin.wbi.hiway.common.Worker";
 
@@ -112,7 +113,7 @@ public class HiWayConfiguration extends YarnConfiguration {
 	public static final String HIWAY_WORKFLOW_LANGUAGE_LOG_WORKER_CLASS = "de.huberlin.wbi.hiway.common.Worker";
 
 	public static boolean debug = false;
-	
+
 	public static boolean verbose = false;
 	static {
 		HIWAY_WORKFLOW_LANGUAGE_EXTS = new HashMap<>();

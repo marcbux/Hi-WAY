@@ -61,7 +61,7 @@ import de.huberlin.wbi.hiway.common.TaskInstance;
 public class CuneiformJApplicationMaster extends WorkflowDriver {
 
 	public static void main(String[] args) {
-		WorkflowDriver.loop(new CuneiformJApplicationMaster(), args);
+		WorkflowDriver.launch(new CuneiformJApplicationMaster(), args);
 	}
 
 	private BaseCreActor creActor;

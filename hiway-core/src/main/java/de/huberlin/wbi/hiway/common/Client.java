@@ -517,6 +517,7 @@ public class Client {
       vargs.add("-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=9010 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false");
 		// Set Xmx based on am memory size
 		vargs.add("-Xmx" + amMemory + "m");
+		vargs.add("-Xss" + "16m");
 		// Set class name
 
 		switch (workflowType) {
