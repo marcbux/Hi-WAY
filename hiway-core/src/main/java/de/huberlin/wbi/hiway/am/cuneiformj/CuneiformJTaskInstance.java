@@ -35,6 +35,7 @@ package de.huberlin.wbi.hiway.am.cuneiformj;
 import java.util.Set;
 
 import de.huberlin.wbi.cuneiform.core.invoc.Invocation;
+import de.huberlin.wbi.hiway.common.HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 
@@ -49,22 +50,42 @@ public class CuneiformJTaskInstance extends TaskInstance {
 
 	@Override
 	public void addChildTask(TaskInstance childTask) throws WorkflowStructureUnknownException {
-		throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
+		throw new WorkflowStructureUnknownException(HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiformJ);
 	}
 
 	@Override
 	public void addParentTask(TaskInstance parentTask) throws WorkflowStructureUnknownException {
-		throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
+		throw new WorkflowStructureUnknownException(HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiformJ);
 	}
 
 	@Override
 	public Set<TaskInstance> getChildTasks() throws WorkflowStructureUnknownException {
-		throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
+		throw new WorkflowStructureUnknownException(HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiformJ);
 	}
 
 	@Override
 	public int getDepth() throws WorkflowStructureUnknownException {
-		throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
+		throw new WorkflowStructureUnknownException(HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiformJ);
+	}
+	
+	@Override
+	public Set<TaskInstance> getParentTasks() throws WorkflowStructureUnknownException {
+		throw new WorkflowStructureUnknownException(HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiformJ);
+	}
+
+	@Override
+	public double getUpwardRank() throws WorkflowStructureUnknownException {
+		throw new WorkflowStructureUnknownException(HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiformJ);
+	}
+	
+	@Override
+	public void setDepth(int depth) throws WorkflowStructureUnknownException {
+		throw new WorkflowStructureUnknownException(HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiformJ);
+	}
+
+	@Override
+	public void setUpwardRank(double upwardRank) throws WorkflowStructureUnknownException {
+		throw new WorkflowStructureUnknownException(HIWAY_WORKFLOW_LANGUAGE_OPTS.cuneiformJ);
 	}
 
 	public Invocation getInvocation() {
@@ -72,28 +93,8 @@ public class CuneiformJTaskInstance extends TaskInstance {
 	}
 
 	@Override
-	public Set<TaskInstance> getParentTasks() throws WorkflowStructureUnknownException {
-		throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
-	}
-
-	@Override
-	public double getUpwardRank() throws WorkflowStructureUnknownException {
-		throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
-	}
-
-	@Override
 	public boolean readyToExecute() {
 		return true;
-	}
-
-	@Override
-	public void setDepth(int depth) throws WorkflowStructureUnknownException {
-		throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
-	}
-
-	@Override
-	public void setUpwardRank(double upwardRank) throws WorkflowStructureUnknownException {
-		throw new WorkflowStructureUnknownException("Workflow structure not derivable in Cuneiform");
 	}
 
 }

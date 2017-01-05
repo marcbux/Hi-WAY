@@ -32,12 +32,14 @@
  ******************************************************************************/
 package de.huberlin.wbi.hiway.common;
 
+import de.huberlin.wbi.hiway.common.HiWayConfiguration.HIWAY_WORKFLOW_LANGUAGE_OPTS;
+
 public class WorkflowStructureUnknownException extends RuntimeException {
 
 	private static final long serialVersionUID = 157794148736647758L;
 
-	public WorkflowStructureUnknownException(String message) {
-		super(message);
+	public WorkflowStructureUnknownException(HIWAY_WORKFLOW_LANGUAGE_OPTS language) {
+		super(language.toString() + " workflows are not static. Static scheduling is not supported.");
 	}
 
 }
