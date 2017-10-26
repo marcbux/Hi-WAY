@@ -44,6 +44,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Queue;
 import java.util.Set;
 
@@ -86,7 +87,7 @@ public abstract class WorkflowScheduler {
 	protected int numberOfRemainingTasks = 0;
 	protected int numberOfRunningTasks = 0;
 	protected boolean relaxLocality = true;
-	protected Map<String, Map<Long, RuntimeEstimate>> runtimeEstimatesPerNode;
+	protected Map<String, Map<Long, WienerProcessModel>> runtimePerBotPerVm;
 	protected Set<Long> taskIds;
 	// a queue of nodes on which containers are to be requested
 	protected Queue<ContainerRequest> unissuedContainerRequests;
@@ -98,15 +99,16 @@ public abstract class WorkflowScheduler {
 
 	public WorkflowScheduler(String workflowName) {
 		this.workflowName = workflowName;
-		
+
 		unissuedContainerRequests = new LinkedList<>();
 
 		taskIds = new HashSet<>();
-		runtimeEstimatesPerNode = new HashMap<>();
+		runtimePerBotPerVm = new HashMap<>();
 		maxTimestampPerHost = new HashMap<>();
 	}
-	
-	public void init(HiWayConfiguration conf_, FileSystem hdfs_, int containerMemory_, Map<String, Integer> customMemoryMap_, int containerCores_, int requestPriority_) {
+
+	public void init(HiWayConfiguration conf_, FileSystem hdfs_, int containerMemory_, Map<String, Integer> customMemoryMap_, int containerCores_,
+	    int requestPriority_) {
 		this.conf = conf_;
 		this.hdfs = hdfs_;
 		this.containerMemory = containerMemory_;
@@ -114,7 +116,7 @@ public abstract class WorkflowScheduler {
 		this.containerCores = containerCores_;
 		this.requestPriority = requestPriority_;
 	}
-	
+
 	protected ContainerRequest setupContainerAskForRM(String[] nodes, int memory) {
 		// set the priority for the request
 		Priority pri = Priority.newInstance(requestPriority);
@@ -155,7 +157,7 @@ public abstract class WorkflowScheduler {
 	public abstract TaskInstance getTask(Container container);
 
 	protected Set<String> getNodeIds() {
-		return new HashSet<>(runtimeEstimatesPerNode.keySet());
+		return new HashSet<>(runtimePerBotPerVm.keySet());
 	}
 
 	public int getNumberOfFinishedTasks() {
@@ -172,11 +174,7 @@ public abstract class WorkflowScheduler {
 		int fin = getNumberOfFinishedTasks();
 		int run = getNumberOfRunningTasks();
 		int rem = numberOfRemainingTasks;
-
-		// WorkflowDriver.writeToStdout("Scheduled Containers Finished: " + fin);
-		// WorkflowDriver.writeToStdout("Scheduled Containers Running: " + run);
-		// WorkflowDriver.writeToStdout("Scheduled Containers Remaining: " + rem);
-
+		
 		return fin + run + rem;
 	}
 
@@ -192,7 +190,7 @@ public abstract class WorkflowScheduler {
 		maxRetries = conf.getInt(HiWayConfiguration.HIWAY_AM_TASK_RETRIES, HiWayConfiguration.HIWAY_AM_TASK_RETRIES_DEFAULT);
 
 		HiWayConfiguration.HIWAY_DB_TYPE_OPTS dbType = HiWayConfiguration.HIWAY_DB_TYPE_OPTS.valueOf(conf.get(HiWayConfiguration.HIWAY_DB_TYPE,
-				HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT.toString()));
+		    HiWayConfiguration.HIWAY_DB_TYPE_DEFAULT.toString()));
 		switch (dbType) {
 		case SQL:
 			String sqlUser = conf.get(HiWayConfiguration.HIWAY_DB_SQL_USER);
@@ -257,18 +255,18 @@ public abstract class WorkflowScheduler {
 	}
 
 	protected void newHost(String nodeId) {
-		Map<Long, RuntimeEstimate> runtimeEstimates = new HashMap<>();
+		Map<Long, WienerProcessModel> runtimeEstimates = new HashMap<>();
 		for (long taskId : getTaskIds()) {
-			runtimeEstimates.put(taskId, new RuntimeEstimate());
+			runtimeEstimates.put(taskId, new WienerProcessModel(taskId, nodeId, false));
 		}
-		runtimeEstimatesPerNode.put(nodeId, runtimeEstimates);
+		runtimePerBotPerVm.put(nodeId, runtimeEstimates);
 		maxTimestampPerHost.put(nodeId, 0l);
 	}
 
 	protected void newTask(long taskId) {
 		taskIds.add(taskId);
-		for (Map<Long, RuntimeEstimate> runtimeEstimates : runtimeEstimatesPerNode.values()) {
-			runtimeEstimates.put(taskId, new RuntimeEstimate());
+		for (Entry<String, Map<Long, WienerProcessModel>> runtimeEstimates : runtimePerBotPerVm.entrySet()) {
+			runtimeEstimates.getValue().put(taskId, new WienerProcessModel(taskId, runtimeEstimates.getKey(), false));
 		}
 	}
 
@@ -342,16 +340,8 @@ public abstract class WorkflowScheduler {
 	}
 
 	protected void updateRuntimeEstimate(InvocStat stat) {
-		RuntimeEstimate re = runtimeEstimatesPerNode.get(stat.getHostName()).get(stat.getTaskId());
-		re.finishedTasks += 1;
-		re.timeSpent += stat.getRealTime();
-		// for (FileStat fileStat : stat.getInputFiles()) {
-		// re.timeSpent += fileStat.getRealTime();
-		// }
-		// for (FileStat fileStat : stat.getOutputFiles()) {
-		// re.timeSpent += fileStat.getRealTime();
-		// }
-		re.weight = re.averageRuntime = re.timeSpent / re.finishedTasks;
+		WienerProcessModel re = runtimePerBotPerVm.get(stat.getHostName()).get(stat.getTaskId());
+		re.addRuntime(stat.getTimestamp(), stat.getRealTime());
 	}
 
 	public void updateRuntimeEstimates(String runId) {

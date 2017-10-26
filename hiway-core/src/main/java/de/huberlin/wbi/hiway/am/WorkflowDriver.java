@@ -97,7 +97,7 @@ import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.common.WorkflowStructureUnknownException;
 import de.huberlin.wbi.hiway.scheduler.WorkflowScheduler;
-import de.huberlin.wbi.hiway.scheduler.c3po.C3PO;
+import de.huberlin.wbi.hiway.scheduler.era.ERA;
 import de.huberlin.wbi.hiway.scheduler.gq.GreedyQueue;
 import de.huberlin.wbi.hiway.scheduler.heft.HEFT;
 import de.huberlin.wbi.hiway.scheduler.ma.MemoryAware;
@@ -113,7 +113,7 @@ import de.huberlin.wbi.hiway.scheduler.rr.RoundRobin;
  * 
  * <p>
  * Hi-WAY currently supports the workflow languages <a href="http://pegasus.isi.edu/wms/docs/latest/creating_workflows.php">Pegasus DAX</a> and <a
- * href="https://github.com/joergen7/cuneiform">Cuneiform</a> as well as the workflow schedulers static round robin, HEFT, greedy queue and C3PO. Hi-WAY uses
+ * href="https://github.com/joergen7/cuneiform">Cuneiform</a> as well as the workflow schedulers static round robin, HEFT, greedy queue and ERA. Hi-WAY uses
  * Hadoop's distributed file system HDFS to store the workflow's input, output and intermediate data. The ApplicationMaster has been tested for up to 320
  * concurrent tasks and is fault-tolerant in that it is able to restart failed tasks.
  * </p>
@@ -816,39 +816,7 @@ public abstract class WorkflowDriver {
 				scheduler = new MemoryAware(getWorkflowName(), amRMClient);
 				break;
 			default:
-				C3PO c3po = new C3PO(getWorkflowName());
-				switch (schedulerName) {
-				// case conservative:
-				// c3po.setConservatismWeight(12d);
-				// c3po.setnClones(0);
-				// c3po.setPlacementAwarenessWeight(0.01d);
-				// c3po.setOutlookWeight(0.01d);
-				// break;
-				// case cloning:
-				// c3po.setConservatismWeight(0.01d);
-				// c3po.setnClones(1);
-				// c3po.setPlacementAwarenessWeight(0.01d);
-				// c3po.setOutlookWeight(0.01d);
-				// break;
-				case dataAware:
-					c3po.setConservatismWeight(0.01d);
-					c3po.setnClones(0);
-					c3po.setPlacementAwarenessWeight(12d);
-					c3po.setOutlookWeight(0.01d);
-					break;
-				// case outlooking:
-				// c3po.setConservatismWeight(0.01d);
-				// c3po.setnClones(0);
-				// c3po.setPlacementAwarenessWeight(0.01d);
-				// c3po.setOutlookWeight(12d);
-				// break;
-				default:
-					c3po.setConservatismWeight(3d);
-					c3po.setnClones(2);
-					c3po.setPlacementAwarenessWeight(1d);
-					c3po.setOutlookWeight(2d);
-				}
-				scheduler = c3po;
+				scheduler = new ERA(getWorkflowName());
 			}
 			scheduler.init(conf, hdfs, containerMemory, customMemoryMap, containerCores, requestPriority);
 

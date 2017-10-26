@@ -45,7 +45,7 @@ public class HiWayConfiguration extends YarnConfiguration {
 	}
 
 	public static enum HIWAY_SCHEDULER_OPTS {
-		c3po, dataAware, greedy, heft, roundRobin, memoryAware
+		era, dataAware, greedy, heft, roundRobin, memoryAware
 	}
 
 	public static enum HIWAY_WORKFLOW_LANGUAGE_OPTS {
@@ -83,7 +83,7 @@ public class HiWayConfiguration extends YarnConfiguration {
 	public static final HIWAY_DB_TYPE_OPTS HIWAY_DB_TYPE_DEFAULT = HIWAY_DB_TYPE_OPTS.local;
 	public static final String HIWAY_GALAXY_PATH = "hiway.galaxy.path";
 	public static final String HIWAY_SCHEDULER = "hiway.scheduler";
-	public static final HIWAY_SCHEDULER_OPTS HIWAY_SCHEDULER_DEFAULT = HIWAY_SCHEDULER_OPTS.c3po;
+	public static final HIWAY_SCHEDULER_OPTS HIWAY_SCHEDULER_DEFAULT = HIWAY_SCHEDULER_OPTS.era;
 
 	public static final String HIWAY_SITE_XML = "hiway-site.xml";
 

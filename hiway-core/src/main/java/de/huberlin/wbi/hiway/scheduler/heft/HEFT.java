@@ -88,7 +88,7 @@ public class HEFT extends StaticScheduler {
 	@Override
 	protected void addTask(TaskInstance task) {
 		numberOfRemainingTasks++;
-		Collection<String> nodes = runtimeEstimatesPerNode.keySet();
+		Collection<String> nodes = runtimePerBotPerVm.keySet();
 
 		// the readytime of a task is the time from workflow onset after which this task will be ready (according to the schedule)
 		// if the task is an input task, its ready time will still be 0
@@ -112,7 +112,7 @@ public class HEFT extends StaticScheduler {
 			ArrayList<Map<Double, Double>> freeTimeSlotLengthsPerContainer = freeTimeSlotLengthsPerNode.get(node);
 
 			// note that the weight is 1 ms if no runtime estimate is available yet
-			double computationCost = runtimeEstimatesPerNode.get(node).get(task.getTaskId()).weight;
+			double computationCost = runtimePerBotPerVm.get(node).get(task.getTaskId()).getEstimate();
 
 			for (int i = 0; i < containers; i++) {
 				// note that at the beginning, all nodes have a free timeslot of length MAX_VALUE starting at time 0
@@ -213,7 +213,7 @@ public class HEFT extends StaticScheduler {
 		List<TaskInstance> taskList = new LinkedList<>(tasks);
 		Collections.sort(taskList, new DepthComparator());
 
-		Collection<String> nodes = runtimeEstimatesPerNode.keySet();
+		Collection<String> nodes = runtimePerBotPerVm.keySet();
 
 		// compute upward ranks of all tasks
 		for (int i = taskList.size() - 1; i >= 0; i--) {
@@ -236,7 +236,7 @@ public class HEFT extends StaticScheduler {
 			// averageComputationCost is the average cost for executing this task on any node
 			double averageComputationCost = 0;
 			for (String node : nodes) {
-				averageComputationCost += runtimeEstimatesPerNode.get(node).get(task.getTaskId()).weight;
+				averageComputationCost += runtimePerBotPerVm.get(node).get(task.getTaskId()).getEstimate();
 			}
 			averageComputationCost /= nodes.size();
 
@@ -305,7 +305,7 @@ public class HEFT extends StaticScheduler {
 					TaskInstance task = taskOnsets.get(onset);
 					sb.append(task.getTaskName());
 					sb.append("-");
-					sb.append(onset + runtimeEstimatesPerNode.get(node).get(task.getTaskId()).weight);
+					sb.append(onset + runtimePerBotPerVm.get(node).get(task.getTaskId()).getEstimate());
 					sb.append(" ");
 				}
 				sb.append("\n");

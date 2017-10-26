@@ -103,7 +103,7 @@ public class ProvenanceManager implements HiwayDBI {
 
 	@Override
 	public Set<Long> getTaskIdsForWorkflow(String workflowName) {
-		return workflowNameToTaskIds.containsKey(workflowName) ? new HashSet<>(workflowNameToTaskIds.get(workflowName)) : new HashSet<Long>();
+		return workflowNameToTaskIds.containsKey(workflowName) ? new HashSet<>(workflowNameToTaskIds.get(workflowName)) : new HashSet<>();
 	}
 
 	@Override
