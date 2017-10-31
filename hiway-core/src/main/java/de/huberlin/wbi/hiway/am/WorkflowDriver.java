@@ -163,9 +163,9 @@ public abstract class WorkflowDriver {
 	 * The main routine.
 	 * 
 	 * @param appMaster
-	 *            The Application Master
+	 *          The Application Master
 	 * @param args
-	 *            Command line arguments passed to the ApplicationMaster.
+	 *          Command line arguments passed to the ApplicationMaster.
 	 */
 	public static void launch(WorkflowDriver appMaster, String[] args) {
 		boolean result = false;
@@ -194,7 +194,7 @@ public abstract class WorkflowDriver {
 	 * Helper function to print usage.
 	 * 
 	 * @param opts
-	 *            Parsed command line options.
+	 *          Parsed command line options.
 	 */
 	private static void printUsage(Options opts) {
 		new HelpFormatter().printHelp("hiway [options] workflow", opts);
@@ -275,7 +275,7 @@ public abstract class WorkflowDriver {
 		}
 		runId = UUID.randomUUID();
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	protected void loop() {
 		try {
@@ -302,7 +302,7 @@ public abstract class WorkflowDriver {
 
 				if (HiWayConfiguration.verbose)
 					WorkflowDriver.writeToStdout("Requested container " + request.getNodes() + ":" + request.getCapability().getVirtualCores() + ":"
-							+ request.getCapability().getMemory());
+					    + request.getCapability().getMemory());
 				writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_HIWAY_EVENT, value));
 
 				amRMClient.addContainerRequest(request);
@@ -311,7 +311,7 @@ public abstract class WorkflowDriver {
 			Thread.sleep(1000);
 
 			WorkflowDriver.writeToStdout("Current application state: requested=" + numRequestedContainers + ", completed=" + numCompletedContainers + ", failed="
-					+ numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
+			    + numFailedContainers + ", killed=" + numKilledContainers + ", allocated=" + numAllocatedContainers);
 			if (HiWayConfiguration.verbose) {
 				// information on outstanding container request
 				StringBuilder sb = new StringBuilder("Open Container Requests: ");
@@ -320,8 +320,8 @@ public abstract class WorkflowDriver {
 				if (!scheduler.relaxLocality())
 					names = scheduler.getDbInterface().getHostNames();
 				for (String node : names) {
-					List<? extends Collection<ContainerRequest>> requestCollections = amRMClient.getMatchingRequests(
-							Priority.newInstance(requestPriority), node, Resource.newInstance(maxMem, maxCores));
+					List<? extends Collection<ContainerRequest>> requestCollections = amRMClient.getMatchingRequests(Priority.newInstance(requestPriority), node,
+					    Resource.newInstance(maxMem, maxCores));
 					for (Collection<ContainerRequest> requestCollection : requestCollections) {
 						ContainerRequest first = requestCollection.iterator().next();
 						sb.append(node);
@@ -372,8 +372,8 @@ public abstract class WorkflowDriver {
 				}
 				String s = sb.toString();
 				if (s.length() > 0) {
-					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(),
-							null, JsonReportEntry.KEY_INVOC_STDOUT, sb.toString());
+					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
+					    JsonReportEntry.KEY_INVOC_STDOUT, sb.toString());
 					report.add(re);
 				}
 			}
@@ -385,8 +385,8 @@ public abstract class WorkflowDriver {
 				}
 				String s = sb.toString();
 				if (s.length() > 0) {
-					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(),
-							null, JsonReportEntry.KEY_INVOC_STDERR, sb.toString());
+					JsonReportEntry re = new JsonReportEntry(task.getWorkflowId(), task.getTaskId(), task.getTaskName(), task.getLanguageLabel(), task.getId(), null,
+					    JsonReportEntry.KEY_INVOC_STDERR, sb.toString());
 					report.add(re);
 				}
 			}
@@ -400,7 +400,7 @@ public abstract class WorkflowDriver {
 
 	protected void finish() {
 		writeEntryToLog(new JsonReportEntry(getRunId(), null, null, null, null, null, HiwayDBI.KEY_WF_TIME, Long.toString(System.currentTimeMillis()
-				- amRMClient.getStartTime())));
+		    - amRMClient.getStartTime())));
 
 		// Join all launched threads needed for when we time out and we need to release containers
 		for (Thread launchThread : launchThreads) {
@@ -431,12 +431,12 @@ public abstract class WorkflowDriver {
 
 		// WorkflowDriver.writeToStdout("Total Scheduled Containers: " + numTotalContainers);
 
-		if (numFailedContainers.get() == 0 && numCompletedContainers.get() == numTotalContainers) {
+		if (scheduler.nothingToSchedule()) {
 			appStatus = FinalApplicationStatus.SUCCEEDED;
 		} else {
 			appStatus = FinalApplicationStatus.FAILED;
 			appMessage = "Diagnostics." + ", total=" + numTotalContainers + ", completed=" + numCompletedContainers.get() + ", allocated="
-					+ numAllocatedContainers.get() + ", failed=" + numFailedContainers.get() + ", killed=" + numKilledContainers.get();
+			    + numAllocatedContainers.get() + ", failed=" + numFailedContainers.get() + ", killed=" + numKilledContainers.get();
 			success = false;
 		}
 
@@ -600,7 +600,7 @@ public abstract class WorkflowDriver {
 			schedulers += ", " + policy.toString();
 		}
 		opts.addOption("s", "scheduler", true, "The scheduling policy that is to be employed. Valid arguments: " + schedulers.substring(2) + "."
-				+ " Overrides settings in hiway-site.xml.");
+		    + " Overrides settings in hiway-site.xml.");
 		opts.addOption("d", "debug", false, "Provide additional logs and information for debugging");
 		opts.addOption("v", "verbose", false, "Increase verbosity of output / reporting.");
 		opts.addOption("appid", true, "Id of this Application Master.");
@@ -705,7 +705,7 @@ public abstract class WorkflowDriver {
 		}
 
 		WorkflowDriver.writeToStdout("Application master for app" + ", appId=" + appAttemptID.getApplicationId().getId() + ", clustertimestamp="
-				+ appAttemptID.getApplicationId().getClusterTimestamp() + ", attemptId=" + appAttemptID.getAttemptId());
+		    + appAttemptID.getApplicationId().getClusterTimestamp() + ", attemptId=" + appAttemptID.getAttemptId());
 
 		String shellEnvs[] = conf.getStrings(HiWayConfiguration.HIWAY_WORKER_SHELL_ENV, HiWayConfiguration.HIWAY_WORKER_SHELL_ENV_DEFAULT);
 		for (String env : shellEnvs) {
@@ -731,7 +731,7 @@ public abstract class WorkflowDriver {
 		}
 
 		schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(conf.get(HiWayConfiguration.HIWAY_SCHEDULER,
-				HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
+		    HiWayConfiguration.HIWAY_SCHEDULER_DEFAULT.toString()));
 		if (cliParser.hasOption("scheduler")) {
 			schedulerName = HiWayConfiguration.HIWAY_SCHEDULER_OPTS.valueOf(cliParser.getOptionValue("scheduler"));
 		}
@@ -757,9 +757,9 @@ public abstract class WorkflowDriver {
 	 * 
 	 * @return True if there were no errors
 	 * @throws YarnException
-	 *             YarnException
+	 *           YarnException
 	 * @throws IOException
-	 *             IOException
+	 *           IOException
 	 */
 	public boolean run() throws YarnException, IOException {
 		WorkflowDriver.writeToStdout("Starting ApplicationMaster");
@@ -806,8 +806,8 @@ public abstract class WorkflowDriver {
 			case roundRobin:
 			case heft:
 				int workerMemory = conf.getInt(YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
-				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.roundRobin) ? new RoundRobin(getWorkflowName()) : new HEFT(
-						getWorkflowName(), workerMemory / containerMemory);
+				scheduler = schedulerName.equals(HiWayConfiguration.HIWAY_SCHEDULER_OPTS.roundRobin) ? new RoundRobin(getWorkflowName()) : new HEFT(getWorkflowName(),
+				    workerMemory / containerMemory);
 				break;
 			case greedy:
 				scheduler = new GreedyQueue(getWorkflowName());
@@ -816,7 +816,7 @@ public abstract class WorkflowDriver {
 				scheduler = new MemoryAware(getWorkflowName(), amRMClient);
 				break;
 			default:
-				scheduler = new ERA(getWorkflowName());
+				scheduler = new ERA(getWorkflowName(), conf);
 			}
 			scheduler.init(conf, hdfs, containerMemory, customMemoryMap, containerCores, requestPriority);
 
@@ -840,12 +840,12 @@ public abstract class WorkflowDriver {
 			// A resource ask cannot exceed the max.
 			if (containerMemory > maxMem) {
 				WorkflowDriver.writeToStdout("Container memory specified above max threshold of cluster." + " Using max value." + ", specified=" + containerMemory
-						+ ", max=" + maxMem);
+				    + ", max=" + maxMem);
 				containerMemory = maxMem;
 			}
 			if (containerCores > maxCores) {
 				WorkflowDriver.writeToStdout("Container vcores specified above max threshold of cluster." + " Using max value." + ", specified=" + containerCores
-						+ ", max=" + maxCores);
+				    + ", max=" + maxCores);
 				containerCores = maxCores;
 			}
 
@@ -921,10 +921,10 @@ public abstract class WorkflowDriver {
 			setDone();
 		}
 	}
-	
+
 	public boolean isDone() {
-	  return done;
-  }
+		return done;
+	}
 
 	public void writeEntryToLog(JsonReportEntry entry) {
 		try {
@@ -937,10 +937,10 @@ public abstract class WorkflowDriver {
 		}
 		scheduler.addEntryToDB(entry);
 	}
-	
+
 	public static void writeToStdout(String s) {
-	  SimpleDateFormat dateFormat = new SimpleDateFormat("yy/MM/dd HH:mm:ss");
-    System.out.println(dateFormat.format(new Date()) + " " + s);
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yy/MM/dd HH:mm:ss");
+		System.out.println(dateFormat.format(new Date()) + " " + s);
 	}
 
 }

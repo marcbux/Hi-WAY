@@ -16,6 +16,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 
 import de.huberlin.wbi.hiway.am.WorkflowDriver;
+import de.huberlin.wbi.hiway.common.HiWayConfiguration;
 import de.huberlin.wbi.hiway.common.TaskInstance;
 import de.huberlin.wbi.hiway.scheduler.WorkflowScheduler;
 
@@ -33,13 +34,19 @@ public class ERA extends WorkflowScheduler {
 
 	protected Map<TaskInstance, List<Container>> taskToContainers;
 
-	public ERA(String workflowName) {
+	protected boolean init;
+
+	public ERA(String workflowName, HiWayConfiguration conf) {
 		super(workflowName);
 		readyTasksPerBot = new HashMap<>();
 		runningTasksPerBot = new HashMap<>();
 		replicas = new LinkedList<>();
 		todo = new HashSet<>();
 		taskToContainers = new HashMap<>();
+		init = true;
+
+		alpha = conf.getDouble(HiWayConfiguration.HIWAY_SCHEDULER_ERA_ALPHA, HiWayConfiguration.HIWAY_SCHEDULER_ERA_ALPHA_DEFAULT);
+		rho = conf.getInt(HiWayConfiguration.HIWAY_SCHEDULER_ERA_RHO, HiWayConfiguration.HIWAY_SCHEDULER_ERA_RHO_DEFAULT);
 	}
 
 	@Override
@@ -62,6 +69,12 @@ public class ERA extends WorkflowScheduler {
 
 	@Override
 	public void addTaskToQueue(TaskInstance task) {
+		if (init) {
+			for (int i = 0; i < rho; i++) {
+				unissuedContainerRequests.add(setupContainerAskForRM(new String[0], containerMemory));
+			}
+			init = false;
+		}
 		unissuedContainerRequests.add(setupContainerAskForRM(new String[0], containerMemory));
 		if (!readyTasksPerBot.containsKey(task.getTaskId())) {
 			Queue<TaskInstance> q = new LinkedList<>();
@@ -132,6 +145,7 @@ public class ERA extends WorkflowScheduler {
 
 		if (b_min != null && !b_min.isEmpty()) {
 			TaskInstance task = b_min.remove();
+			double estimate = runtimePerBotPerVm.get(nodeId).get(task.getTaskId()).getEstimate(System.currentTimeMillis(), replicate ? 0.5 : alpha);
 
 			if (replicate) {
 				replicas.add(task);
@@ -159,6 +173,8 @@ public class ERA extends WorkflowScheduler {
 			} else {
 				WorkflowDriver.writeToStdout("Assigned task " + task + " to container " + container.getId() + "@" + container.getNodeId().getHost());
 			}
+
+			WorkflowDriver.writeToStdout("(estimate: " + estimate + "; sufferage: " + s_min + ")");
 			task.incTries();
 
 			return task;

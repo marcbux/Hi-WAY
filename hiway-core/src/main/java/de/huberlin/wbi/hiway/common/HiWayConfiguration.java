@@ -84,7 +84,12 @@ public class HiWayConfiguration extends YarnConfiguration {
 	public static final String HIWAY_GALAXY_PATH = "hiway.galaxy.path";
 	public static final String HIWAY_SCHEDULER = "hiway.scheduler";
 	public static final HIWAY_SCHEDULER_OPTS HIWAY_SCHEDULER_DEFAULT = HIWAY_SCHEDULER_OPTS.era;
-
+	
+	public static final String HIWAY_SCHEDULER_ERA_ALPHA = "hiway.scheduler.era.alpha";
+	public static final double HIWAY_SCHEDULER_ERA_ALPHA_DEFAULT = 0.2;
+	public static final String HIWAY_SCHEDULER_ERA_RHO = "hiway.scheduler.era.rho";
+	public static final int HIWAY_SCHEDULER_ERA_RHO_DEFAULT = 1;
+	
 	public static final String HIWAY_SITE_XML = "hiway-site.xml";
 
 	public static final String HIWAY_WORKER_MEMORY = "hiway.worker.memory";
